@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.1.0**
+**Version 0.2.0**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -10,19 +10,29 @@ Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics vo
 
 **Außengerät** mit ein oder zwei Lüftern. Die Lüfter drehen sich einzeln und mit der tatsächlichen Drehzahl ihrer jeweiligen Entität. Bei 0 U/min stehen sie still und werden dunkler. Läuft eine Abtauung, erscheint ein Hinweis am Gerät.
 
-**Außenfühler** als Thermometer mit steigender Säule und eigener Farbskala.
-
 **Heizungspuffer** als großer Speicher, eingefärbt nach seiner Temperatur.
+
+**Umwälzpumpe** auf der Rücklaufleitung, deren Rotor sich mit der tatsächlichen Drehzahl dreht.
+
+**Dreiwegeventil** am Abzweig zum Warmwasserspeicher, das anzeigt, ob gerade geheizt oder Warmwasser bereitet wird.
+
+**Wasserdruck** als Manometer mit Zeiger. Der Zeiger wird rot, wenn der Druck unter 0,8 oder über 2,8 bar liegt.
 
 **Heizkreis** als Heizkörper, oben nach Vorlauf und unten nach Rücklauf eingefärbt, mit beiden Werten als Schild.
 
-**Warmwasserspeicher** mit Isttemperatur, Zieltemperatur und einem Hinweis, wenn der Heizstab läuft.
+**Warmwasserspeicher** mit Isttemperatur, Zieltemperatur und einem Hinweis, wenn der Heizstab läuft. Am Puffer erscheint derselbe Hinweis für den Heizstab der Heizung.
+
+**Störungsmeldung** als roter Balken über dem Schema, sobald die Wärmepumpe einen Fehlercode meldet.
 
 **Leitungen** zwischen den Baugruppen, die sich nach Vorlauf- und Rücklauftemperatur färben. Die Spreizung ist damit direkt in der Zeichnung ablesbar.
 
 **Kennzahlenleiste** mit Verdichterdrehzahl, Wasserdurchfluss, Wärmeleistung, Stromaufnahme und der daraus berechneten momentanen Arbeitszahl.
 
+**Schalter** für Wärmepumpe und Warmwasser-Zwangsladung, dazu die Betriebsart als Auswahlliste.
+
 **Sollwertregler** für Heizung und Warmwasser. Minimum, Maximum und Schrittweite liest die Karte aus der Entität selbst.
+
+Die **Außentemperatur** steht bewusst im Kopfbereich der Karte und nicht im Anlagenschema. Im Schema stünde sie in einer Flucht mit den Leitungen und ließe sich mit einer Temperatur im Heizungssystem verwechseln.
 
 ## Installation
 
@@ -76,6 +86,7 @@ scale_min: 20
 scale_max: 60
 outdoor_min: -15
 outdoor_max: 35
+show_switches: true
 show_controls: true
 entities:
   outside_temp: sensor.heishamon_top14
@@ -90,10 +101,19 @@ entities:
   flow_temp: sensor.heishamon_top6
   return_temp: sensor.heishamon_top5
   heating_setpoint: number.heishamon_top27
+  pump_speed: sensor.heishamon_top65
+  three_way_valve: sensor.heishamon_top20
+  room_heater: sensor.heishamon_top59
   buffer_temp: sensor.heishamon_top46
   dhw_temp: sensor.heishamon_top10
   dhw_setpoint: number.heishamon_top9
   dhw_heater: sensor.heishamon_top58
+  error: sensor.heishamon_top44
+  water_pressure: sensor.heishamon_top115
+  power_switch: switch.heishamon_setheatpump
+  dhw_switch: switch.heishamon_setforcedhw
+  mode_select: select.heishamon_setoperationmode
+  # heating_switch: switch.mein_eigener_helfer   # optional, siehe unten
 ```
 
 ### Optionen
@@ -106,6 +126,7 @@ entities:
 | `scale_max` | 60 | Obere Grenze der Heizungsfarbskala in Grad |
 | `outdoor_min` | -15 | Untere Grenze der Außenskala in Grad |
 | `outdoor_max` | 35 | Obere Grenze der Außenskala in Grad |
+| `show_switches` | true | Schalter und Betriebsart anzeigen |
 | `show_controls` | true | Sollwertregler anzeigen |
 | `entities` | leer | Zuordnung der Entitäten, siehe unten |
 
@@ -115,7 +136,7 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 
 | Feld | HeishaMon | Bedeutung |
 |---|---|---|
-| `outside_temp` | TOP14 | Außentemperatur, färbt das Thermometer |
+| `outside_temp` | TOP14 | Außentemperatur, im Kopfbereich der Karte |
 | `operating_mode` | TOP4 | Betriebsart, wird als Klartext oben rechts angezeigt |
 | `compressor` | TOP8 | Verdichterdrehzahl |
 | `pump_flow` | TOP1 | Wasserdurchfluss |
@@ -131,6 +152,15 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `dhw_temp` | TOP10 | Warmwasser Isttemperatur |
 | `dhw_setpoint` | TOP9 | Sollwert Warmwasser, muss eine Number-Entität sein |
 | `dhw_heater` | TOP58 | Heizstab Warmwasser, blendet den Hinweis ein |
+| `error` | TOP44 | Fehlercode, blendet die Störungsmeldung ein |
+| `water_pressure` | TOP115 | Wasserdruck, Zeiger des Manometers |
+| `pump_speed` | TOP65 | Drehzahl der Umwälzpumpe |
+| `three_way_valve` | TOP20 | Dreiwegeventil, Heizen oder Warmwasser |
+| `room_heater` | TOP59 | Heizstab Heizung, blendet den Hinweis am Puffer ein |
+| `power_switch` | SetHeatpump | Wärmepumpe ein und aus, muss ein Switch sein |
+| `dhw_switch` | SetForceDHW | Warmwasser sofort laden, muss ein Switch sein |
+| `mode_select` | SetOperationMode | Betriebsart, muss ein Select sein |
+| `heating_switch` | keines | Optional, für einen eigenen Helfer |
 
 ## Farbskalen
 
@@ -139,6 +169,20 @@ Die Karte verwendet zwei getrennte Skalen, weil Heizungs- und Außentemperaturen
 Die Skala läuft von Tiefblau über Cyan und Bernstein bis Rot. Werte unterhalb des Minimums bleiben blau, Werte oberhalb des Maximums bleiben rot.
 
 Bei einer Fußbodenheizung lohnt es sich, `scale_max` auf etwa 40 zu senken. Sonst bleibt fast alles im blauen Bereich, und Unterschiede sind kaum sichtbar.
+
+## Heizung und Warmwasser schalten
+
+HeishaMon kennt keine getrennten Schalter für "Heizung ein" und "Warmwasser ein". Was die Anlage wirklich umschaltet, ist die Betriebsart. Die Karte bildet deshalb ab, was es tatsächlich gibt:
+
+| Bedienelement | Wirkung |
+|---|---|
+| Wärmepumpe | Schaltet die gesamte Anlage ein und aus |
+| Betriebsart | Nur Heizen, Nur Warmwasser, Heizen und Warmwasser, und weitere |
+| Warmwasser | Löst eine Zwangsladung des Speichers aus |
+
+Wer eine echte Schaltfläche "Heizung ein und aus" möchte, legt sich einen eigenen Helfer an, etwa einen Schalter, der eine Automation auslöst, und trägt ihn im Feld `heating_switch` ein.
+
+Alle Schaltflächen brauchen die Steuerentitäten der Integration. Die entstehen nur, wenn bei der Einrichtung die Option **Nur lesen** deaktiviert ist.
 
 ## Hinweise
 
