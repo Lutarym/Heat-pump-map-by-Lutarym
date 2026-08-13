@@ -1,0 +1,6 @@
+{
+  "name": "Lutarym Wärmepumpen Card",
+  "filename": "lutarym-heatpump-card.js",
+  "render_readme": true,
+  "homeassistant": "2024.1.0"
+}
