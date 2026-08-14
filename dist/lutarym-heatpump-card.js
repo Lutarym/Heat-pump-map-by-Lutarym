@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "0.8.4";
+const CARD_VERSION = "0.8.5";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -748,6 +748,8 @@ class LutarymHeatpumpCard extends HTMLElement {
         </g>
         <text class="cap" x="1425" y="${C}" text-anchor="middle">Warmwasser</text>
       </g>
+      <text class="version" x="${L.W - 10}" y="${L.H - 8}"
+            text-anchor="end">v${CARD_VERSION}</text>
     </svg>`;
   }
 
@@ -1233,6 +1235,10 @@ class LutarymHeatpumpCard extends HTMLElement {
         font-variant-numeric: tabular-nums;
       }
       .badge-t { fill: #E8EDF4; font-size: 13px; }
+      .version {
+        fill: #3A4757; font-size: 12px;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      }
       .badge { opacity: 0; transition: opacity 300ms ease; }
       .badge.is-on { opacity: 1; }
       .badge.is-on.is-pulsing { animation: lhc-pulse 2.2s ease-in-out infinite; }
@@ -1623,8 +1629,15 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
   }
 }
 
-customElements.define("lutarym-heatpump-card", LutarymHeatpumpCard);
-customElements.define("lutarym-heatpump-card-editor", LutarymHeatpumpCardEditor);
+// Schutz, falls versehentlich zwei Fassungen als Ressource eingetragen sind.
+// Ohne diesen Schutz wirft der zweite Aufruf einen Fehler und die Karte
+// bleibt leer, was wie ein nicht wirksames Update aussieht.
+if (!customElements.get("lutarym-heatpump-card")) {
+  customElements.define("lutarym-heatpump-card", LutarymHeatpumpCard);
+}
+if (!customElements.get("lutarym-heatpump-card-editor")) {
+  customElements.define("lutarym-heatpump-card-editor", LutarymHeatpumpCardEditor);
+}
 
 window.customCards = window.customCards || [];
 window.customCards.push({
