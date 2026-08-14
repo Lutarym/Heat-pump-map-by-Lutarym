@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.9.4**
+**Version 0.9.5**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -290,6 +290,8 @@ Ob die Wärmepumpe auf den Sollwert TOP27 reagiert, hängt davon ab, ob sie auf 
 **Alles zeigt zwei Striche.** Die Entitäten sind nicht zugeordnet oder existieren nicht. Im Editor sind fehlende Entitäten rot umrandet.
 
 **Die Lüfter drehen nicht.** Die zugeordnete Entität liefert 0 oder keinen Zahlenwert. Bei stehender Wärmepumpe ist das korrekt.
+
+**Der Schieberegler steht auf null statt auf dem eingestellten Wert.** Behoben in 0.9.5. Der Regler liest jetzt zuerst den Sollwert und richtet den Bereich danach aus. Liefert die Entität keinen Zahlenwert, steht dort "nicht verfügbar" statt einer irreführenden Null. Meldet die Wärmepumpe für TOP27 dauerhaft nichts, läuft die Anlage vermutlich auf Heizkurve statt auf festem Sollwert.
 
 **Der Regler springt zurück.** Der gesendete Wert wurde von der Wärmepumpe nicht übernommen, etwa weil er außerhalb des zulässigen Bereichs liegt oder die Anlage im falschen Betriebsmodus ist.
 

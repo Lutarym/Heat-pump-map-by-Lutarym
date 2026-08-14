@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "0.9.4";
+const CARD_VERSION = "0.9.5";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1201,31 +1201,52 @@ class LutarymHeatpumpCard extends HTMLElement {
     const range = this.shadowRoot.getElementById(`${id}-range`);
     if (!range) return;
     const out = this.shadowRoot.getElementById(`${id}-out`);
-    const st = this._hass.states[this._e(key)];
-    if (!st) {
+    const minEl = this.shadowRoot.getElementById(`${id}-min`);
+    const maxEl = this.shadowRoot.getElementById(`${id}-max`);
+    const entityId = this._e(key);
+    const st = this._hass.states[entityId];
+
+    const sperren = (text) => {
       range.disabled = true;
-      if (out) out.textContent = "nicht gefunden";
+      if (out) out.textContent = text;
+      if (minEl) minEl.textContent = "";
+      if (maxEl) maxEl.textContent = "";
+    };
+
+    if (!st) {
+      sperren("nicht gefunden");
       return;
     }
+
+    // Zuerst den tatsaechlichen Wert lesen, erst danach den Bereich setzen.
+    const wert = parseFloat(st.state);
+    if (Number.isNaN(wert)) {
+      sperren("nicht verfügbar");
+      return;
+    }
+
+    let lo = Number(st.attributes.min !== undefined ? st.attributes.min : 15);
+    let hi = Number(st.attributes.max !== undefined ? st.attributes.max : 65);
+    // Liegt der Sollwert ausserhalb, wird der Bereich erweitert.
+    // Sonst klemmt der Browser den Regler an den Rand und zeigt etwas
+    // anderes an, als die Waermepumpe tatsaechlich eingestellt hat.
+    if (wert < lo) lo = Math.floor(wert);
+    if (wert > hi) hi = Math.ceil(wert);
+
     range.disabled = false;
-    const lo = Number(st.attributes.min !== undefined ? st.attributes.min : 15);
-    const hi = Number(st.attributes.max !== undefined ? st.attributes.max : 65);
     range.min = lo;
     range.max = hi;
     range.step = Number(st.attributes.step !== undefined ? st.attributes.step : 1);
-    this.shadowRoot.getElementById(`${id}-min`).textContent = `${lo} °C`;
-    this.shadowRoot.getElementById(`${id}-max`).textContent = `${hi} °C`;
+    if (minEl) minEl.textContent = `${lo} °C`;
+    if (maxEl) maxEl.textContent = `${hi} °C`;
 
     if (this._dragging === id) return;
-    const v = parseFloat(st.state);
-    if (!Number.isNaN(v)) {
-      range.value = v;
-      if (out) out.textContent = `${v} °C`;
-      range.style.setProperty(
-        "--thumb",
-        thermalColor(v, Number(this._config.scale_min), Number(this._config.scale_max))
-      );
-    }
+    range.value = wert;
+    if (out) out.textContent = `${wert} °C`;
+    range.style.setProperty(
+      "--thumb",
+      thermalColor(wert, Number(this._config.scale_min), Number(this._config.scale_max))
+    );
   }
 
   /* -------------------- Styles -------------------- */
