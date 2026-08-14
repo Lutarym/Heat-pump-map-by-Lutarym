@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "0.9.5";
+const CARD_VERSION = "0.9.7";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -354,6 +354,9 @@ const DEFAULT_CONFIG = {
   outdoor_max: 35,
   show_controls: true,
   show_switches: true,
+  label_hk1: "Heizkreis 1",
+  label_hk2: "Heizkreis 2",
+  label_dhw: "Warmwasser",
   animate: true,
   entities: {},
 };
@@ -521,9 +524,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       return;
     }
     const rows = [
-      { key: "hk1_setpoint", id: "ctl-hk1", label: "Heizkreis 1 Sollwert" },
-      { key: "hk2_setpoint", id: "ctl-hk2", label: "Heizkreis 2 Sollwert" },
-      { key: "dhw_setpoint", id: "ctl-dhw", label: "Warmwasser Sollwert" },
+      { key: "hk1_setpoint", id: "ctl-hk1", label: this._config.label_hk1 },
+      { key: "hk2_setpoint", id: "ctl-hk2", label: this._config.label_hk2 },
+      { key: "dhw_setpoint", id: "ctl-dhw", label: this._config.label_dhw },
     ].filter((r) => this._e(r.key) && (r.id !== "ctl-hk2" || this._config.hk_count === 2));
 
     if (!rows.length) {
@@ -536,7 +539,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         (r) => `
         <div class="lhc-ctl">
           <div class="lhc-ctl-head">
-            <span class="lhc-field-label">${r.label}</span>
+            <span class="lhc-field-label" id="${r.id}-label">${r.label}</span>
             <output class="lhc-ctl-out" id="${r.id}-out">--</output>
           </div>
           <input class="lhc-slider" type="range" id="${r.id}-range"
@@ -1570,6 +1573,18 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
             <input type="number" id="opt-omin">
           </label>
           <label class="ed-row"><span>Außenskala warm<em>Grad</em></span><input type="number" id="opt-omax"></label>
+          <label class="ed-row">
+            <span>Beschriftung Regler 1<em>frei wählbar</em></span>
+            <input type="text" id="opt-lhk1">
+          </label>
+          <label class="ed-row">
+            <span>Beschriftung Regler 2<em>frei wählbar</em></span>
+            <input type="text" id="opt-lhk2">
+          </label>
+          <label class="ed-row">
+            <span>Beschriftung Warmwasser<em>frei wählbar</em></span>
+            <input type="text" id="opt-ldhw">
+          </label>
           <label class="ed-row ed-check"><input type="checkbox" id="opt-animate"><span>Bewegung anzeigen</span></label>
           <label class="ed-row ed-check"><input type="checkbox" id="opt-switches"><span>Betriebsart und Schalter anzeigen</span></label>
           <label class="ed-row ed-check"><input type="checkbox" id="opt-controls"><span>Sollwertregler anzeigen</span></label>
@@ -1619,6 +1634,9 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     bind("opt-max", (el) => put({ scale_max: parseFloat(el.value) }));
     bind("opt-omin", (el) => put({ outdoor_min: parseFloat(el.value) }));
     bind("opt-omax", (el) => put({ outdoor_max: parseFloat(el.value) }));
+    bind("opt-lhk1", (el) => put({ label_hk1: el.value }));
+    bind("opt-lhk2", (el) => put({ label_hk2: el.value }));
+    bind("opt-ldhw", (el) => put({ label_dhw: el.value }));
     bind("opt-animate", (el) => put({ animate: el.checked }));
     bind("opt-switches", (el) => put({ show_switches: el.checked }));
     bind("opt-controls", (el) => put({ show_controls: el.checked }));
@@ -1671,6 +1689,9 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     put("opt-max", this._config.scale_max);
     put("opt-omin", this._config.outdoor_min);
     put("opt-omax", this._config.outdoor_max);
+    put("opt-lhk1", this._config.label_hk1);
+    put("opt-lhk2", this._config.label_hk2);
+    put("opt-ldhw", this._config.label_dhw);
     check("opt-animate", this._config.animate);
     check("opt-switches", this._config.show_switches);
     check("opt-controls", this._config.show_controls);

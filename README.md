@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.9.5**
+**Version 0.9.7**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -152,6 +152,9 @@ entities:
 | `fan_count` | 2 | Anzahl der dargestellten Lüfter, 1 oder 2 |
 | `hk_count` | 2 | Anzahl der dargestellten Heizkreise, 1 oder 2 |
 | `animate` | true | Bewegung anzeigen |
+| `label_hk1` | Heizkreis 1 | Beschriftung des ersten Reglers |
+| `label_hk2` | Heizkreis 2 | Beschriftung des zweiten Reglers |
+| `label_dhw` | Warmwasser | Beschriftung des Warmwasserreglers |
 | `scale_min` | 20 | Untere Grenze der Heizungsfarbskala in Grad |
 | `scale_max` | 60 | Obere Grenze der Heizungsfarbskala in Grad |
 | `outdoor_min` | -15 | Untere Grenze der Außenskala in Grad |
@@ -254,6 +257,12 @@ Fehlt einer der beiden Kontakte, blendet sich die Anzeige aus. Ist einer nicht e
 Die Anzeige sitzt im Gehäuse des Außengeräts, ohne eigenen Rahmen. Zustand 1 und Zustand 4 sind Ausnahmezustände und blinken, damit sie auffallen. Zustand 2 und 3 stehen ruhig. Ist kein Kontakt eingetragen, blendet sich die Anzeige vollständig aus.
 
 Die Karte zeigt SG Ready nur an, sie schaltet nicht. Wer umschalten will, steuert die Relais über eine Automation.
+
+## Beschriftung der Regler
+
+Die drei Regler heißen standardmäßig "Heizkreis 1", "Heizkreis 2" und "Warmwasser". Im Editor unter Darstellung kannst du jede Beschriftung frei ändern, etwa in "Fußboden EG" oder "Brauchwasser".
+
+Die Karte fügt bewusst nichts hinzu und deutet den Wert nicht. Sie zeigt, was die Entität liefert, im Bereich, den die Entität meldet. Was TOP27 und TOP34 in deiner Anlage bedeuten, hängt von deren Konfiguration ab. Der HeishaMon-Quellcode schreibt den Wert nur roh in die Anfrage an die Wärmepumpe und legt keine Bedeutung fest.
 
 ## Heizung und Warmwasser schalten
 
