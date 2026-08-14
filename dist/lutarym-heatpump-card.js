@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "0.9.2";
+const CARD_VERSION = "0.9.4";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -407,7 +407,10 @@ class LutarymHeatpumpCard extends HTMLElement {
   }
 
   _e(key) {
-    const configured = (this._config.entities || {})[key];
+    const eintraege = this._config.entities || {};
+    // Frueherer Feldname bleibt gueltig, damit bestehende Karten weiterlaufen.
+    const alias = { power_state: "power_switch", buffer_temp: "buffer_top" };
+    const configured = eintraege[key] || eintraege[alias[key]];
     if (configured) return configured;
     if (!this._auto) this._auto = detectIntegration(this._hass).entities;
     return this._auto[key] || "";
@@ -445,6 +448,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       <style>${this._css()}</style>
       <ha-card class="lhc">
         <div class="lhc-alert" id="alert" hidden></div>
+        <div class="lhc-hint" id="hinweis" hidden></div>
         <div class="lhc-scene">${this._svg()}</div>
         <section class="lhc-switches" id="switches"></section>
         <section class="lhc-controls" id="controls"></section>
@@ -620,18 +624,20 @@ class LutarymHeatpumpCard extends HTMLElement {
       <path class="pipe" id="pipe-return" d="M340 ${R} H 1525"/>
       <path class="pipe-shell" d="M340 ${F} H 1525"/>
       <path class="pipe" id="pipe-flow" d="M340 ${F} H 1525"/>
-      <path class="flowdots rev" id="dots-primary" d="M340 ${R} H 1525"/>
-      <path class="flowdots" id="dots-primary2" d="M340 ${F} H 1525"/>
+      <path class="flowdots" id="dots-vorlauf" d="M340 ${F} H 1525"/>
+      <path class="flowdots rev" id="dots-ruecklauf" d="M340 ${R} H 1525"/>
 
       <path class="pipe-shell" d="M630 ${F} V ${T} M630 ${B} V ${R}"/>
       <path class="pipe" id="pipe-buf-in" d="M630 ${F} V ${T}"/>
       <path class="pipe" id="pipe-buf-out" d="M630 ${B} V ${R}"/>
-      <path class="flowdots" id="dots-buf" d="M630 ${F} V ${T} M630 ${B} V ${R}"/>
+      <path class="flowdots" id="dots-buf" d="M630 ${F} V ${T}"/>
+      <path class="flowdots rev" id="dots-buf2" d="M630 ${B} V ${R}"/>
 
       <path class="pipe-shell" d="M1525 ${F} V ${T} M1525 ${B} V ${R}"/>
       <path class="pipe" id="pipe-dhw-in" d="M1525 ${F} V ${T}"/>
       <path class="pipe" id="pipe-dhw-out" d="M1525 ${B} V ${R}"/>
-      <path class="flowdots" id="dots-dhw" d="M1525 ${F} V ${T} M1525 ${B} V ${R}"/>
+      <path class="flowdots" id="dots-dhw" d="M1525 ${F} V ${T}"/>
+      <path class="flowdots rev" id="dots-dhw2" d="M1525 ${B} V ${R}"/>
 
       <!-- Außengerät -->
       <g class="unit">
@@ -887,14 +893,33 @@ class LutarymHeatpumpCard extends HTMLElement {
       el.classList.toggle("is-on", aktiv);
       el.classList.toggle("is-pulsing", aktiv && animate);
     };
-    const flowing = (ids, on, color) => {
+    // Schaltet die Laufstriche eines Leitungsabschnitts.
+    const stroemt = (ids, an, farbe) => {
       ids.forEach((id) => {
         const el = sr.getElementById(id);
         if (!el) return;
-        el.classList.toggle("is-on", animate && Boolean(on));
-        if (color) el.setAttribute("stroke", color);
+        el.classList.toggle("is-on", animate && an === true);
+        if (farbe) el.setAttribute("stroke", farbe);
       });
     };
+
+    /* Sichtbarer Hinweis, wenn ueberhaupt keine Entitaet gefunden wurde.
+       Sonst zeigt die Karte nur Striche und man sucht an der falschen Stelle. */
+    const pflicht = ["outside_temp", "compressor", "flow_temp", "return_temp",
+                     "buffer_temp", "dhw_temp"];
+    const gefunden = pflicht.filter((k) => {
+      const id = this._e(k);
+      return id && hass.states[id] !== undefined;
+    }).length;
+    const hinweis = sr.getElementById("hinweis");
+    if (hinweis) {
+      hinweis.hidden = gefunden > 0;
+      if (gefunden === 0) {
+        hinweis.textContent =
+          "Keine Entitäten zugeordnet. Karte bearbeiten und oben auf " +
+          "\u201eAus Integration übernehmen\u201c drücken.";
+      }
+    }
 
     /* Störung */
     const alertEl = sr.getElementById("alert");
@@ -1033,17 +1058,15 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (this._config.hk_count === 2) this._circuitUpdate(2, col, animate);
 
     /* Durchflussanimation */
-    // Umgewaelzt wird, sobald Pumpe, Durchfluss oder Verdichter arbeiten.
-    // Ist keiner dieser Werte zugeordnet, laesst sich der Zustand nicht
-    // ermitteln. Dann laeuft die Bewegung, statt eine tote Karte zu zeigen.
-    const messwerte = [pumpRpm, flowRate, comp];
-    const unbekannt = messwerte.every((v) => v === null);
+    // Der Primaerkreis foerdert, wenn Pumpe oder Durchfluss das melden.
+    // Ohne diese Werte bewegt sich nichts, es wird nichts angenommen.
     const primaer =
-      unbekannt || messwerte.some((v) => v !== null && v > 0);
-    flowing(["dots-primary2"], primaer, col(flow));
-    flowing(["dots-primary"], primaer, col(ret));
-    flowing(["dots-buf"], primaer && !zuWarmwasser, col(flow));
-    flowing(["dots-dhw"], primaer && zuWarmwasser, col(flow));
+      (pumpRpm !== null && pumpRpm > 0) || (flowRate !== null && flowRate > 0);
+    // Jeder Abschnitt einzeln, abhaengig nur vom eigenen Kreis.
+    stroemt(["dots-vorlauf"], primaer, col(flow));
+    stroemt(["dots-ruecklauf"], primaer, col(ret));
+    stroemt(["dots-buf", "dots-buf2"], primaer && !zuWarmwasser, col(buf));
+    stroemt(["dots-dhw", "dots-dhw2"], primaer && zuWarmwasser, col(dhw));
 
     // Wasser bewegt sich im Speicher, der gerade beladen wird.
     const bufLaeuft = primaer && !zuWarmwasser;
@@ -1098,16 +1121,17 @@ class LutarymHeatpumpCard extends HTMLElement {
     }
     set(`hk${n}-pump-v`, pumpOn ? "läuft" : "aus");
 
+    // Die beiden Leitungen dieses Heizkreises laufen nur mit seiner Pumpe.
+    [`dots-hk${n}`, `dots-hk${n}b`].forEach((id) => {
+      const el = sr.getElementById(id);
+      if (!el) return;
+      el.classList.toggle("is-on", animate && pumpOn);
+      el.setAttribute("stroke", col(water));
+    });
+
     ["in", "out"].forEach((seite) => {
       const el = sr.getElementById(`pipe-hk${n}-${seite}`);
       if (el) el.setAttribute("stroke", col(seite === "in" ? water : water - 6));
-    });
-    [`dots-hk${n}`, `dots-hk${n}b`].forEach((id) => {
-      const el = sr.getElementById(id);
-      if (el) {
-        el.classList.toggle("is-on", animate && pumpOn);
-        el.setAttribute("stroke", col(water));
-      }
     });
     return pumpOn;
   }
@@ -1221,6 +1245,12 @@ class LutarymHeatpumpCard extends HTMLElement {
       }
       .lhc-alert[hidden] { display: none; }
       .lhc-alert.is-pulsing { animation: lhc-pulse 2s ease-in-out infinite; }
+      .lhc-hint {
+        margin-bottom: 14px; padding: 12px 16px; border-radius: 10px;
+        background: #2A2313; border: 1px solid #B07B2E; color: #F2DFB0;
+        font-size: 14px;
+      }
+      .lhc-hint[hidden] { display: none; }
       .lhc-svg { width: 100%; height: auto; display: block; }
 
       .pipe-shell {
@@ -1235,15 +1265,16 @@ class LutarymHeatpumpCard extends HTMLElement {
       .signal {
         fill: none; stroke: #46536A; stroke-width: 2; stroke-dasharray: 5 5;
       }
-      /* Deutlich sichtbare Striche. Kurze Punkte verschwinden, sobald
-         die Karte auf Bildschirmbreite herunterskaliert wird. */
+      /* Laufende Striche zeigen an, dass in genau dieser Leitung
+         gerade Wasser stroemt. Kurze Punkte verschwinden beim
+         Herunterskalieren, daher bewusst lang und kraeftig. */
       .flowdots {
         fill: none; stroke: #FFFFFF; stroke-width: 7;
         stroke-linecap: round; stroke-dasharray: 14 30;
         opacity: 0; animation: lhc-flow 1.2s linear infinite;
         animation-play-state: paused;
       }
-      .flowdots.is-on { opacity: 0.95; animation-play-state: running; }
+      .flowdots.is-on { opacity: 0.9; animation-play-state: running; }
       .flowdots.rev { animation-name: lhc-flow-rev; }
       @keyframes lhc-flow { to { stroke-dashoffset: -44; } }
       @keyframes lhc-flow-rev { to { stroke-dashoffset: 44; } }
@@ -1408,7 +1439,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       .lhc-empty { color: var(--muted); font-size: 13px; margin: 0; }
 
       @media (prefers-reduced-motion: reduce) {
-        .rotor, .flowdots, .badge, .lhc-alert, #unit-glow, #sg-group {
+        .rotor, .waves, .flowdots, .badge, .lhc-alert, #unit-glow, #sg-group {
           animation: none !important;
         }
       }

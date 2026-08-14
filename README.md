@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.9.2**
+**Version 0.9.4**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -27,6 +27,8 @@ Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 **Dreiwegeventil** am Abzweig zum Warmwasserspeicher, in Klartext als Heizung oder Warmwasser.
 
 **Warmwasserspeicher** mit Ist- und Zieltemperatur und einem Hinweis, wenn der Heizstab läuft. Das Wasser im Speicher bewegt sich, solange geladen wird.
+
+**Hinweis** als gelber Balken, wenn gar keine Entität zugeordnet ist. Sonst zeigt die Karte nur Striche und man sucht an der falschen Stelle.
 
 **Störungsmeldung** als roter Balken über dem Schema, sobald ein Fehlercode anliegt.
 
@@ -209,16 +211,18 @@ Bewegung zeigt an, dass etwas tatsächlich arbeitet. Steht ein Bauteil still, st
 | Lüfter 1 und 2 | Drehzahl größer null, Geschwindigkeit nach echter Drehzahl |
 | Primärpumpe | Drehzahl größer null, feste ruhige Geschwindigkeit |
 | Heizkreispumpen | Pumpenstatus an, feste ruhige Geschwindigkeit |
-| Sammelleitungen oben und unten | Primärpumpe oder Durchfluss größer null |
-| Stichleitung zum Puffer | zusätzlich das Dreiwegeventil auf Heizen |
-| Stichleitung zum Speicher | zusätzlich das Dreiwegeventil auf Warmwasser |
-| Heizkreisleitungen | die jeweilige Kreispumpe läuft |
 | Gehäuserahmen außen | Verdichter läuft |
+| Vorlauf und Rücklauf | Primärpumpe oder Durchfluss melden Förderung |
+| Stichleitung zum Puffer | zusätzlich Dreiwegeventil auf Heizen |
+| Stichleitung zum Speicher | zusätzlich Dreiwegeventil auf Warmwasser |
+| Leitungen eines Heizkreises | nur dessen eigene Kreispumpe |
 | Wasser im Puffer | Dreiwegeventil auf Heizen und Umwälzung läuft |
 | Wasser im Warmwasserspeicher | Dreiwegeventil auf Warmwasser oder Heizstab läuft |
 | Hinweise Heizstab und Abtauung | solange sie aktiv sind |
 | SG Ready | in Zustand 1 Sperre und Zustand 4 Anlaufbefehl |
 | Störungsbalken | solange ein Fehlercode anliegt |
+
+Jeder Leitungsabschnitt wird einzeln geschaltet. Läuft nur Heizkreis 1, bewegt sich auch nur dessen Leitung. Fehlen die Entitäten für Pumpendrehzahl und Durchfluss, bewegt sich nichts. Die Karte nimmt nichts an, was sie nicht messen kann.
 
 Alle Pumpen drehen mit derselben ruhigen Geschwindigkeit, drei Sekunden pro Umdrehung. Sie sollen nur zeigen, dass gefördert wird, nicht wie schnell. Die tatsächliche Drehzahl der Primärpumpe steht als Zahl daneben. Nur die Lüfter drehen nach echter Drehzahl, dort ist der Unterschied zwischen leisem und vollem Betrieb gut sichtbar.
 
