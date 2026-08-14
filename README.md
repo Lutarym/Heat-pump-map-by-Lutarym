@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.5.1**
+**Version 0.7.0**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -32,13 +32,13 @@ Das Seitenverhältnis beträgt etwa 2,7 zu 1. Bei 900 Pixeln Kartenbreite ist di
 
 **Leitungen** zwischen den Baugruppen, die sich nach Vorlauf- und Rücklauftemperatur färben. Die Spreizung ist damit direkt in der Zeichnung ablesbar.
 
-**Kennzahlenleiste** mit Verdichterdrehzahl, Wasserdurchfluss, Wärmeleistung, Stromaufnahme und der daraus berechneten momentanen Arbeitszahl.
+Die **Verdichterdrehzahl** steht oben im Außengerät, die **Durchflussmenge** an der Primärpumpe. Beides steht damit dort, wo es hingehört, statt in einer eigenen Leiste.
 
 **Schalter** für Wärmepumpe und Warmwasser-Zwangsladung, dazu die Betriebsart als Auswahlliste.
 
 **Sollwertregler** für Heizkreis 1, Heizkreis 2 und Warmwasser. Minimum, Maximum und Schrittweite liest die Karte aus der Entität selbst.
 
-**SG Ready** im Kopfbereich mit dem aus zwei Kontakten abgeleiteten Betriebszustand und einem Balken aus vier Segmenten, der zeigt, wo die Anlage gerade steht.
+**SG Ready** direkt im Außengerät, ohne Rahmen. Der Betriebszustand wird aus zwei Kontakten abgeleitet, darunter zeigt ein Balken aus vier Segmenten, wo die Anlage gerade steht. Bei zwei Lüftern sitzt die Anzeige zwischen ihnen, bei einem darunter.
 
 Die **Außentemperatur** steht bewusst im Kopfbereich der Karte und nicht im Anlagenschema. Im Schema stünde sie in einer Flucht mit den Leitungen und ließe sich mit einer Temperatur im Heizungssystem verwechseln.
 
@@ -105,8 +105,6 @@ entities:
   operating_mode: sensor.heishamon_top4
   compressor: sensor.heishamon_top8
   pump_flow: sensor.heishamon_top1
-  heat_output: sensor.heishamon_top15
-  power_input: sensor.heishamon_top16
   error: sensor.heishamon_top44
   water_pressure: sensor.heishamon_top115
   fan1_rpm: sensor.heishamon_top62
@@ -163,10 +161,8 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 |---|---|---|
 | `outside_temp` | TOP14 | Außentemperatur, im Kopfbereich der Karte |
 | `operating_mode` | TOP4 | Betriebsart, wird als Klartext oben rechts angezeigt |
-| `compressor` | TOP8 | Verdichterdrehzahl |
-| `pump_flow` | TOP1 | Wasserdurchfluss |
-| `heat_output` | TOP15 | Abgegebene Heizleistung, Zähler der Arbeitszahl |
-| `power_input` | TOP16 | Stromaufnahme, Nenner der Arbeitszahl |
+| `compressor` | TOP8 | Verdichterdrehzahl, oben im Außengerät |
+| `pump_flow` | TOP1 | Durchflussmenge, an der Primärpumpe |
 | `fan1_rpm` | TOP62 | Drehzahl Lüfter 1 |
 | `fan2_rpm` | TOP63 | Drehzahl Lüfter 2 |
 | `defrost` | TOP26 | Abtauung, blendet den Hinweis ein |
@@ -221,6 +217,7 @@ Bewegung zeigt an, dass etwas tatsächlich arbeitet. Steht ein Bauteil still, st
 | Heizkreisleitungen | die jeweilige Kreispumpe läuft |
 | Gehäuserahmen außen | Verdichter läuft |
 | Hinweise Heizstab und Abtauung | solange sie aktiv sind |
+| SG Ready | in Zustand 1 Sperre und Zustand 4 Anlaufbefehl |
 | Störungsbalken | solange ein Fehlercode anliegt |
 
 Die Heizkreispumpen melden bei HeishaMon nur an oder aus, keine Drehzahl. Sie drehen sich daher mit fester Geschwindigkeit, im Gegensatz zu Lüftern und Primärpumpe.
@@ -248,7 +245,7 @@ Erlaubt sind die Domänen `switch`, `input_boolean`, `binary_sensor` und `sensor
 
 Fehlt einer der beiden Kontakte, blendet sich die Anzeige aus. Ist einer nicht erreichbar, zeigt die Karte "unbekannt", statt einen Zustand zu raten. Ein ausgefallener Shelly darf nicht als offener Kontakt gelten, sonst stünde dort Normalbetrieb, obwohl niemand weiß, was tatsächlich anliegt.
 
-Zustand 1 und Zustand 4 sind Ausnahmezustände und blinken, damit sie auffallen. Zustand 2 und 3 stehen ruhig.
+Die Anzeige sitzt im Gehäuse des Außengeräts, ohne eigenen Rahmen. Zustand 1 und Zustand 4 sind Ausnahmezustände und blinken, damit sie auffallen. Zustand 2 und 3 stehen ruhig. Ist kein Kontakt eingetragen, blendet sich die Anzeige vollständig aus.
 
 Die Karte zeigt SG Ready nur an, sie schaltet nicht. Wer umschalten will, steuert die Relais über eine Automation.
 
@@ -277,6 +274,8 @@ Die Lüfteranimation wird bei aktivierter Systemeinstellung für reduzierte Bewe
 Ob die Wärmepumpe auf den Sollwert TOP27 reagiert, hängt davon ab, ob sie auf feste Vorlauftemperatur oder auf Heizkurve läuft. Das entscheidet die Wärmepumpe, nicht die Karte.
 
 ## Fehlersuche
+
+**Im Editor springen die Eingabefelder zurück, sobald ich tippe.** Behoben in 0.5.2. Ältere Fassungen glichen die Felder bei jeder Zustandsänderung in Home Assistant ab und überschrieben dabei die Eingabe. Prüfe die Version in der Browser-Konsole und leere den Cache.
 
 **Die Karte erscheint nicht in der Auswahl.** Ressource geprüft, Browser-Cache geleert? Die Karte meldet sich beim Laden in der Browser-Konsole mit ihrer Version.
 
