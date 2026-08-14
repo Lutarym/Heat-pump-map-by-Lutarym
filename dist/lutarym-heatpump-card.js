@@ -2,32 +2,30 @@
  * lutarym-heatpump-card
  *
  * Anlagenschema fuer Panasonic Aquarea via HeishaMon.
- * Zwei Ebenen: oben die Erzeugung, unten der Heizkreisverteiler.
+ * Breitformat: alle Baugruppen in einer Reihe nebeneinander.
  *
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "0.3.0";
+const CARD_VERSION = "0.4.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
  *
- *  Alle waagerechten Bezugslinien an einer Stelle. Beschriftungen
- *  liegen bewusst zwischen den Leitungen, nie darauf.
+ *  Alle waagerechten Bezugslinien an einer Stelle. Die Baugruppen
+ *  haengen zwischen Vorlauf oben und Ruecklauf unten, die
+ *  Beschriftungen liegen darunter, nie auf einer Leitung.
  * ------------------------------------------------------------------ */
 const L = {
-  W: 1240,
-  H: 860,
-  FLOW_Y: 150, // Primaervorlauf
-  RET_Y: 470, // Primaerruecklauf
-  TANK_TOP: 196,
-  TANK_BOTTOM: 420,
-  CAP1_Y: 512, // Beschriftungen Ebene 1
-  HK_FLOW_Y: 600, // Vorlauf Heizkreisverteiler
-  RAD_TOP: 660,
-  RAD_BOTTOM: 760,
-  HK_RET_Y: 790, // Ruecklauf Heizkreisverteiler
-  CAP2_Y: 815, // Beschriftungen Ebene 2
+  W: 1640,
+  H: 600,
+  FLOW_Y: 150, // Vorlaufleitung
+  RET_Y: 500, // Ruecklaufleitung
+  TANK_TOP: 200,
+  TANK_BOTTOM: 440,
+  RAD_TOP: 240,
+  RAD_BOTTOM: 400,
+  CAP_Y: 548, // Grundlinie aller Beschriftungen, klar unter der Ruecklaufleitung
 };
 
 /* ------------------------------------------------------------------ *
@@ -547,21 +545,14 @@ class LutarymHeatpumpCard extends HTMLElement {
   _svg() {
     const two = this._config.fan_count === 2;
     const fans = two
-      ? `${this._fan("fan1", 180, 175, 52)}${this._fan("fan2", 180, 330, 52)}`
-      : this._fan("fan1", 180, 255, 86);
+      ? `${this._fan("fan1", 180, 185, 54)}${this._fan("fan2", 180, 360, 54)}`
+      : this._fan("fan1", 180, 280, 88);
 
     const F = L.FLOW_Y;
     const R = L.RET_Y;
     const T = L.TANK_TOP;
     const B = L.TANK_BOTTOM;
-    const C1 = L.CAP1_Y;
-    const HF = L.HK_FLOW_Y;
-    const HR = L.HK_RET_Y;
-
-    // Steigleitungen zum Verteiler, mit Bogen ueber den Primaerruecklauf
-    const riseFlow = `M640 280 H 700 V 448 C 718 456, 718 484, 700 492 V ${HF}`;
-    const riseRet = `M660 ${HR} V 492 C 642 484, 642 456, 660 448 V 340 H 640`;
-
+    const C = L.CAP_Y;
     const hk2 = this._config.hk_count === 2;
 
     return `
@@ -594,49 +585,34 @@ class LutarymHeatpumpCard extends HTMLElement {
         </linearGradient>
       </defs>
 
-      <!-- ===== Leitungen Ebene 1 ===== -->
-      <path class="pipe-shell" d="M320 ${R} H 1095"/>
-      <path class="pipe" id="pipe-return" d="M320 ${R} H 1095"/>
-      <path class="pipe-shell" d="M320 ${F} H 1095"/>
-      <path class="pipe" id="pipe-flow" d="M320 ${F} H 1095"/>
-      <path class="flowdots rev" id="dots-primary" d="M320 ${R} H 1095"/>
-      <path class="flowdots" id="dots-primary2" d="M320 ${F} H 1095"/>
+      <!-- ===== Sammelleitungen ===== -->
+      <path class="pipe-shell" d="M320 ${R} H 1425"/>
+      <path class="pipe" id="pipe-return" d="M320 ${R} H 1425"/>
+      <path class="pipe-shell" d="M320 ${F} H 1425"/>
+      <path class="pipe" id="pipe-flow" d="M320 ${F} H 1425"/>
+      <path class="flowdots rev" id="dots-primary" d="M320 ${R} H 1425"/>
+      <path class="flowdots" id="dots-primary2" d="M320 ${F} H 1425"/>
 
-      <path class="pipe-shell" d="M490 ${F} V ${T} M490 ${B} V ${R}"/>
-      <path class="pipe" id="pipe-buf-in" d="M490 ${F} V ${T}"/>
-      <path class="pipe" id="pipe-buf-out" d="M490 ${B} V ${R}"/>
-      <path class="flowdots" id="dots-buf" d="M490 ${F} V ${T} M490 ${B} V ${R}"/>
+      <path class="pipe-shell" d="M530 ${F} V ${T} M530 ${B} V ${R}"/>
+      <path class="pipe" id="pipe-buf-in" d="M530 ${F} V ${T}"/>
+      <path class="pipe" id="pipe-buf-out" d="M530 ${B} V ${R}"/>
+      <path class="flowdots" id="dots-buf" d="M530 ${F} V ${T} M530 ${B} V ${R}"/>
 
-      <path class="pipe-shell" d="M1095 ${F} V ${T} M1095 ${B} V ${R}"/>
-      <path class="pipe" id="pipe-dhw-in" d="M1095 ${F} V ${T}"/>
-      <path class="pipe" id="pipe-dhw-out" d="M1095 ${B} V ${R}"/>
-      <path class="flowdots" id="dots-dhw" d="M1095 ${F} V ${T} M1095 ${B} V ${R}"/>
-
-      <!-- ===== Steigleitungen zum Verteiler ===== -->
-      <path class="pipe-shell" d="${riseFlow}"/>
-      <path class="pipe" id="pipe-rise-flow" d="${riseFlow}"/>
-      <path class="flowdots" id="dots-rise-flow" d="${riseFlow}"/>
-      <path class="pipe-shell" d="${riseRet}"/>
-      <path class="pipe" id="pipe-rise-ret" d="${riseRet}"/>
-      <path class="flowdots" id="dots-rise-ret" d="${riseRet}"/>
-
-      <!-- ===== Verteilerleitungen ===== -->
-      <path class="pipe-shell" d="M700 ${HF} H 1170 M660 ${HR} H 1170"/>
-      <path class="pipe" id="pipe-hk-flow" d="M700 ${HF} H 1170"/>
-      <path class="pipe" id="pipe-hk-ret" d="M660 ${HR} H 1170"/>
-      <path class="flowdots" id="dots-hkmain" d="M700 ${HF} H 1170"/>
-      <path class="flowdots rev" id="dots-hkmain2" d="M660 ${HR} H 1170"/>
+      <path class="pipe-shell" d="M1425 ${F} V ${T} M1425 ${B} V ${R}"/>
+      <path class="pipe" id="pipe-dhw-in" d="M1425 ${F} V ${T}"/>
+      <path class="pipe" id="pipe-dhw-out" d="M1425 ${B} V ${R}"/>
+      <path class="flowdots" id="dots-dhw" d="M1425 ${F} V ${T} M1425 ${B} V ${R}"/>
 
       <!-- ===== Aussengeraet ===== -->
       <g class="unit">
-        <rect x="40" y="80" width="280" height="390" rx="16"
+        <rect x="40" y="80" width="280" height="420" rx="16"
               fill="url(#casing)" stroke="#33415A" stroke-width="2"/>
-        <rect id="unit-glow" x="40" y="80" width="280" height="390" rx="16"
+        <rect id="unit-glow" x="40" y="80" width="280" height="420" rx="16"
               fill="none" stroke="#E0762E" stroke-width="2" opacity="0"/>
-        <rect x="40" y="80" width="280" height="390" rx="16" fill="url(#glass)"/>
+        <rect x="40" y="80" width="280" height="420" rx="16" fill="url(#glass)"/>
         <text class="cap" x="180" y="108" text-anchor="middle">Aussengeraet</text>
         ${fans}
-        <g id="defrost-badge" class="badge" transform="translate(180 440)">
+        <g id="defrost-badge" class="badge" transform="translate(180 478)">
           <rect x="-64" y="-16" width="128" height="32" rx="16"
                 fill="#0E2A4A" stroke="#3E9BE0" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Abtauung</text>
@@ -645,90 +621,90 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- ===== Primaerpumpe ===== -->
       <g>
-        <text class="value-s" id="pump-v" x="380" y="432" text-anchor="middle">--</text>
+        <text class="value-s" id="pump-v" x="380" y="462" text-anchor="middle">--</text>
         <circle cx="380" cy="${R}" r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
         <g id="pump-rotor" class="rotor" transform="translate(380 ${R})">
           <path d="M0 -15 L5 -4 L16 0 L5 4 L0 15 L-5 4 L-16 0 L-5 -4 Z" fill="#55637A"/>
           <circle r="4" fill="#0D1219"/>
         </g>
-        <text class="cap-s" x="380" y="${C1}" text-anchor="middle">Primaerpumpe</text>
+        <text class="cap-s" x="380" y="${C}" text-anchor="middle">Pumpe</text>
       </g>
 
       <!-- ===== Heizungspuffer ===== -->
       <g>
-        <rect x="440" y="${T}" width="200" height="224" rx="26"
+        <rect x="440" y="${T}" width="190" height="240" rx="26"
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
-        <rect x="448" y="204" width="184" height="208" rx="20" fill="url(#bufferFill)"/>
-        <rect x="448" y="204" width="184" height="208" rx="20" fill="url(#glass)"/>
-        <text class="value-l" id="buf-v" x="540" y="318" text-anchor="middle">--</text>
-        <g id="roomheater-badge" class="badge" transform="translate(540 386)">
+        <rect x="448" y="208" width="174" height="224" rx="20" fill="url(#bufferFill)"/>
+        <rect x="448" y="208" width="174" height="224" rx="20" fill="url(#glass)"/>
+        <text class="value-l" id="buf-v" x="535" y="316" text-anchor="middle">--</text>
+        <g id="roomheater-badge" class="badge" transform="translate(535 392)">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
-        <text class="cap" x="540" y="${C1}" text-anchor="middle">Heizungspuffer</text>
+        <text class="cap" x="535" y="${C}" text-anchor="middle">Puffer</text>
       </g>
 
       <!-- ===== Wasserdruck ===== -->
       <g>
-        <text class="value-s" id="press-v" x="900" y="432" text-anchor="middle">--</text>
-        <circle cx="900" cy="${R}" r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
-        <circle cx="900" cy="${R}" r="18" fill="none" stroke="#26303F" stroke-width="3"/>
-        <line id="press-needle" x1="900" y1="${R}" x2="900" y2="${R - 15}"
+        <text class="value-s" id="press-v" x="660" y="462" text-anchor="middle">--</text>
+        <circle cx="660" cy="${R}" r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+        <circle cx="660" cy="${R}" r="18" fill="none" stroke="#26303F" stroke-width="3"/>
+        <line id="press-needle" x1="660" y1="${R}" x2="660" y2="${R - 15}"
               stroke="${NEUTRAL}" stroke-width="3" stroke-linecap="round"
-              transform="rotate(-120 900 ${R})"/>
-        <circle cx="900" cy="${R}" r="4" fill="#55637A"/>
-        <text class="cap-s" x="900" y="${C1}" text-anchor="middle">Druck</text>
+              transform="rotate(-120 660 ${R})"/>
+        <circle cx="660" cy="${R}" r="4" fill="#55637A"/>
+        <text class="cap-s" x="660" y="${C}" text-anchor="middle">Druck</text>
       </g>
+
+      ${this._circuit(1, 720, 940, 770, 890)}
+      ${hk2 ? this._circuit(2, 1010, 1230, 1060, 1180) : ""}
 
       <!-- ===== Dreiwegeventil ===== -->
       <g>
-        <rect x="1077" y="158" width="36" height="36" rx="8"
+        <text class="value-s" id="valve-v" x="1425" y="128" text-anchor="middle">--</text>
+        <rect x="1407" y="158" width="36" height="36" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="2"
-              transform="rotate(45 1095 176)"/>
-        <circle cx="1095" cy="176" r="9" id="valve-dot" fill="${NEUTRAL}"/>
-        <text class="value-s" id="valve-v" x="1128" y="181" text-anchor="start">--</text>
+              transform="rotate(45 1425 176)"/>
+        <circle cx="1425" cy="176" r="9" id="valve-dot" fill="${NEUTRAL}"/>
       </g>
 
       <!-- ===== Warmwasserspeicher ===== -->
       <g>
-        <rect x="1010" y="${T}" width="170" height="224" rx="34"
+        <rect x="1340" y="${T}" width="170" height="240" rx="34"
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
-        <rect x="1018" y="204" width="154" height="208" rx="28" fill="url(#dhwFill)"/>
-        <rect x="1018" y="204" width="154" height="208" rx="28" fill="url(#glass)"/>
-        <path class="coil" d="M1040 292 q28 -18 55 0 q28 18 55 0
-                              M1040 326 q28 -18 55 0 q28 18 55 0
-                              M1040 360 q28 -18 55 0 q28 18 55 0"/>
-        <text class="value-l" id="dhw-v" x="1095" y="258" text-anchor="middle">--</text>
-        <text class="value-sp" id="dhw-sp" x="1095" y="280" text-anchor="middle"></text>
-        <g id="dhwheater-badge" class="badge" transform="translate(1095 388)">
+        <rect x="1348" y="208" width="154" height="224" rx="28" fill="url(#dhwFill)"/>
+        <rect x="1348" y="208" width="154" height="224" rx="28" fill="url(#glass)"/>
+        <path class="coil" d="M1370 306 q28 -18 55 0 q28 18 55 0
+                              M1370 340 q28 -18 55 0 q28 18 55 0
+                              M1370 374 q28 -18 55 0 q28 18 55 0"/>
+        <text class="value-l" id="dhw-v" x="1425" y="272" text-anchor="middle">--</text>
+        <text class="value-sp" id="dhw-sp" x="1425" y="294" text-anchor="middle"></text>
+        <g id="dhwheater-badge" class="badge" transform="translate(1425 406)">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
-        <text class="cap" x="1095" y="${C1}" text-anchor="middle">Warmwasser</text>
+        <text class="cap" x="1425" y="${C}" text-anchor="middle">Warmwasser</text>
       </g>
-
-      ${this._circuit(1, 720, 930, 780, 870)}
-      ${hk2 ? this._circuit(2, 970, 1180, 1030, 1120) : ""}
     </svg>`;
   }
 
   /**
-   * Ein Heizkreis: Abgang vom Verteiler, Pumpe, Heizkoerper, Ruecklauf.
+   * Ein Heizkreis: Abgang vom Vorlauf, Pumpe, Heizkoerper, Ruecklauf.
    */
   _circuit(n, x1, x2, dropX, backX) {
-    const HF = L.HK_FLOW_Y;
-    const HR = L.HK_RET_Y;
+    const F = L.FLOW_Y;
+    const R = L.RET_Y;
     const RT = L.RAD_TOP;
     const RB = L.RAD_BOTTOM;
     const mid = (x1 + x2) / 2;
-    const drop = `M${dropX} ${HF} V ${RT}`;
-    const back = `M${backX} ${RB} V ${HR}`;
+    const drop = `M${dropX} ${F} V ${RT}`;
+    const back = `M${backX} ${RB} V ${R}`;
 
     let fins = "";
     for (let x = x1 + 26; x < x2 - 10; x += 30) {
-      fins += `<line x1="${x}" y1="${RT + 8}" x2="${x}" y2="${RB - 8}"/>`;
+      fins += `<line x1="${x}" y1="${RT + 10}" x2="${x}" y2="${RB - 10}"/>`;
     }
 
     return `
@@ -739,12 +715,12 @@ class LutarymHeatpumpCard extends HTMLElement {
         <path class="flowdots" id="dots-hk${n}" d="${drop}"/>
         <path class="flowdots rev" id="dots-hk${n}b" d="${back}"/>
 
-        <circle cx="${dropX}" cy="630" r="21" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
-        <g id="hk${n}-rotor" class="rotor" transform="translate(${dropX} 630)">
+        <circle cx="${dropX}" cy="196" r="21" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+        <g id="hk${n}-rotor" class="rotor" transform="translate(${dropX} 196)">
           <path d="M0 -12 L4 -3 L13 0 L4 3 L0 12 L-4 3 L-13 0 L-4 -3 Z" fill="#55637A"/>
           <circle r="3.5" fill="#0D1219"/>
         </g>
-        <text class="value-s" id="hk${n}-pump-v" x="${dropX + 30}" y="636"
+        <text class="value-s" id="hk${n}-pump-v" x="${dropX + 30}" y="202"
               text-anchor="start">--</text>
 
         <rect x="${x1}" y="${RT}" width="${x2 - x1}" height="${RB - RT}" rx="10"
@@ -752,18 +728,18 @@ class LutarymHeatpumpCard extends HTMLElement {
         <g stroke="#0D1219" stroke-width="7" opacity="0.5">${fins}</g>
         <rect x="${x1}" y="${RT}" width="${x2 - x1}" height="${RB - RT}" rx="10" fill="url(#glass)"/>
 
-        <g transform="translate(${mid - 52} ${RT + 52})">
+        <g transform="translate(${mid - 52} ${RT + 80})">
           <rect x="-48" y="-26" width="96" height="46" rx="9" fill="#0B1017" opacity="0.88"/>
           <text class="tag-l" x="0" y="-10" text-anchor="middle">Wasser</text>
           <text class="tag-v" id="hk${n}-water-v" x="0" y="12" text-anchor="middle">--</text>
         </g>
-        <g transform="translate(${mid + 52} ${RT + 52})">
+        <g transform="translate(${mid + 52} ${RT + 80})">
           <rect x="-48" y="-26" width="96" height="46" rx="9" fill="#0B1017" opacity="0.88"/>
           <text class="tag-l" x="0" y="-10" text-anchor="middle">Raum</text>
           <text class="tag-v" id="hk${n}-room-v" x="0" y="12" text-anchor="middle">--</text>
         </g>
 
-        <text class="cap" x="${mid}" y="${L.CAP2_Y}" text-anchor="middle">Heizkreis ${n}</text>
+        <text class="cap" x="${mid}" y="${L.CAP_Y}" text-anchor="middle">Heizkreis ${n}</text>
       </g>`;
   }
 
@@ -893,12 +869,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     const ret = numState(hass, this._e("return_temp"));
     const buf = numState(hass, this._e("buffer_temp"));
     const dhw = numState(hass, this._e("dhw_temp"));
-    ["pipe-flow", "pipe-buf-in", "pipe-dhw-in", "pipe-rise-flow", "pipe-hk-flow"].forEach(
-      (id) => stroke(id, col(flow))
-    );
-    ["pipe-return", "pipe-buf-out", "pipe-dhw-out", "pipe-rise-ret", "pipe-hk-ret"].forEach(
-      (id) => stroke(id, col(ret))
-    );
+    ["pipe-flow", "pipe-buf-in", "pipe-dhw-in"].forEach((id) => stroke(id, col(flow)));
+    ["pipe-return", "pipe-buf-out", "pipe-dhw-out"].forEach((id) => stroke(id, col(ret)));
 
     /* Puffer */
     paint("bg-top", col(buf));
@@ -959,12 +931,11 @@ class LutarymHeatpumpCard extends HTMLElement {
     }
 
     /* Heizkreise */
-    const hk1On = this._circuitUpdate(1, col, animate);
-    const hk2On =
-      this._config.hk_count === 2 ? this._circuitUpdate(2, col, animate) : false;
+    this._circuitUpdate(1, col, animate);
+    if (this._config.hk_count === 2) this._circuitUpdate(2, col, animate);
 
     /* Durchflussanimation, je Abschnitt einzeln */
-    // Primaerkreis laeuft, wenn Wasser umgewaelzt wird.
+    // Die Sammelleitungen laufen, wenn Wasser umgewaelzt wird.
     const primaer =
       (pumpRpm !== null && pumpRpm > 0) || (flowRate !== null && flowRate > 0);
     flowing(["dots-primary2"], primaer, col(flow));
@@ -973,10 +944,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     flowing(["dots-buf"], primaer && !zuWarmwasser, col(flow));
     // Der Speicher nur, wenn das Ventil auf Warmwasser steht.
     flowing(["dots-dhw"], primaer && zuWarmwasser, col(flow));
-    // Der Verteiler laeuft, sobald mindestens ein Heizkreis foerdert.
-    const verteiler = hk1On || hk2On;
-    flowing(["dots-rise-flow", "dots-hkmain"], verteiler, col(flow));
-    flowing(["dots-rise-ret", "dots-hkmain2"], verteiler, col(ret));
 
     /* Bedienung */
     this._syncToggle("sw-power", "power_switch");

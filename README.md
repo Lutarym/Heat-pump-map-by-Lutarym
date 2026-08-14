@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.3.0**
+**Version 0.4.0**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -10,7 +10,9 @@ Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics vo
 
 **Außengerät** mit ein oder zwei Lüftern. Die Lüfter drehen sich einzeln und mit der tatsächlichen Drehzahl ihrer jeweiligen Entität. Bei 0 U/min stehen sie still und werden dunkler. Läuft eine Abtauung, erscheint ein Hinweis am Gerät.
 
-Das Schema ist zweistufig aufgebaut. Oben die Erzeugung mit Wärmepumpe, Puffer und Warmwasserspeicher, unten der Heizkreisverteiler mit zwei getrennten Heizkreisen. Die beiden Ebenen sind über zwei Steigleitungen verbunden, die den Primärrücklauf mit einem Bogen überbrücken.
+Das Schema ist im Breitformat angelegt, alle Baugruppen stehen in einer Reihe nebeneinander. Von links nach rechts: Außengerät, Pumpe, Puffer, Manometer, Heizkreis 1, Heizkreis 2, Dreiwegeventil, Warmwasserspeicher. Oben verläuft der Vorlauf, unten der Rücklauf, jede Baugruppe hängt mit einer Stichleitung dazwischen.
+
+Das Seitenverhältnis beträgt etwa 2,7 zu 1. Bei 900 Pixeln Kartenbreite ist die Karte rund 330 Pixel hoch.
 
 **Heizungspuffer** als großer Speicher, eingefärbt nach seiner Temperatur.
 
@@ -205,10 +207,9 @@ Bewegung zeigt an, dass etwas tatsächlich arbeitet. Steht ein Bauteil still, st
 | Lüfter 1 und 2 | Drehzahl größer null, Geschwindigkeit nach echter Drehzahl |
 | Primärpumpe | Drehzahl größer null, Geschwindigkeit nach echter Drehzahl |
 | Heizkreispumpen | Pumpenstatus an, feste Geschwindigkeit |
-| Primärleitungen | Primärpumpe oder Durchfluss größer null |
+| Sammelleitungen oben und unten | Primärpumpe oder Durchfluss größer null |
 | Stichleitung zum Puffer | zusätzlich das Dreiwegeventil auf Heizen |
 | Stichleitung zum Speicher | zusätzlich das Dreiwegeventil auf Warmwasser |
-| Verteilerleitungen | mindestens ein Heizkreis fördert |
 | Heizkreisleitungen | die jeweilige Kreispumpe läuft |
 | Gehäuserahmen außen | Verdichter läuft |
 | Hinweise Heizstab und Abtauung | solange sie aktiv sind |
