@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "0.8.0";
+const CARD_VERSION = "0.8.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -81,10 +81,10 @@ function modeLabel(wert) {
  *  1:0 Zustand 1, 0:0 Zustand 2, 0:1 Zustand 3, 1:1 Zustand 4.
  * ------------------------------------------------------------------ */
 const SG_STATES = {
-  1: { kurz: "Sperre", lang: "Sperre, höchstens zwei Stunden", farbe: "#D6534A" },
-  2: { kurz: "Normal", lang: "Energieeffizienter Normalbetrieb", farbe: "#7E8CA0" },
-  3: { kurz: "Empfehlung", lang: "Einschaltempfehlung", farbe: "#F2B233" },
-  4: { kurz: "Anlauf", lang: "Anlaufbefehl", farbe: "#46C07A" },
+  1: { kurz: "Stopp", lang: "Sperre durch den Netzbetreiber", farbe: "#D6534A" },
+  2: { kurz: "Normal", lang: "Normalbetrieb", farbe: "#7E8CA0" },
+  3: { kurz: "PV Überschuss 1", lang: "Einschaltempfehlung", farbe: "#F2B233" },
+  4: { kurz: "PV Überschuss 2", lang: "Anlaufbefehl, verstärkter Betrieb", farbe: "#46C07A" },
 };
 
 /* ------------------------------------------------------------------ *
@@ -99,6 +99,10 @@ const THERMAL_STOPS = [
 ];
 
 const NEUTRAL = "#46536A";
+
+// Pumpen drehen bewusst langsam und immer gleich schnell. Sie sollen
+// nur zeigen, dass sie foerdern, nicht wie schnell.
+const PUMP_SECONDS = 3;
 
 function clamp(v, lo, hi) {
   return Math.min(hi, Math.max(lo, v));
@@ -924,7 +928,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         const sg = this._sgMode();
         const info = SG_STATES[sg];
         const farbe = info ? info.farbe : NEUTRAL;
-        set("sg-text", sg === null ? "unbekannt" : `${sg} ${info.kurz}`);
+        set("sg-text", sg === null ? "unbekannt" : info.kurz);
         const t = sr.getElementById("sg-text");
         if (t) t.setAttribute("fill", farbe);
         for (let i = 1; i <= 4; i++) {
@@ -958,7 +962,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     /* Primärpumpe und Durchfluss */
     const pumpRpm = numState(hass, this._e("pump_speed"));
     const flowRate = numState(hass, this._e("pump_flow"));
-    this._spin("pump-rotor", pumpRpm, "pump-v", "U/min");
+    this._spin("pump-rotor", pumpRpm, "pump-v", "U/min", PUMP_SECONDS);
     set("flow-v", flowRate === null ? "--" : `${fmt(flowRate)} l/min`);
 
     /* Wasserdruck, nur bei vorhandenem Wert */
@@ -1043,7 +1047,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     const rotor = sr.getElementById(`hk${n}-rotor`);
     if (rotor) {
       rotor.classList.toggle("is-still", !pumpOn);
-      rotor.style.animationDuration = "1.4s";
+      rotor.style.animationDuration = `${PUMP_SECONDS}s`;
       rotor.style.animationPlayState = pumpOn && animate ? "running" : "paused";
     }
     set(`hk${n}-pump-v`, pumpOn ? "läuft" : "aus");
@@ -1062,7 +1066,13 @@ class LutarymHeatpumpCard extends HTMLElement {
     return pumpOn;
   }
 
-  _spin(rotorId, rpm, labelId, unit) {
+  /**
+   * Dreht einen Rotor.
+   * Ohne festeDauer richtet sich das Tempo nach der Drehzahl, das
+   * passt zu den Lueftern. Pumpen bekommen eine feste, ruhige Dauer,
+   * denn dort soll nur erkennbar sein, dass sie ueberhaupt foerdern.
+   */
+  _spin(rotorId, rpm, labelId, unit, festeDauer) {
     const label = this.shadowRoot.getElementById(labelId);
     if (label) label.textContent = rpm === null ? "--" : `${fmt(rpm, 0)} ${unit}`;
     const el = this.shadowRoot.getElementById(rotorId);
@@ -1074,7 +1084,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       return;
     }
     el.classList.remove("is-still");
-    el.style.animationDuration = `${clamp(900 / rpm, 0.25, 6).toFixed(2)}s`;
+    el.style.animationDuration = festeDauer
+      ? `${festeDauer}s`
+      : `${clamp(900 / rpm, 0.25, 6).toFixed(2)}s`;
     el.style.animationPlayState = "running";
   }
 
@@ -1231,7 +1243,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         fill: #7E8CA0; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
       }
       .sg-value {
-        fill: ${NEUTRAL}; font-size: 22px; font-weight: 650;
+        fill: ${NEUTRAL}; font-size: 19px; font-weight: 650;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums; transition: fill 400ms ease;
       }

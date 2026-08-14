@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.8.0**
+**Version 0.8.1**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -211,8 +211,8 @@ Bewegung zeigt an, dass etwas tatsächlich arbeitet. Steht ein Bauteil still, st
 | Element | Bewegt sich, wenn |
 |---|---|
 | Lüfter 1 und 2 | Drehzahl größer null, Geschwindigkeit nach echter Drehzahl |
-| Primärpumpe | Drehzahl größer null, Geschwindigkeit nach echter Drehzahl |
-| Heizkreispumpen | Pumpenstatus an, feste Geschwindigkeit |
+| Primärpumpe | Drehzahl größer null, feste ruhige Geschwindigkeit |
+| Heizkreispumpen | Pumpenstatus an, feste ruhige Geschwindigkeit |
 | Sammelleitungen oben und unten | Primärpumpe oder Durchfluss größer null |
 | Stichleitung zum Puffer | zusätzlich das Dreiwegeventil auf Heizen |
 | Stichleitung zum Speicher | zusätzlich das Dreiwegeventil auf Warmwasser |
@@ -222,7 +222,7 @@ Bewegung zeigt an, dass etwas tatsächlich arbeitet. Steht ein Bauteil still, st
 | SG Ready | in Zustand 1 Sperre und Zustand 4 Anlaufbefehl |
 | Störungsbalken | solange ein Fehlercode anliegt |
 
-Die Heizkreispumpen melden bei HeishaMon nur an oder aus, keine Drehzahl. Sie drehen sich daher mit fester Geschwindigkeit, im Gegensatz zu Lüftern und Primärpumpe.
+Alle Pumpen drehen mit derselben ruhigen Geschwindigkeit, drei Sekunden pro Umdrehung. Sie sollen nur zeigen, dass gefördert wird, nicht wie schnell. Die tatsächliche Drehzahl der Primärpumpe steht als Zahl daneben. Nur die Lüfter drehen nach echter Drehzahl, dort ist der Unterschied zwischen leisem und vollem Betrieb gut sichtbar.
 
 Die gesamte Bewegung lässt sich im Editor mit der Option **Bewegung anzeigen** abschalten. Ist im Betriebssystem reduzierte Bewegung eingestellt, schaltet sich die Animation ohnehin ab.
 
@@ -232,12 +232,14 @@ Die gesamte Bewegung lässt sich im Editor mit der Option **Bewegung anzeigen** 
 
 Die Karte zeigt die vier Betriebszustände nach der Schnittstellenbeschreibung des Bundesverbands Wärmepumpe:
 
-| Zustand | Kontakte K1:K2 | Bedeutung | Farbe |
-|---|---|---|---|
-| 1 | 1:0 | Sperre, höchstens zwei Stunden | rot |
-| 2 | 0:0 | Energieeffizienter Normalbetrieb | grau |
-| 3 | 0:1 | Einschaltempfehlung, verstärkter Betrieb | bernstein |
-| 4 | 1:1 | Anlaufbefehl | grün |
+| Zustand | K1:K2 | Anzeige in der Karte | Offizieller Begriff | Farbe |
+|---|---|---|---|---|
+| 1 | 1:0 | Stopp | Sperre, höchstens zwei Stunden | rot |
+| 2 | 0:0 | Normal | Energieeffizienter Normalbetrieb | grau |
+| 3 | 0:1 | PV Überschuss 1 | Einschaltempfehlung | bernstein |
+| 4 | 1:1 | PV Überschuss 2 | Anlaufbefehl | grün |
+
+Die Anzeige ist bewusst nach dem praktischen Zweck benannt statt nach der Norm. Zustand 3 ist eine Empfehlung, die Wärmepumpe entscheidet selbst. Zustand 4 ist ein verbindlicher Anlaufbefehl mit verstärktem Betrieb. In einer Anlage mit Photovoltaik entspricht das zwei Stufen von Überschuss.
 
 K1 ist der Sperrkontakt, K2 der Anlaufkontakt.
 
