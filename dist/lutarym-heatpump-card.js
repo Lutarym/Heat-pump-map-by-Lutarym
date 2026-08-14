@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "0.8.1";
+const CARD_VERSION = "0.8.3";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -21,10 +21,10 @@ const L = {
   TANK_BOTTOM: 540,
   RAD_TOP: 300,
   RAD_BOTTOM: 470,
-  UNIT_TOP: 104,
+  UNIT_TOP: 20,
   UNIT_BOTTOM: 640,
   CAP_Y: 648,
-  SG_Y: 584,
+  SG_Y: 590,
 };
 
 /* ------------------------------------------------------------------ *
@@ -196,6 +196,7 @@ const TOPIC_TO_FIELD = {
   top20: "three_way_valve",
   top59: "room_heater",
   top46: "buffer_temp",
+  top7: "buffer_target",
   top36: "hk1_water",
   top42: "hk1_water_target",
   top56: "hk1_room",
@@ -320,6 +321,7 @@ const ENTITY_FIELDS = [
   { key: "water_pressure", label: "Wasserdruck", group: "Primärkreis", hint: "TOP115" },
 
   { key: "buffer_temp", label: "Puffertemperatur", group: "Heizungspuffer", hint: "TOP46" },
+  { key: "buffer_target", label: "Puffer Zieltemperatur", group: "Heizungspuffer", hint: "TOP7, Soll Vorlauf" },
   { key: "room_heater", label: "Heizstab Heizung", group: "Heizungspuffer", hint: "TOP59" },
 
   { key: "hk1_water", label: "HK1 Wassertemperatur", group: "Heizkreis 1", hint: "TOP36" },
@@ -565,8 +567,8 @@ class LutarymHeatpumpCard extends HTMLElement {
   _svg() {
     const two = this._config.fan_count === 2;
     const fans = two
-      ? `${this._fan("fan1", 180, 282, 58)}${this._fan("fan2", 180, 474, 58)}`
-      : this._fan("fan1", 180, 380, 100);
+      ? `${this._fan("fan1", 180, 290, 58)}${this._fan("fan2", 180, 478, 58)}`
+      : this._fan("fan1", 180, 384, 100);
 
     const F = L.FLOW_Y;
     const R = L.RET_Y;
@@ -624,40 +626,34 @@ class LutarymHeatpumpCard extends HTMLElement {
       <path class="pipe" id="pipe-dhw-out" d="M1425 ${B} V ${R}"/>
       <path class="flowdots" id="dots-dhw" d="M1425 ${F} V ${T} M1425 ${B} V ${R}"/>
 
-      <!-- Außenfühler als eigenes Gerät, per Signalleitung angebunden -->
-      <path class="signal" d="M145 76 V ${L.UNIT_TOP}"/>
-      <g id="sensor-box">
-        <rect x="40" y="6" width="210" height="70" rx="12"
-              fill="url(#casing)" stroke="#33415A" stroke-width="2"/>
-        <rect x="40" y="6" width="210" height="70" rx="12" fill="url(#glass)"/>
-        <text class="unit-label" x="60" y="32">Außenfühler</text>
-        <text class="sensor-value" id="outside-v" x="60" y="64">--</text>
-        <rect x="216" y="18" width="12" height="38" rx="6" fill="#1A2330"
-              stroke="#33415A" stroke-width="1.5"/>
-        <circle cx="222" cy="62" r="10" fill="#1A2330" stroke="#33415A" stroke-width="1.5"/>
-        <circle cx="222" cy="62" r="6.5" id="mini-bulb" fill="${NEUTRAL}"/>
-        <rect x="218" y="48" width="8" height="8" id="mini-neck" fill="${NEUTRAL}"/>
-        <rect x="218" y="52" width="8" height="0" rx="4" id="mini-fill" fill="${NEUTRAL}"/>
-      </g>
-
       <!-- Außengerät -->
       <g class="unit">
-        <rect x="40" y="${L.UNIT_TOP}" width="280" height="536" rx="16"
+        <rect x="40" y="${L.UNIT_TOP}" width="280" height="620" rx="16"
               fill="url(#casing)" stroke="#33415A" stroke-width="2"/>
-        <rect id="unit-glow" x="40" y="${L.UNIT_TOP}" width="280" height="536" rx="16"
+        <rect id="unit-glow" x="40" y="${L.UNIT_TOP}" width="280" height="620" rx="16"
               fill="none" stroke="#E0762E" stroke-width="2" opacity="0"/>
-        <rect x="40" y="${L.UNIT_TOP}" width="280" height="536" rx="16" fill="url(#glass)"/>
+        <rect x="40" y="${L.UNIT_TOP}" width="280" height="620" rx="16" fill="url(#glass)"/>
 
-        <circle cx="68" cy="140" r="9" id="power-led" fill="#2C3646"/>
-        <text class="unit-label" x="88" y="145">Betrieb</text>
-        <g id="defrost-badge" class="badge" transform="translate(246 140)">
+        <circle cx="68" cy="56" r="9" id="power-led" fill="#2C3646"/>
+        <text class="unit-label" x="88" y="61">Betrieb</text>
+        <g id="defrost-badge" class="badge" transform="translate(246 56)">
           <rect x="-62" y="-16" width="124" height="32" rx="16"
                 fill="#0E2A4A" stroke="#3E9BE0" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Abtauung</text>
         </g>
 
-        <text class="unit-label" x="180" y="180" text-anchor="middle">Verdichter</text>
-        <text class="unit-value" id="comp-v" x="180" y="206" text-anchor="middle">--</text>
+        <text class="unit-label" x="110" y="96" text-anchor="middle">Außen</text>
+        <text class="unit-value" id="outside-v" x="110" y="124"
+              text-anchor="middle">--</text>
+        <text class="unit-label" x="250" y="96" text-anchor="middle">Verdichter</text>
+        <text class="unit-value" id="comp-v" x="250" y="124" text-anchor="middle">--</text>
+
+        <text class="unit-label" x="110" y="164" text-anchor="middle">Vorlauf</text>
+        <text class="unit-value" id="unit-flow-v" x="110" y="192"
+              text-anchor="middle">--</text>
+        <text class="unit-label" x="250" y="164" text-anchor="middle">Rücklauf</text>
+        <text class="unit-value" id="unit-ret-v" x="250" y="192"
+              text-anchor="middle">--</text>
 
         ${fans}
 
@@ -694,7 +690,8 @@ class LutarymHeatpumpCard extends HTMLElement {
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
         <rect x="448" y="258" width="174" height="274" rx="20" fill="url(#bufferFill)"/>
         <rect x="448" y="258" width="174" height="274" rx="20" fill="url(#glass)"/>
-        <text class="value-l" id="buf-v" x="535" y="400" text-anchor="middle">--</text>
+        <text class="value-l" id="buf-v" x="535" y="392" text-anchor="middle">--</text>
+        <text class="value-sp" id="buf-sp" x="535" y="420" text-anchor="middle"></text>
         <g id="roomheater-badge" class="badge" transform="translate(535 486)">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
@@ -786,15 +783,13 @@ class LutarymHeatpumpCard extends HTMLElement {
         <g stroke="#0D1219" stroke-width="7" opacity="0.5">${fins}</g>
         <rect x="${x1}" y="${RT}" width="${x2 - x1}" height="${RB - RT}" rx="10" fill="url(#glass)"/>
 
-        <g transform="translate(${mid - 52} ${RT + 90})">
-          <rect x="-48" y="-26" width="96" height="46" rx="9" fill="#0B1017" opacity="0.88"/>
-          <text class="tag-l" x="0" y="-10" text-anchor="middle">Wasser</text>
-          <text class="tag-v" id="hk${n}-water-v" x="0" y="12" text-anchor="middle">--</text>
-        </g>
-        <g transform="translate(${mid + 52} ${RT + 90})">
-          <rect x="-48" y="-26" width="96" height="46" rx="9" fill="#0B1017" opacity="0.88"/>
-          <text class="tag-l" x="0" y="-10" text-anchor="middle">Raum</text>
-          <text class="tag-v" id="hk${n}-room-v" x="0" y="12" text-anchor="middle">--</text>
+        <g transform="translate(${mid} ${RT + 85})">
+          <rect x="-100" y="-42" width="200" height="84" rx="10"
+                fill="#0B1017" opacity="0.9"/>
+          <text class="tag-l" x="-86" y="-14">Wasser</text>
+          <text class="tag-v" id="hk${n}-water-v" x="86" y="-12" text-anchor="end">--</text>
+          <text class="tag-l" x="-86" y="24">Raum</text>
+          <text class="tag-v" id="hk${n}-room-v" x="86" y="26" text-anchor="end">--</text>
         </g>
 
         <text class="cap" x="${mid}" y="${L.CAP_Y}" text-anchor="middle">Heizkreis ${n}</text>
@@ -884,21 +879,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     const oMax = Number(this._config.outdoor_max);
     const outColor = thermalColor(outside, oMin, oMax);
     set("outside-v", outside === null ? "--" : `${fmt(outside)} °C`);
-    const wert = sr.getElementById("outside-v");
-    if (wert) wert.setAttribute("fill", outColor);
-    ["mini-bulb", "mini-neck"].forEach((id) => {
-      const el = sr.getElementById(id);
-      if (el) el.setAttribute("fill", outColor);
-    });
-    const saeule = sr.getElementById("mini-fill");
-    if (saeule) {
-      const ratio =
-        outside === null ? 0 : clamp((outside - oMin) / ((oMax - oMin) || 1), 0, 1);
-      const h = Math.round(34 * ratio);
-      saeule.setAttribute("fill", outColor);
-      saeule.setAttribute("height", String(h));
-      saeule.setAttribute("y", String(52 - h));
-    }
+    const aussenEl = sr.getElementById("outside-v");
+    if (aussenEl) aussenEl.setAttribute("fill", outColor);
 
     /* Außengerät */
     const comp = numState(hass, this._e("compressor"));
@@ -947,9 +929,19 @@ class LutarymHeatpumpCard extends HTMLElement {
     ["pipe-flow", "pipe-buf-in", "pipe-dhw-in"].forEach((id) => stroke(id, col(flow)));
     ["pipe-return", "pipe-buf-out", "pipe-dhw-out"].forEach((id) => stroke(id, col(ret)));
 
+    // Beide Temperaturen zusaetzlich als Zahl im Gehaeuse, thermisch gefaerbt.
+    set("unit-flow-v", flow === null ? "--" : `${fmt(flow)} °C`);
+    set("unit-ret-v", ret === null ? "--" : `${fmt(ret)} °C`);
+    const flowEl = sr.getElementById("unit-flow-v");
+    if (flowEl) flowEl.setAttribute("fill", col(flow));
+    const retEl = sr.getElementById("unit-ret-v");
+    if (retEl) retEl.setAttribute("fill", col(ret));
+
     paint("bg-top", col(buf));
     paint("bg-bottom", col(buf === null ? null : buf - 4));
     set("buf-v", buf === null ? "--" : `${fmt(buf)} °C`);
+    const bufSp = numState(hass, this._e("buffer_target"));
+    set("buf-sp", bufSp === null ? "" : `Ziel ${fmt(bufSp, 0)} °C`);
     abzeichen("roomheater-badge", isOn(hass, this._e("room_heater")) === true);
 
     const dhwSp = numState(hass, this._e("dhw_setpoint"));
@@ -1040,9 +1032,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       `hk${n}-water-v`,
       water === null
         ? "--"
-        : `${fmt(water, 0)}°${target === null ? "" : ` / ${fmt(target, 0)}°`}`
+        : `${fmt(water, 0)}${target === null ? "" : ` / ${fmt(target, 0)}`} °C`
     );
-    set(`hk${n}-room-v`, room === null ? "--" : `${fmt(room)}°`);
+    set(`hk${n}-room-v`, room === null ? "--" : `${fmt(room)} °C`);
 
     const rotor = sr.getElementById(`hk${n}-rotor`);
     if (rotor) {
@@ -1205,6 +1197,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       }
       .unit-value {
         fill: #E8EDF4; font-size: 20px; font-weight: 600;
+        transition: fill 600ms ease;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums;
       }
@@ -1226,7 +1219,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums;
       }
-      .value-sp { fill: rgba(255,255,255,0.78); font-size: 13px; }
+      .value-sp { fill: rgba(255,255,255,0.85); font-size: 17px; }
       .coil { fill: none; stroke: rgba(255,255,255,0.28); stroke-width: 5; stroke-linecap: round; }
       .tag-l { fill: #8494AA; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
       .tag-v {

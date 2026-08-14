@@ -2,25 +2,30 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.8.1**
+**Version 0.8.3**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
 ## Was die Karte zeigt
 
-Das Schema ist im Breitformat angelegt, alle Baugruppen stehen in einer Reihe. Von links nach rechts: Außenfühler, Außengerät, Pumpe, Puffer, Manometer, Heizkreis 1, Heizkreis 2, Dreiwegeventil, Warmwasserspeicher. Oben verläuft der Vorlauf, unten der Rücklauf.
+Das Schema ist im Breitformat angelegt, alle Baugruppen stehen in einer Reihe. Von links nach rechts: Außengerät, Pumpe, Puffer, Manometer, Heizkreis 1, Heizkreis 2, Dreiwegeventil, Warmwasserspeicher. Oben verläuft der Vorlauf, unten der Rücklauf.
 
 Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 
-**Außenfühler** als eigenes kleines Gerät oben links, über eine gestrichelte Signalleitung mit dem Außengerät verbunden. Gestrichelt, weil es eine Messleitung ist und keine Rohrleitung.
+**Außengerät** mit grüner Betriebs-LED, vier Kennwerten in zwei Spalten, ein oder zwei Lüftern, SG-Ready-Anzeige und dem Hinweis bei laufender Abtauung. Alle Werte stehen ohne Rahmen direkt im Gehäuse.
 
-**Außengerät** mit grüner Betriebs-LED, Verdichterdrehzahl, ein oder zwei Lüftern, SG-Ready-Anzeige und dem Hinweis bei laufender Abtauung.
+| Links | Rechts |
+|---|---|
+| Außentemperatur | Verdichterdrehzahl |
+| Vorlauftemperatur | Rücklauftemperatur |
+
+Vorlauf und Rücklauf sind thermisch eingefärbt, in denselben Farben wie die Leitungen. Die Spreizung ist damit auch als Zahl ablesbar, nicht nur an der Leitungsfarbe.
 
 **Primärpumpe** mit Drehzahl und Durchflussmenge.
 
-**Heizungspuffer** als großer Speicher, eingefärbt nach seiner Temperatur.
+**Heizungspuffer** als großer Speicher, eingefärbt nach seiner Temperatur, darunter die Zieltemperatur.
 
-**Heizkreis 1 und 2**, jeder mit eigener Pumpe, eigenem Heizkörper, eigener Wasser- und Raumtemperatur und eigenem Sollwertregler.
+**Heizkreis 1 und 2**, jeder mit eigener Pumpe und eigenem Heizkörper. Auf dem Heizkörper liegt eine Tafel mit Wassertemperatur samt Sollwert und der Raumtemperatur.
 
 **Wasserdruck** als Manometer. Es erscheint nur, wenn ein Wert vorliegt, sonst bleibt die Stelle leer.
 
@@ -124,6 +129,7 @@ entities:
   three_way_valve: sensor.heishamon_top20
   water_pressure: sensor.heishamon_top115
   buffer_temp: sensor.heishamon_top46
+  buffer_target: sensor.heishamon_top7
   room_heater: sensor.heishamon_top59
   hk1_water: sensor.heishamon_top36
   hk1_water_target: sensor.heishamon_top42
@@ -179,6 +185,7 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `three_way_valve` | TOP20 | Dreiwegeventil |
 | `water_pressure` | TOP115 | Wasserdruck |
 | `buffer_temp` | TOP46 | Puffertemperatur |
+| `buffer_target` | TOP7 | Puffer Zieltemperatur |
 | `room_heater` | TOP59 | Heizstab Heizung |
 | `hk1_water` | TOP36 | HK1 Wassertemperatur |
 | `hk1_water_target` | TOP42 | HK1 Wasser Sollwert |
@@ -196,13 +203,7 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `mode_select` | SetOperationMode | Betriebsart umschalten |
 | `heating_switch` | eigene Entität | Heizung ein und aus |
 
-## Farbskalen
-
-Die Karte verwendet zwei getrennte Skalen, weil Heizungs- und Außentemperaturen in völlig verschiedenen Bereichen liegen.
-
-Die Skala läuft von Tiefblau über Cyan und Bernstein bis Rot. Werte unterhalb des Minimums bleiben blau, Werte oberhalb des Maximums bleiben rot.
-
-Bei einer Fußbodenheizung lohnt es sich, `scale_max` auf etwa 40 zu senken. Sonst bleibt fast alles im blauen Bereich, und Unterschiede sind kaum sichtbar.
+HeishaMon kennt keinen eigenen Puffer-Sollwert. `buffer_target` nutzt deshalb TOP7, die Soll-Vorlauftemperatur, auf die der Puffer geladen wird.
 
 ## Animation
 
