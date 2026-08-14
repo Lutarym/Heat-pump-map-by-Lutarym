@@ -7,24 +7,24 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "0.9.1";
+const CARD_VERSION = "0.9.2";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
  * ------------------------------------------------------------------ */
 const L = {
   W: 1740,
-  H: 700,
-  FLOW_Y: 200,
-  RET_Y: 600,
-  TANK_TOP: 250,
-  TANK_BOTTOM: 540,
-  RAD_TOP: 300,
-  RAD_BOTTOM: 470,
-  UNIT_TOP: 110,
-  UNIT_BOTTOM: 560,
-  CAP_Y: 648,
-  SG_Y: 484,
+  H: 820,
+  FLOW_Y: 240,
+  RET_Y: 700,
+  TANK_TOP: 290,
+  TANK_BOTTOM: 640,
+  RAD_TOP: 340,
+  RAD_BOTTOM: 540,
+  UNIT_TOP: 60,
+  UNIT_BOTTOM: 760,
+  CAP_Y: 768,
+  SG_Y: 690,
 }
 
 /* ------------------------------------------------------------------ *
@@ -566,11 +566,10 @@ class LutarymHeatpumpCard extends HTMLElement {
 
   _svg() {
     const two = this._config.fan_count === 2;
-    // Luefter stehen nebeneinander. Dadurch bleibt das Gehaeuse flach
-    // und die Luefter koennen deutlich groesser sein.
+    // Luefter uebereinander, wie beim echten Aussengeraet.
     const fans = two
-      ? `${this._fan("fan1", 140, 350, 76)}${this._fan("fan2", 320, 350, 76)}`
-      : this._fan("fan1", 230, 350, 96);
+      ? `${this._fan("fan1", 190, 300, 96)}${this._fan("fan2", 190, 548, 96)}`
+      : this._fan("fan1", 190, 420, 120);
 
     const F = L.FLOW_Y;
     const R = L.RET_Y;
@@ -609,20 +608,20 @@ class LutarymHeatpumpCard extends HTMLElement {
           <stop offset="100%" id="rad2-bottom" stop-color="${NEUTRAL}"/>
         </linearGradient>
         <clipPath id="bufClip">
-          <rect x="548" y="258" width="174" height="274" rx="20"/>
+          <rect x="548" y="298" width="174" height="334" rx="20"/>
         </clipPath>
         <clipPath id="dhwClip">
-          <rect x="1448" y="258" width="154" height="274" rx="28"/>
+          <rect x="1448" y="298" width="154" height="334" rx="28"/>
         </clipPath>
       </defs>
 
       <!-- Sammelleitungen -->
-      <path class="pipe-shell" d="M420 ${R} H 1525"/>
-      <path class="pipe" id="pipe-return" d="M420 ${R} H 1525"/>
-      <path class="pipe-shell" d="M420 ${F} H 1525"/>
-      <path class="pipe" id="pipe-flow" d="M420 ${F} H 1525"/>
-      <path class="flowdots rev" id="dots-primary" d="M420 ${R} H 1525"/>
-      <path class="flowdots" id="dots-primary2" d="M420 ${F} H 1525"/>
+      <path class="pipe-shell" d="M340 ${R} H 1525"/>
+      <path class="pipe" id="pipe-return" d="M340 ${R} H 1525"/>
+      <path class="pipe-shell" d="M340 ${F} H 1525"/>
+      <path class="pipe" id="pipe-flow" d="M340 ${F} H 1525"/>
+      <path class="flowdots rev" id="dots-primary" d="M340 ${R} H 1525"/>
+      <path class="flowdots" id="dots-primary2" d="M340 ${F} H 1525"/>
 
       <path class="pipe-shell" d="M630 ${F} V ${T} M630 ${B} V ${R}"/>
       <path class="pipe" id="pipe-buf-in" d="M630 ${F} V ${T}"/>
@@ -636,55 +635,55 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Außengerät -->
       <g class="unit">
-        <rect x="40" y="110" width="380" height="450" rx="16"
+        <rect x="40" y="${L.UNIT_TOP}" width="300" height="700" rx="16"
               fill="url(#casing)" stroke="#33415A" stroke-width="2"/>
-        <rect id="unit-glow" x="40" y="110" width="380" height="450" rx="16"
+        <rect id="unit-glow" x="40" y="${L.UNIT_TOP}" width="300" height="700" rx="16"
               fill="none" stroke="#E0762E" stroke-width="2" opacity="0"/>
-        <rect x="40" y="110" width="380" height="450" rx="16" fill="url(#glass)"/>
+        <rect x="40" y="${L.UNIT_TOP}" width="300" height="700" rx="16" fill="url(#glass)"/>
 
-        <circle cx="70" cy="146" r="9" id="power-led" fill="#2C3646"/>
-        <text class="unit-label" x="90" y="151">Betrieb</text>
-        <g id="defrost-badge" class="badge" transform="translate(346 146)">
+        <circle cx="66" cy="96" r="9" id="power-led" fill="#2C3646"/>
+        <text class="unit-label" x="86" y="101">Betrieb</text>
+        <g id="defrost-badge" class="badge" transform="translate(250 96)">
           <rect x="-62" y="-16" width="124" height="32" rx="16"
                 fill="#0E2A4A" stroke="#3E9BE0" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Abtauung</text>
         </g>
 
-        <text class="unit-label" x="135" y="190" text-anchor="middle">Außen</text>
-        <text class="unit-value" id="outside-v" x="135" y="218"
+        <text class="unit-label" x="115" y="140" text-anchor="middle">Außen</text>
+        <text class="unit-value" id="outside-v" x="115" y="168"
               text-anchor="middle">--</text>
-        <text class="unit-label" x="325" y="190" text-anchor="middle">Verdichter</text>
-        <text class="unit-value" id="comp-v" x="325" y="218" text-anchor="middle">--</text>
+        <text class="unit-label" x="265" y="140" text-anchor="middle">Verdichter</text>
+        <text class="unit-value" id="comp-v" x="265" y="168" text-anchor="middle">--</text>
 
         ${fans}
 
         <g id="sg-group" opacity="0">
-          <text class="sg-label" x="230" y="${SG}" text-anchor="middle">SG Ready</text>
-          <g transform="translate(230 ${SG + 10})">
+          <text class="sg-label" x="190" y="${SG}" text-anchor="middle">SG Ready</text>
+          <g transform="translate(190 ${SG + 10})">
             <rect x="-60" y="0" width="26" height="12" rx="6" id="sg-seg-1" fill="#586A88"/>
             <rect x="-30" y="0" width="26" height="12" rx="6" id="sg-seg-2" fill="#586A88"/>
             <rect x="4" y="0" width="26" height="12" rx="6" id="sg-seg-3" fill="#586A88"/>
             <rect x="34" y="0" width="26" height="12" rx="6" id="sg-seg-4" fill="#586A88"/>
           </g>
-          <text class="sg-value" id="sg-text" x="230" y="${SG + 46}"
+          <text class="sg-value" id="sg-text" x="190" y="${SG + 46}"
                 text-anchor="middle">--</text>
         </g>
       </g>
 
-      <!-- Vorlauf am Ausgang, Rücklauf am Eingang der Wärmepumpe -->
-      <g transform="translate(480 ${F})">
+      <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
+      <g transform="translate(410 ${F})">
         <rect x="-56" y="-22" width="112" height="44" rx="10" fill="#0B1017" opacity="0.92"/>
         <text class="tag-v" id="unit-flow-v" x="0" y="7" text-anchor="middle">--</text>
       </g>
-      <g transform="translate(480 ${R})">
+      <g transform="translate(410 ${R})">
         <rect x="-56" y="-22" width="112" height="44" rx="10" fill="#0B1017" opacity="0.92"/>
         <text class="tag-v" id="unit-ret-v" x="0" y="7" text-anchor="middle">--</text>
       </g>
 
       <!-- Primärpumpe -->
       <g>
-        <text class="value-s" id="pump-v" x="780" y="540" text-anchor="middle">--</text>
-        <text class="unit-value" id="flow-v" x="780" y="564" text-anchor="middle">--</text>
+        <text class="value-s" id="pump-v" x="780" y="640" text-anchor="middle">--</text>
+        <text class="unit-value" id="flow-v" x="780" y="664" text-anchor="middle">--</text>
         <g transform="translate(780 ${R})">
           <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <g class="rotor" id="pump-rotor">
@@ -697,14 +696,14 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Heizungspuffer -->
       <g>
-        <rect x="540" y="${T}" width="190" height="290" rx="26"
+        <rect x="540" y="${T}" width="190" height="350" rx="26"
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
-        <rect x="548" y="258" width="174" height="274" rx="20" fill="url(#bufferFill)"/>
-        <g clip-path="url(#bufClip)">${this._waves("buf-waves", 548, 258, 174, 274)}</g>
-        <rect x="548" y="258" width="174" height="274" rx="20" fill="url(#glass)"/>
-        <text class="value-l" id="buf-v" x="635" y="392" text-anchor="middle">--</text>
-        <text class="value-sp" id="buf-sp" x="635" y="420" text-anchor="middle"></text>
-        <g id="roomheater-badge" class="badge" transform="translate(635 486)">
+        <rect x="548" y="298" width="174" height="334" rx="20" fill="url(#bufferFill)"/>
+        <g clip-path="url(#bufClip)">${this._waves("buf-waves", 548, 298, 174, 334, 6)}</g>
+        <rect x="548" y="298" width="174" height="334" rx="20" fill="url(#glass)"/>
+        <text class="value-l" id="buf-v" x="635" y="460" text-anchor="middle">--</text>
+        <text class="value-sp" id="buf-sp" x="635" y="488" text-anchor="middle"></text>
+        <g id="roomheater-badge" class="badge" transform="translate(635 586)">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
@@ -712,9 +711,9 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="cap" x="635" y="${C}" text-anchor="middle">Puffer</text>
       </g>
 
-      <!-- Wasserdruck, nur sichtbar wenn ein Wert vorliegt -->
+      <!-- Wasserdruck -->
       <g id="press-group" opacity="0">
-        <text class="value-s" id="press-v" x="1390" y="560" text-anchor="middle">--</text>
+        <text class="value-s" id="press-v" x="1390" y="660" text-anchor="middle">--</text>
         <g transform="translate(1390 ${R})">
           <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <circle r="18" fill="none" stroke="#26303F" stroke-width="3"/>
@@ -730,23 +729,23 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Dreiwegeventil -->
       <g>
-        <text class="value-s" id="valve-v" x="1525" y="176" text-anchor="middle">--</text>
-        <rect x="1507" y="208" width="36" height="36" rx="8"
+        <text class="value-s" id="valve-v" x="1525" y="216" text-anchor="middle">--</text>
+        <rect x="1507" y="248" width="36" height="36" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="2"
-              transform="rotate(45 1525 226)"/>
-        <circle cx="1525" cy="226" r="9" id="valve-dot" fill="${NEUTRAL}"/>
+              transform="rotate(45 1525 266)"/>
+        <circle cx="1525" cy="266" r="9" id="valve-dot" fill="${NEUTRAL}"/>
       </g>
 
       <!-- Warmwasserspeicher -->
       <g>
-        <rect x="1440" y="${T}" width="170" height="290" rx="34"
+        <rect x="1440" y="${T}" width="170" height="350" rx="34"
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
-        <rect x="1448" y="258" width="154" height="274" rx="28" fill="url(#dhwFill)"/>
-        <g clip-path="url(#dhwClip)">${this._waves("dhw-waves", 1448, 258, 154, 274)}</g>
-        <rect x="1448" y="258" width="154" height="274" rx="28" fill="url(#glass)"/>
-        <text class="value-l" id="dhw-v" x="1525" y="330" text-anchor="middle">--</text>
-        <text class="value-sp" id="dhw-sp" x="1525" y="354" text-anchor="middle"></text>
-        <g id="dhwheater-badge" class="badge" transform="translate(1525 504)">
+        <rect x="1448" y="298" width="154" height="334" rx="28" fill="url(#dhwFill)"/>
+        <g clip-path="url(#dhwClip)">${this._waves("dhw-waves", 1448, 298, 154, 334, 6)}</g>
+        <rect x="1448" y="298" width="154" height="334" rx="28" fill="url(#glass)"/>
+        <text class="value-l" id="dhw-v" x="1525" y="440" text-anchor="middle">--</text>
+        <text class="value-sp" id="dhw-sp" x="1525" y="468" text-anchor="middle"></text>
+        <g id="dhwheater-badge" class="badge" transform="translate(1525 604)">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
@@ -796,7 +795,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <g stroke="#0D1219" stroke-width="7" opacity="0.5">${fins}</g>
         <rect x="${x1}" y="${RT}" width="${x2 - x1}" height="${RB - RT}" rx="10" fill="url(#glass)"/>
 
-        <g transform="translate(${mid} ${RT + 85})">
+        <g transform="translate(${mid} ${RT + 100})">
           <rect x="-100" y="-42" width="200" height="84" rx="10"
                 fill="#0B1017" opacity="0.9"/>
           <text class="tag-l" x="-86" y="-14">Wasser</text>
@@ -1035,10 +1034,12 @@ class LutarymHeatpumpCard extends HTMLElement {
 
     /* Durchflussanimation */
     // Umgewaelzt wird, sobald Pumpe, Durchfluss oder Verdichter arbeiten.
+    // Ist keiner dieser Werte zugeordnet, laesst sich der Zustand nicht
+    // ermitteln. Dann laeuft die Bewegung, statt eine tote Karte zu zeigen.
+    const messwerte = [pumpRpm, flowRate, comp];
+    const unbekannt = messwerte.every((v) => v === null);
     const primaer =
-      (pumpRpm !== null && pumpRpm > 0) ||
-      (flowRate !== null && flowRate > 0) ||
-      (comp !== null && comp > 0);
+      unbekannt || messwerte.some((v) => v !== null && v > 0);
     flowing(["dots-primary2"], primaer, col(flow));
     flowing(["dots-primary"], primaer, col(ret));
     flowing(["dots-buf"], primaer && !zuWarmwasser, col(flow));
@@ -1277,13 +1278,13 @@ class LutarymHeatpumpCard extends HTMLElement {
       .value-sp { fill: rgba(255,255,255,0.85); font-size: 17px; }
       /* Wasserbewegung in den Speichern. Laeuft nur, wenn beladen wird. */
       .waves path {
-        fill: none; stroke: #FFFFFF; stroke-width: 3; stroke-linecap: round;
+        fill: none; stroke: #FFFFFF; stroke-width: 4; stroke-linecap: round;
       }
       .waves {
         opacity: 0; animation: lhc-wave 3s linear infinite;
         animation-play-state: paused; transition: opacity 600ms ease;
       }
-      .waves.is-on { opacity: 0.32; animation-play-state: running; }
+      .waves.is-on { opacity: 0.45; animation-play-state: running; }
       @keyframes lhc-wave { to { transform: translateX(-44px); } }
       .tag-l { fill: #8494AA; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
       .tag-v {

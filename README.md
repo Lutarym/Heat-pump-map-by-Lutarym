@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.9.1**
+**Version 0.9.2**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -12,7 +12,7 @@ Das Schema ist im Breitformat angelegt, alle Baugruppen stehen in einer Reihe. V
 
 Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 
-**Außengerät** mit grüner Betriebs-LED, Außentemperatur und Verdichterdrehzahl, ein oder zwei nebeneinander stehenden Lüftern, SG-Ready-Anzeige und dem Hinweis bei laufender Abtauung. Alle Werte stehen ohne Rahmen direkt im Gehäuse.
+**Außengerät** mit grüner Betriebs-LED, Außentemperatur und Verdichterdrehzahl, ein oder zwei übereinander stehenden Lüftern, SG-Ready-Anzeige und dem Hinweis bei laufender Abtauung. Alle Werte stehen ohne Rahmen direkt im Gehäuse.
 
 **Vorlauf und Rücklauf** als Werte auf den Leitungen, direkt am Ausgang und am Eingang der Wärmepumpe, ohne Beschriftung. Welcher Wert welcher ist, sagt die Lage: oben der Vorlauf, unten der Rücklauf. Beide sind thermisch eingefärbt, in derselben Farbe wie ihre Leitung.
 
