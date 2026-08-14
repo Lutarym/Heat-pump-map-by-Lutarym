@@ -2,27 +2,32 @@
  * lutarym-heatpump-card
  *
  * Anlagenschema fuer Panasonic Aquarea via HeishaMon.
+ * Zwei Ebenen: oben die Erzeugung, unten der Heizkreisverteiler.
  *
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "0.2.0";
+const CARD_VERSION = "0.3.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
  *
- *  Alle waagerechten Bezugslinien an einer Stelle. Die Beschriftungen
- *  liegen bewusst unter der Ruecklaufleitung, damit sie nicht mehr
- *  von Leitungen verdeckt werden.
+ *  Alle waagerechten Bezugslinien an einer Stelle. Beschriftungen
+ *  liegen bewusst zwischen den Leitungen, nie darauf.
  * ------------------------------------------------------------------ */
 const L = {
   W: 1240,
-  H: 600,
-  FLOW_Y: 150,
-  RET_Y: 500,
+  H: 860,
+  FLOW_Y: 150, // Primaervorlauf
+  RET_Y: 470, // Primaerruecklauf
   TANK_TOP: 196,
-  TANK_BOTTOM: 444,
-  CAP_Y: 545,
+  TANK_BOTTOM: 420,
+  CAP1_Y: 512, // Beschriftungen Ebene 1
+  HK_FLOW_Y: 600, // Vorlauf Heizkreisverteiler
+  RAD_TOP: 660,
+  RAD_BOTTOM: 760,
+  HK_RET_Y: 790, // Ruecklauf Heizkreisverteiler
+  CAP2_Y: 815, // Beschriftungen Ebene 2
 };
 
 /* ------------------------------------------------------------------ *
@@ -88,7 +93,7 @@ function isOn(hass, entityId) {
   const s = rawState(hass, entityId);
   if (s === null) return null;
   if (s === "on" || s === "true") return true;
-  if (s === "off" || s === "false") return false;
+  if (s === "off" || s === "false" || s === "unknown" || s === "unavailable") return false;
   const n = parseFloat(s);
   return Number.isNaN(n) ? null : n > 0;
 }
@@ -111,11 +116,6 @@ function escapeHtml(text) {
 
 /* ------------------------------------------------------------------ *
  *  Erkennung der Integration "Heishamon by Lutarym"
- *
- *  Die Integration setzt bei jeder Entity einen translation_key, bei
- *  Sensoren "top5", bei Kommandos "setheatpump". Der steht im
- *  Entitaetsregister und ueberlebt Umbenennungen. Faellt das Register
- *  aus, greift die Suche ueber das Namensschema der Entity-ID.
  * ------------------------------------------------------------------ */
 const INTEGRATION_DOMAIN = "heishamon_lutarym";
 
@@ -136,8 +136,20 @@ const TOPIC_TO_FIELD = {
   top65: "pump_speed",
   top20: "three_way_valve",
   top59: "room_heater",
-  top27: "heating_setpoint",
   top46: "buffer_temp",
+  // Heizkreis 1
+  top36: "hk1_water",
+  top42: "hk1_water_target",
+  top56: "hk1_room",
+  top124: "hk1_pump",
+  top27: "hk1_setpoint",
+  // Heizkreis 2
+  top37: "hk2_water",
+  top43: "hk2_water_target",
+  top57: "hk2_room",
+  top123: "hk2_pump",
+  top34: "hk2_setpoint",
+  // Warmwasser
   top10: "dhw_temp",
   top9: "dhw_setpoint",
   top58: "dhw_heater",
@@ -150,7 +162,8 @@ const COMMAND_TO_FIELD = {
 };
 
 const FIELD_DOMAIN = {
-  heating_setpoint: ["number", "input_number"],
+  hk1_setpoint: ["number", "input_number"],
+  hk2_setpoint: ["number", "input_number"],
   dhw_setpoint: ["number", "input_number"],
   power_switch: ["switch", "input_boolean"],
   heating_switch: ["switch", "input_boolean"],
@@ -245,14 +258,25 @@ const ENTITY_FIELDS = [
   { key: "fan2_rpm", label: "Luefter 2 Drehzahl", group: "Aussengeraet", hint: "TOP63" },
   { key: "defrost", label: "Abtauung laeuft", group: "Aussengeraet", hint: "TOP26" },
 
-  { key: "flow_temp", label: "Vorlauftemperatur", group: "Heizkreis", hint: "TOP6" },
-  { key: "return_temp", label: "Ruecklauftemperatur", group: "Heizkreis", hint: "TOP5" },
-  { key: "pump_speed", label: "Umwaelzpumpe Drehzahl", group: "Heizkreis", hint: "TOP65" },
-  { key: "three_way_valve", label: "Dreiwegeventil", group: "Heizkreis", hint: "TOP20" },
-  { key: "room_heater", label: "Heizstab Heizung", group: "Heizkreis", hint: "TOP59" },
-  { key: "heating_setpoint", label: "Heizung Sollwert", group: "Heizkreis", hint: "TOP27, number" },
+  { key: "flow_temp", label: "Vorlauftemperatur", group: "Primaerkreis", hint: "TOP6" },
+  { key: "return_temp", label: "Ruecklauftemperatur", group: "Primaerkreis", hint: "TOP5" },
+  { key: "pump_speed", label: "Primaerpumpe Drehzahl", group: "Primaerkreis", hint: "TOP65" },
+  { key: "three_way_valve", label: "Dreiwegeventil", group: "Primaerkreis", hint: "TOP20" },
 
   { key: "buffer_temp", label: "Puffertemperatur", group: "Heizungspuffer", hint: "TOP46" },
+  { key: "room_heater", label: "Heizstab Heizung", group: "Heizungspuffer", hint: "TOP59" },
+
+  { key: "hk1_water", label: "HK1 Wassertemperatur", group: "Heizkreis 1", hint: "TOP36" },
+  { key: "hk1_water_target", label: "HK1 Wasser Sollwert", group: "Heizkreis 1", hint: "TOP42" },
+  { key: "hk1_room", label: "HK1 Raumtemperatur", group: "Heizkreis 1", hint: "TOP56" },
+  { key: "hk1_pump", label: "HK1 Pumpe laeuft", group: "Heizkreis 1", hint: "TOP124" },
+  { key: "hk1_setpoint", label: "HK1 Sollwert einstellbar", group: "Heizkreis 1", hint: "TOP27, number" },
+
+  { key: "hk2_water", label: "HK2 Wassertemperatur", group: "Heizkreis 2", hint: "TOP37" },
+  { key: "hk2_water_target", label: "HK2 Wasser Sollwert", group: "Heizkreis 2", hint: "TOP43" },
+  { key: "hk2_room", label: "HK2 Raumtemperatur", group: "Heizkreis 2", hint: "TOP57" },
+  { key: "hk2_pump", label: "HK2 Pumpe laeuft", group: "Heizkreis 2", hint: "TOP123" },
+  { key: "hk2_setpoint", label: "HK2 Sollwert einstellbar", group: "Heizkreis 2", hint: "TOP34, number" },
 
   { key: "dhw_temp", label: "Warmwasser Isttemperatur", group: "Warmwasser", hint: "TOP10" },
   { key: "dhw_setpoint", label: "Warmwasser Sollwert", group: "Warmwasser", hint: "TOP9, number" },
@@ -268,12 +292,14 @@ const DEFAULT_CONFIG = {
   type: "custom:lutarym-heatpump-card",
   title: "Waermepumpe",
   fan_count: 2,
+  hk_count: 2,
   scale_min: 20,
   scale_max: 60,
   outdoor_min: -15,
   outdoor_max: 35,
   show_controls: true,
   show_switches: true,
+  animate: true,
   entities: {},
 };
 
@@ -308,6 +334,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       entities: { ...(config.entities || {}) },
     };
     this._config.fan_count = this._config.fan_count === 1 ? 1 : 2;
+    this._config.hk_count = this._config.hk_count === 1 ? 1 : 2;
     this._built = false;
     this._auto = null;
     if (this.shadowRoot) this.shadowRoot.innerHTML = "";
@@ -321,7 +348,7 @@ class LutarymHeatpumpCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 16;
+    return 20;
   }
 
   _e(key) {
@@ -408,13 +435,11 @@ class LutarymHeatpumpCard extends HTMLElement {
       host.hidden = true;
       return;
     }
-
     const toggles = [
       { key: "power_switch", id: "sw-power", label: "Waermepumpe" },
       { key: "heating_switch", id: "sw-heat", label: "Heizung" },
       { key: "dhw_switch", id: "sw-dhw", label: "Warmwasser" },
     ].filter((t) => this._e(t.key));
-
     const hasMode = Boolean(this._e("mode_select"));
     if (!toggles.length && !hasMode) {
       host.hidden = true;
@@ -472,9 +497,10 @@ class LutarymHeatpumpCard extends HTMLElement {
       return;
     }
     const rows = [
-      { key: "heating_setpoint", id: "ctl-heat", label: "Heizung Sollwert" },
+      { key: "hk1_setpoint", id: "ctl-hk1", label: "Heizkreis 1 Sollwert" },
+      { key: "hk2_setpoint", id: "ctl-hk2", label: "Heizkreis 2 Sollwert" },
       { key: "dhw_setpoint", id: "ctl-dhw", label: "Warmwasser Sollwert" },
-    ].filter((r) => this._e(r.key));
+    ].filter((r) => this._e(r.key) && (r.id !== "ctl-hk2" || this._config.hk_count === 2));
 
     if (!rows.length) {
       host.innerHTML = `<p class="lhc-empty">Keine Sollwert-Entitaet gefunden. Die Integration legt diese nur an, wenn "Nur lesen" bei der Einrichtung deaktiviert ist.</p>`;
@@ -492,8 +518,7 @@ class LutarymHeatpumpCard extends HTMLElement {
           <input class="lhc-slider" type="range" id="${r.id}-range"
                  min="0" max="100" step="1" value="0" aria-label="${r.label}">
           <div class="lhc-ctl-scale">
-            <span id="${r.id}-min">--</span>
-            <span id="${r.id}-max">--</span>
+            <span id="${r.id}-min">--</span><span id="${r.id}-max">--</span>
           </div>
         </div>`
       )
@@ -522,18 +547,26 @@ class LutarymHeatpumpCard extends HTMLElement {
   _svg() {
     const two = this._config.fan_count === 2;
     const fans = two
-      ? `${this._fan("fan1", 180, 190, 58)}${this._fan("fan2", 180, 360, 58)}`
-      : this._fan("fan1", 180, 280, 95);
+      ? `${this._fan("fan1", 180, 175, 52)}${this._fan("fan2", 180, 330, 52)}`
+      : this._fan("fan1", 180, 255, 86);
 
     const F = L.FLOW_Y;
     const R = L.RET_Y;
     const T = L.TANK_TOP;
     const B = L.TANK_BOTTOM;
-    const C = L.CAP_Y;
+    const C1 = L.CAP1_Y;
+    const HF = L.HK_FLOW_Y;
+    const HR = L.HK_RET_Y;
+
+    // Steigleitungen zum Verteiler, mit Bogen ueber den Primaerruecklauf
+    const riseFlow = `M640 280 H 700 V 448 C 718 456, 718 484, 700 492 V ${HF}`;
+    const riseRet = `M660 ${HR} V 492 C 642 484, 642 456, 660 448 V 340 H 640`;
+
+    const hk2 = this._config.hk_count === 2;
 
     return `
     <svg viewBox="0 0 ${L.W} ${L.H}" class="lhc-svg" role="img"
-         aria-label="Schema der Waermepumpenanlage">
+         aria-label="Schema der Waermepumpenanlage mit zwei Heizkreisen">
       <defs>
         <linearGradient id="casing" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="#232C3A"/><stop offset="100%" stop-color="#161D28"/>
@@ -551,99 +584,105 @@ class LutarymHeatpumpCard extends HTMLElement {
           <stop offset="0%" id="dhw-top" stop-color="${NEUTRAL}"/>
           <stop offset="100%" id="dhw-bottom" stop-color="${NEUTRAL}"/>
         </linearGradient>
-        <linearGradient id="radFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" id="rad-top" stop-color="${NEUTRAL}"/>
-          <stop offset="100%" id="rad-bottom" stop-color="${NEUTRAL}"/>
+        <linearGradient id="rad1Fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" id="rad1-top" stop-color="${NEUTRAL}"/>
+          <stop offset="100%" id="rad1-bottom" stop-color="${NEUTRAL}"/>
+        </linearGradient>
+        <linearGradient id="rad2Fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" id="rad2-top" stop-color="${NEUTRAL}"/>
+          <stop offset="100%" id="rad2-bottom" stop-color="${NEUTRAL}"/>
         </linearGradient>
       </defs>
 
+      <!-- ===== Leitungen Ebene 1 ===== -->
       <path class="pipe-shell" d="M320 ${R} H 1095"/>
       <path class="pipe" id="pipe-return" d="M320 ${R} H 1095"/>
       <path class="pipe-shell" d="M320 ${F} H 1095"/>
       <path class="pipe" id="pipe-flow" d="M320 ${F} H 1095"/>
+      <path class="flowdots rev" id="dots-primary" d="M320 ${R} H 1095"/>
+      <path class="flowdots" id="dots-primary2" d="M320 ${F} H 1095"/>
 
-      <path class="pipe-shell" d="M540 ${F} V ${T} M540 ${B} V ${R}"/>
-      <path class="pipe" id="pipe-buf-in" d="M540 ${F} V ${T}"/>
-      <path class="pipe" id="pipe-buf-out" d="M540 ${B} V ${R}"/>
-
-      <path class="pipe-shell" d="M835 ${F} V 236 M835 404 V ${R}"/>
-      <path class="pipe" id="pipe-rad-in" d="M835 ${F} V 236"/>
-      <path class="pipe" id="pipe-rad-out" d="M835 404 V ${R}"/>
+      <path class="pipe-shell" d="M490 ${F} V ${T} M490 ${B} V ${R}"/>
+      <path class="pipe" id="pipe-buf-in" d="M490 ${F} V ${T}"/>
+      <path class="pipe" id="pipe-buf-out" d="M490 ${B} V ${R}"/>
+      <path class="flowdots" id="dots-buf" d="M490 ${F} V ${T} M490 ${B} V ${R}"/>
 
       <path class="pipe-shell" d="M1095 ${F} V ${T} M1095 ${B} V ${R}"/>
       <path class="pipe" id="pipe-dhw-in" d="M1095 ${F} V ${T}"/>
       <path class="pipe" id="pipe-dhw-out" d="M1095 ${B} V ${R}"/>
+      <path class="flowdots" id="dots-dhw" d="M1095 ${F} V ${T} M1095 ${B} V ${R}"/>
 
+      <!-- ===== Steigleitungen zum Verteiler ===== -->
+      <path class="pipe-shell" d="${riseFlow}"/>
+      <path class="pipe" id="pipe-rise-flow" d="${riseFlow}"/>
+      <path class="flowdots" id="dots-rise-flow" d="${riseFlow}"/>
+      <path class="pipe-shell" d="${riseRet}"/>
+      <path class="pipe" id="pipe-rise-ret" d="${riseRet}"/>
+      <path class="flowdots" id="dots-rise-ret" d="${riseRet}"/>
+
+      <!-- ===== Verteilerleitungen ===== -->
+      <path class="pipe-shell" d="M700 ${HF} H 1170 M660 ${HR} H 1170"/>
+      <path class="pipe" id="pipe-hk-flow" d="M700 ${HF} H 1170"/>
+      <path class="pipe" id="pipe-hk-ret" d="M660 ${HR} H 1170"/>
+      <path class="flowdots" id="dots-hkmain" d="M700 ${HF} H 1170"/>
+      <path class="flowdots rev" id="dots-hkmain2" d="M660 ${HR} H 1170"/>
+
+      <!-- ===== Aussengeraet ===== -->
       <g class="unit">
-        <rect x="40" y="80" width="280" height="430" rx="16"
+        <rect x="40" y="80" width="280" height="390" rx="16"
               fill="url(#casing)" stroke="#33415A" stroke-width="2"/>
-        <rect x="40" y="80" width="280" height="430" rx="16" fill="url(#glass)"/>
-        <text class="cap" x="180" y="110" text-anchor="middle">Aussengeraet</text>
+        <rect id="unit-glow" x="40" y="80" width="280" height="390" rx="16"
+              fill="none" stroke="#E0762E" stroke-width="2" opacity="0"/>
+        <rect x="40" y="80" width="280" height="390" rx="16" fill="url(#glass)"/>
+        <text class="cap" x="180" y="108" text-anchor="middle">Aussengeraet</text>
         ${fans}
-        <g id="defrost-badge" opacity="0" transform="translate(180 484)">
+        <g id="defrost-badge" class="badge" transform="translate(180 440)">
           <rect x="-64" y="-16" width="128" height="32" rx="16"
                 fill="#0E2A4A" stroke="#3E9BE0" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Abtauung</text>
         </g>
       </g>
 
-      <g class="vessel">
-        <rect x="440" y="${T}" width="200" height="248" rx="26"
-              fill="#0D1219" stroke="#33415A" stroke-width="2"/>
-        <rect x="448" y="204" width="184" height="232" rx="20" fill="url(#bufferFill)"/>
-        <rect x="448" y="204" width="184" height="232" rx="20" fill="url(#glass)"/>
-        <text class="value-l" id="buf-v" x="540" y="330" text-anchor="middle">--</text>
-        <g id="roomheater-badge" opacity="0" transform="translate(540 412)">
-          <rect x="-56" y="-15" width="112" height="30" rx="15"
-                fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
-          <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
-        </g>
-        <text class="cap" x="540" y="${C}" text-anchor="middle">Heizungspuffer</text>
-      </g>
-
-      <g class="device">
-        <text class="value-s" id="pump-v" x="380" y="462" text-anchor="middle">--</text>
-        <text class="cap-s" x="380" y="${C}" text-anchor="middle">Pumpe</text>
+      <!-- ===== Primaerpumpe ===== -->
+      <g>
+        <text class="value-s" id="pump-v" x="380" y="432" text-anchor="middle">--</text>
         <circle cx="380" cy="${R}" r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
         <g id="pump-rotor" class="rotor" transform="translate(380 ${R})">
           <path d="M0 -15 L5 -4 L16 0 L5 4 L0 15 L-5 4 L-16 0 L-5 -4 Z" fill="#55637A"/>
           <circle r="4" fill="#0D1219"/>
         </g>
+        <text class="cap-s" x="380" y="${C1}" text-anchor="middle">Primaerpumpe</text>
       </g>
 
-      <g class="rad">
-        <rect x="730" y="236" width="210" height="168" rx="10"
-              fill="url(#radFill)" stroke="#33415A" stroke-width="2"/>
-        <g stroke="#0D1219" stroke-width="7" opacity="0.5">
-          <line x1="760" y1="244" x2="760" y2="396"/><line x1="790" y1="244" x2="790" y2="396"/>
-          <line x1="820" y1="244" x2="820" y2="396"/><line x1="850" y1="244" x2="850" y2="396"/>
-          <line x1="880" y1="244" x2="880" y2="396"/><line x1="910" y1="244" x2="910" y2="396"/>
+      <!-- ===== Heizungspuffer ===== -->
+      <g>
+        <rect x="440" y="${T}" width="200" height="224" rx="26"
+              fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+        <rect x="448" y="204" width="184" height="208" rx="20" fill="url(#bufferFill)"/>
+        <rect x="448" y="204" width="184" height="208" rx="20" fill="url(#glass)"/>
+        <text class="value-l" id="buf-v" x="540" y="318" text-anchor="middle">--</text>
+        <g id="roomheater-badge" class="badge" transform="translate(540 386)">
+          <rect x="-56" y="-15" width="112" height="30" rx="15"
+                fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
+          <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
-        <rect x="730" y="236" width="210" height="168" rx="10" fill="url(#glass)"/>
-        <g transform="translate(835 288)">
-          <rect x="-66" y="-26" width="132" height="44" rx="10" fill="#0B1017" opacity="0.88"/>
-          <text class="tag-l" x="0" y="-9" text-anchor="middle">Vorlauf</text>
-          <text class="tag-v" id="rad-flow-v" x="0" y="12" text-anchor="middle">--</text>
-        </g>
-        <g transform="translate(835 366)">
-          <rect x="-66" y="-26" width="132" height="44" rx="10" fill="#0B1017" opacity="0.88"/>
-          <text class="tag-l" x="0" y="-9" text-anchor="middle">Ruecklauf</text>
-          <text class="tag-v" id="rad-ret-v" x="0" y="12" text-anchor="middle">--</text>
-        </g>
-        <text class="cap" x="835" y="${C}" text-anchor="middle">Heizkreis</text>
+        <text class="cap" x="540" y="${C1}" text-anchor="middle">Heizungspuffer</text>
       </g>
 
-      <g class="device">
-        <text class="value-s" id="press-v" x="975" y="462" text-anchor="middle">--</text>
-        <circle cx="975" cy="${R}" r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
-        <circle cx="975" cy="${R}" r="18" fill="none" stroke="#26303F" stroke-width="3"/>
-        <line id="press-needle" x1="975" y1="${R}" x2="975" y2="${R - 15}"
+      <!-- ===== Wasserdruck ===== -->
+      <g>
+        <text class="value-s" id="press-v" x="900" y="432" text-anchor="middle">--</text>
+        <circle cx="900" cy="${R}" r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+        <circle cx="900" cy="${R}" r="18" fill="none" stroke="#26303F" stroke-width="3"/>
+        <line id="press-needle" x1="900" y1="${R}" x2="900" y2="${R - 15}"
               stroke="${NEUTRAL}" stroke-width="3" stroke-linecap="round"
-              transform="rotate(-120 975 ${R})"/>
-        <circle cx="975" cy="${R}" r="4" fill="#55637A"/>
+              transform="rotate(-120 900 ${R})"/>
+        <circle cx="900" cy="${R}" r="4" fill="#55637A"/>
+        <text class="cap-s" x="900" y="${C1}" text-anchor="middle">Druck</text>
       </g>
 
-      <g class="device">
+      <!-- ===== Dreiwegeventil ===== -->
+      <g>
         <rect x="1077" y="158" width="36" height="36" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="2"
               transform="rotate(45 1095 176)"/>
@@ -651,24 +690,81 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="value-s" id="valve-v" x="1128" y="181" text-anchor="start">--</text>
       </g>
 
-      <g class="vessel">
-        <rect x="1010" y="${T}" width="170" height="248" rx="34"
+      <!-- ===== Warmwasserspeicher ===== -->
+      <g>
+        <rect x="1010" y="${T}" width="170" height="224" rx="34"
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
-        <rect x="1018" y="204" width="154" height="232" rx="28" fill="url(#dhwFill)"/>
-        <rect x="1018" y="204" width="154" height="232" rx="28" fill="url(#glass)"/>
-        <path class="coil" d="M1040 300 q28 -18 55 0 q28 18 55 0
-                              M1040 336 q28 -18 55 0 q28 18 55 0
-                              M1040 372 q28 -18 55 0 q28 18 55 0"/>
-        <text class="value-l" id="dhw-v" x="1095" y="266" text-anchor="middle">--</text>
-        <text class="value-sp" id="dhw-sp" x="1095" y="290" text-anchor="middle"></text>
-        <g id="dhwheater-badge" opacity="0" transform="translate(1095 412)">
+        <rect x="1018" y="204" width="154" height="208" rx="28" fill="url(#dhwFill)"/>
+        <rect x="1018" y="204" width="154" height="208" rx="28" fill="url(#glass)"/>
+        <path class="coil" d="M1040 292 q28 -18 55 0 q28 18 55 0
+                              M1040 326 q28 -18 55 0 q28 18 55 0
+                              M1040 360 q28 -18 55 0 q28 18 55 0"/>
+        <text class="value-l" id="dhw-v" x="1095" y="258" text-anchor="middle">--</text>
+        <text class="value-sp" id="dhw-sp" x="1095" y="280" text-anchor="middle"></text>
+        <g id="dhwheater-badge" class="badge" transform="translate(1095 388)">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
-        <text class="cap" x="1095" y="${C}" text-anchor="middle">Warmwasser</text>
+        <text class="cap" x="1095" y="${C1}" text-anchor="middle">Warmwasser</text>
       </g>
+
+      ${this._circuit(1, 720, 930, 780, 870)}
+      ${hk2 ? this._circuit(2, 970, 1180, 1030, 1120) : ""}
     </svg>`;
+  }
+
+  /**
+   * Ein Heizkreis: Abgang vom Verteiler, Pumpe, Heizkoerper, Ruecklauf.
+   */
+  _circuit(n, x1, x2, dropX, backX) {
+    const HF = L.HK_FLOW_Y;
+    const HR = L.HK_RET_Y;
+    const RT = L.RAD_TOP;
+    const RB = L.RAD_BOTTOM;
+    const mid = (x1 + x2) / 2;
+    const drop = `M${dropX} ${HF} V ${RT}`;
+    const back = `M${backX} ${RB} V ${HR}`;
+
+    let fins = "";
+    for (let x = x1 + 26; x < x2 - 10; x += 30) {
+      fins += `<line x1="${x}" y1="${RT + 8}" x2="${x}" y2="${RB - 8}"/>`;
+    }
+
+    return `
+      <g class="circuit">
+        <path class="pipe-shell" d="${drop} ${back}"/>
+        <path class="pipe" id="pipe-hk${n}-in" d="${drop}"/>
+        <path class="pipe" id="pipe-hk${n}-out" d="${back}"/>
+        <path class="flowdots" id="dots-hk${n}" d="${drop}"/>
+        <path class="flowdots rev" id="dots-hk${n}b" d="${back}"/>
+
+        <circle cx="${dropX}" cy="630" r="21" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+        <g id="hk${n}-rotor" class="rotor" transform="translate(${dropX} 630)">
+          <path d="M0 -12 L4 -3 L13 0 L4 3 L0 12 L-4 3 L-13 0 L-4 -3 Z" fill="#55637A"/>
+          <circle r="3.5" fill="#0D1219"/>
+        </g>
+        <text class="value-s" id="hk${n}-pump-v" x="${dropX + 30}" y="636"
+              text-anchor="start">--</text>
+
+        <rect x="${x1}" y="${RT}" width="${x2 - x1}" height="${RB - RT}" rx="10"
+              fill="url(#rad${n}Fill)" stroke="#33415A" stroke-width="2"/>
+        <g stroke="#0D1219" stroke-width="7" opacity="0.5">${fins}</g>
+        <rect x="${x1}" y="${RT}" width="${x2 - x1}" height="${RB - RT}" rx="10" fill="url(#glass)"/>
+
+        <g transform="translate(${mid - 52} ${RT + 52})">
+          <rect x="-48" y="-26" width="96" height="46" rx="9" fill="#0B1017" opacity="0.88"/>
+          <text class="tag-l" x="0" y="-10" text-anchor="middle">Wasser</text>
+          <text class="tag-v" id="hk${n}-water-v" x="0" y="12" text-anchor="middle">--</text>
+        </g>
+        <g transform="translate(${mid + 52} ${RT + 52})">
+          <rect x="-48" y="-26" width="96" height="46" rx="9" fill="#0B1017" opacity="0.88"/>
+          <text class="tag-l" x="0" y="-10" text-anchor="middle">Raum</text>
+          <text class="tag-v" id="hk${n}-room-v" x="0" y="12" text-anchor="middle">--</text>
+        </g>
+
+        <text class="cap" x="${mid}" y="${L.CAP2_Y}" text-anchor="middle">Heizkreis ${n}</text>
+      </g>`;
   }
 
   _fan(id, cx, cy, r) {
@@ -691,7 +787,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <g stroke="#2A3446" stroke-width="1.5" fill="none" opacity="0.55">
           <circle r="${r * 0.4}"/><circle r="${r * 0.65}"/><circle r="${r * 0.9}"/>
         </g>
-        <text class="value-s" id="${id}-rpm" y="${r + 30}" text-anchor="middle">--</text>
+        <text class="value-s" id="${id}-rpm" y="${r + 28}" text-anchor="middle">--</text>
       </g>`;
   }
 
@@ -704,6 +800,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     const min = Number(this._config.scale_min);
     const max = Number(this._config.scale_max);
     const col = (v) => thermalColor(v, min, max);
+    const animate = this._config.animate !== false;
+
     const set = (id, text) => {
       const el = sr.getElementById(id);
       if (el) el.textContent = text;
@@ -712,29 +810,43 @@ class LutarymHeatpumpCard extends HTMLElement {
       const el = sr.getElementById(id);
       if (el) el.setAttribute("stop-color", color);
     };
-    const show = (id, visible) => {
+    const stroke = (id, color) => {
       const el = sr.getElementById(id);
-      if (el) el.setAttribute("opacity", visible ? "1" : "0");
+      if (el) el.setAttribute("stroke", color);
+    };
+    const toggle = (id, on) => {
+      const el = sr.getElementById(id);
+      if (el) el.classList.toggle("is-on", Boolean(on));
+    };
+    // Laufpunkte einer Leitung ein oder ausschalten
+    const flowing = (ids, on, color) => {
+      ids.forEach((id) => {
+        const el = sr.getElementById(id);
+        if (!el) return;
+        el.classList.toggle("is-on", animate && Boolean(on));
+        if (color) el.setAttribute("stroke", color);
+      });
     };
 
+    /* Kopfzeile */
     const modeEntity = this._e("operating_mode");
     set(
       "mode",
       attr(hass, modeEntity, "beschreibung", null) || rawState(hass, modeEntity) || "--"
     );
 
+    /* Stoerung */
     const alertEl = sr.getElementById("alert");
     if (alertEl) {
       const err = rawState(hass, this._e("error"));
       const harmlos = [null, "", "OK", "ok", "0", "No error", "unknown", "unavailable"];
-      if (err !== null && !harmlos.includes(err)) {
-        alertEl.hidden = false;
-        alertEl.textContent = `Stoerung der Waermepumpe: ${err}`;
-      } else {
-        alertEl.hidden = true;
-      }
+      const stoerung = err !== null && !harmlos.includes(err);
+      alertEl.hidden = !stoerung;
+      alertEl.classList.toggle("is-pulsing", stoerung && animate);
+      if (stoerung) alertEl.textContent = `Stoerung der Waermepumpe: ${err}`;
     }
 
+    /* Kennzahlen */
     const comp = numState(hass, this._e("compressor"));
     const flowRate = numState(hass, this._e("pump_flow"));
     const output = numState(hass, this._e("heat_output"));
@@ -745,13 +857,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     set("st-input", input === null ? "--" : `${fmt(input, 0)} W`);
     set("st-cop", output && input && input > 0 ? (output / input).toFixed(2) : "--");
 
-    this._spin("fan1", numState(hass, this._e("fan1_rpm")), "fan1-rpm", "U/min");
-    if (this._config.fan_count === 2) {
-      this._spin("fan2", numState(hass, this._e("fan2_rpm")), "fan2-rpm", "U/min");
-    }
-    show("defrost-badge", isOn(hass, this._e("defrost")) === true);
-
-    // Aussentemperatur bewusst im Kopfbereich, nicht im Anlagenschema.
+    /* Aussentemperatur, bewusst im Kopfbereich und nicht im Schema */
     const outside = numState(hass, this._e("outside_temp"));
     const oMin = Number(this._config.outdoor_min);
     const oMax = Number(this._config.outdoor_max);
@@ -771,50 +877,71 @@ class LutarymHeatpumpCard extends HTMLElement {
       column.setAttribute("y", String(28 - h));
     }
 
+    /* Aussengeraet */
+    this._spin("fan1", numState(hass, this._e("fan1_rpm")), "fan1-rpm", "U/min");
+    if (this._config.fan_count === 2) {
+      this._spin("fan2", numState(hass, this._e("fan2_rpm")), "fan2-rpm", "U/min");
+    }
+    const defrostOn = isOn(hass, this._e("defrost")) === true;
+    toggle("defrost-badge", defrostOn);
+    sr.getElementById("defrost-badge").classList.toggle("is-pulsing", defrostOn && animate);
+    const glow = sr.getElementById("unit-glow");
+    if (glow) glow.classList.toggle("is-on", animate && comp !== null && comp > 0);
+
+    /* Temperaturen und Leitungsfarben */
+    const flow = numState(hass, this._e("flow_temp"));
+    const ret = numState(hass, this._e("return_temp"));
     const buf = numState(hass, this._e("buffer_temp"));
+    const dhw = numState(hass, this._e("dhw_temp"));
+    ["pipe-flow", "pipe-buf-in", "pipe-dhw-in", "pipe-rise-flow", "pipe-hk-flow"].forEach(
+      (id) => stroke(id, col(flow))
+    );
+    ["pipe-return", "pipe-buf-out", "pipe-dhw-out", "pipe-rise-ret", "pipe-hk-ret"].forEach(
+      (id) => stroke(id, col(ret))
+    );
+
+    /* Puffer */
     paint("bg-top", col(buf));
     paint("bg-bottom", col(buf === null ? null : buf - 4));
     set("buf-v", buf === null ? "--" : `${fmt(buf)} °C`);
-    show("roomheater-badge", isOn(hass, this._e("room_heater")) === true);
+    const roomHeaterOn = isOn(hass, this._e("room_heater")) === true;
+    toggle("roomheater-badge", roomHeaterOn);
+    sr.getElementById("roomheater-badge").classList.toggle(
+      "is-pulsing",
+      roomHeaterOn && animate
+    );
 
-    const dhw = numState(hass, this._e("dhw_temp"));
+    /* Warmwasser */
     const dhwSp = numState(hass, this._e("dhw_setpoint"));
     paint("dhw-top", col(dhw));
     paint("dhw-bottom", col(dhw === null ? null : dhw - 6));
     set("dhw-v", dhw === null ? "--" : `${fmt(dhw)} °C`);
     set("dhw-sp", dhwSp === null ? "" : `Ziel ${fmt(dhwSp, 0)} °C`);
-    show("dhwheater-badge", isOn(hass, this._e("dhw_heater")) === true);
-
-    const flow = numState(hass, this._e("flow_temp"));
-    const ret = numState(hass, this._e("return_temp"));
-    paint("rad-top", col(flow));
-    paint("rad-bottom", col(ret));
-    set("rad-flow-v", flow === null ? "--" : `${fmt(flow)} °C`);
-    set("rad-ret-v", ret === null ? "--" : `${fmt(ret)} °C`);
-
-    const stroke = (id, color) => {
-      const el = sr.getElementById(id);
-      if (el) el.setAttribute("stroke", color);
-    };
-    ["pipe-flow", "pipe-buf-in", "pipe-rad-in", "pipe-dhw-in"].forEach((id) =>
-      stroke(id, col(flow))
-    );
-    ["pipe-return", "pipe-buf-out", "pipe-rad-out", "pipe-dhw-out"].forEach((id) =>
-      stroke(id, col(ret))
+    const dhwHeaterOn = isOn(hass, this._e("dhw_heater")) === true;
+    toggle("dhwheater-badge", dhwHeaterOn);
+    sr.getElementById("dhwheater-badge").classList.toggle(
+      "is-pulsing",
+      dhwHeaterOn && animate
     );
 
-    this._spin("pump-rotor", numState(hass, this._e("pump_speed")), "pump-v", "U/min");
+    /* Primaerpumpe */
+    const pumpRpm = numState(hass, this._e("pump_speed"));
+    this._spin("pump-rotor", pumpRpm, "pump-v", "U/min");
 
+    /* Wasserdruck */
     const bar = numState(hass, this._e("water_pressure"));
     set("press-v", bar === null ? "--" : `${fmt(bar)} bar`);
     const needle = sr.getElementById("press-needle");
     if (needle) {
       const ratio = bar === null ? 0 : clamp(bar / 4, 0, 1);
-      needle.setAttribute("transform", `rotate(${-120 + 240 * ratio} 975 ${L.RET_Y})`);
-      const kritisch = bar !== null && (bar < 0.8 || bar > 2.8);
-      needle.setAttribute("stroke", kritisch ? "#D62B2B" : "#9BAAC0");
+      needle.setAttribute("transform", `rotate(${-120 + 240 * ratio} 900 ${L.RET_Y})`);
+      needle.setAttribute(
+        "stroke",
+        bar !== null && (bar < 0.8 || bar > 2.8) ? "#D62B2B" : "#9BAAC0"
+      );
     }
 
+    /* Dreiwegeventil */
     const valveEntity = this._e("three_way_valve");
     const valveText = attr(hass, valveEntity, "beschreibung", null);
     const valveNum = numState(hass, valveEntity);
@@ -831,12 +958,86 @@ class LutarymHeatpumpCard extends HTMLElement {
       );
     }
 
+    /* Heizkreise */
+    const hk1On = this._circuitUpdate(1, col, animate);
+    const hk2On =
+      this._config.hk_count === 2 ? this._circuitUpdate(2, col, animate) : false;
+
+    /* Durchflussanimation, je Abschnitt einzeln */
+    // Primaerkreis laeuft, wenn Wasser umgewaelzt wird.
+    const primaer =
+      (pumpRpm !== null && pumpRpm > 0) || (flowRate !== null && flowRate > 0);
+    flowing(["dots-primary2"], primaer, col(flow));
+    flowing(["dots-primary"], primaer, col(ret));
+    // Der Puffer wird nur beschickt, wenn das Ventil auf Heizen steht.
+    flowing(["dots-buf"], primaer && !zuWarmwasser, col(flow));
+    // Der Speicher nur, wenn das Ventil auf Warmwasser steht.
+    flowing(["dots-dhw"], primaer && zuWarmwasser, col(flow));
+    // Der Verteiler laeuft, sobald mindestens ein Heizkreis foerdert.
+    const verteiler = hk1On || hk2On;
+    flowing(["dots-rise-flow", "dots-hkmain"], verteiler, col(flow));
+    flowing(["dots-rise-ret", "dots-hkmain2"], verteiler, col(ret));
+
+    /* Bedienung */
     this._syncToggle("sw-power", "power_switch");
     this._syncToggle("sw-heat", "heating_switch");
     this._syncToggle("sw-dhw", "dhw_switch");
     this._syncModeSelect();
-    this._syncSlider("ctl-heat", "heating_setpoint");
+    this._syncSlider("ctl-hk1", "hk1_setpoint");
+    this._syncSlider("ctl-hk2", "hk2_setpoint");
     this._syncSlider("ctl-dhw", "dhw_setpoint");
+  }
+
+  /**
+   * Aktualisiert einen Heizkreis und meldet, ob seine Pumpe foerdert.
+   */
+  _circuitUpdate(n, col, animate) {
+    const hass = this._hass;
+    const sr = this.shadowRoot;
+    const water = numState(hass, this._e(`hk${n}_water`));
+    const target = numState(hass, this._e(`hk${n}_water_target`));
+    const room = numState(hass, this._e(`hk${n}_room`));
+    const pumpOn = isOn(hass, this._e(`hk${n}_pump`)) === true;
+
+    const set = (id, text) => {
+      const el = sr.getElementById(id);
+      if (el) el.textContent = text;
+    };
+    const paint = (id, color) => {
+      const el = sr.getElementById(id);
+      if (el) el.setAttribute("stop-color", color);
+    };
+
+    paint(`rad${n}-top`, col(water));
+    paint(`rad${n}-bottom`, col(water === null ? null : water - 6));
+    set(
+      `hk${n}-water-v`,
+      water === null ? "--" : `${fmt(water, 0)}°${target === null ? "" : ` / ${fmt(target, 0)}`}`
+    );
+    set(`hk${n}-room-v`, room === null ? "--" : `${fmt(room)}°`);
+
+    // Die Pumpe meldet nur an oder aus, keine Drehzahl. Feste Umlaufzeit.
+    const rotor = sr.getElementById(`hk${n}-rotor`);
+    if (rotor) {
+      rotor.classList.toggle("is-still", !pumpOn);
+      rotor.style.animationDuration = "1.4s";
+      rotor.style.animationPlayState = pumpOn && animate ? "running" : "paused";
+    }
+    set(`hk${n}-pump-v`, pumpOn ? "laeuft" : "aus");
+
+    ["in", "out"].forEach((seite) => {
+      const el = sr.getElementById(`pipe-hk${n}-${seite}`);
+      if (el) el.setAttribute("stroke", col(seite === "in" ? water : water - 6));
+    });
+    [`dots-hk${n}`, `dots-hk${n}b`].forEach((id) => {
+      const el = sr.getElementById(id);
+      if (el) {
+        el.classList.toggle("is-on", animate && pumpOn);
+        el.setAttribute("stroke", col(water));
+      }
+    });
+
+    return pumpOn;
   }
 
   _spin(rotorId, rpm, labelId, unit) {
@@ -844,9 +1045,10 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (label) label.textContent = rpm === null ? "--" : `${fmt(rpm, 0)} ${unit}`;
     const el = this.shadowRoot.getElementById(rotorId);
     if (!el) return;
-    if (rpm === null || rpm <= 0) {
+    const animate = this._config.animate !== false;
+    if (rpm === null || rpm <= 0 || !animate) {
       el.style.animationPlayState = "paused";
-      el.classList.add("is-still");
+      el.classList.toggle("is-still", rpm === null || rpm <= 0);
       return;
     }
     el.classList.remove("is-still");
@@ -937,7 +1139,9 @@ class LutarymHeatpumpCard extends HTMLElement {
         text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
       }
       .lhc-title h2 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
-      .lhc-head-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+      .lhc-head-right {
+        display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end;
+      }
       .lhc-outside {
         display: flex; align-items: center; gap: 10px;
         padding: 8px 14px 8px 10px; border-radius: 12px;
@@ -963,6 +1167,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         font-size: 14px; font-weight: 500;
       }
       .lhc-alert[hidden] { display: none; }
+      .lhc-alert.is-pulsing { animation: lhc-pulse 2s ease-in-out infinite; }
       .lhc-stats {
         display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 1px; background: var(--line); border: 1px solid var(--line);
@@ -988,17 +1193,25 @@ class LutarymHeatpumpCard extends HTMLElement {
         fill: none; stroke: ${NEUTRAL}; stroke-width: 9;
         stroke-linecap: round; stroke-linejoin: round; transition: stroke 900ms ease;
       }
+      /* Laufende Punkte zeigen an, dass in dieser Leitung wirklich Wasser stroemt. */
+      .flowdots {
+        fill: none; stroke: #FFFFFF; stroke-width: 5;
+        stroke-linecap: round; stroke-dasharray: 2 26;
+        opacity: 0; animation: lhc-flow 1.6s linear infinite;
+        animation-play-state: paused;
+      }
+      .flowdots.is-on { opacity: 0.9; animation-play-state: running; }
+      .flowdots.rev { animation-name: lhc-flow-rev; }
+      @keyframes lhc-flow { to { stroke-dashoffset: -28; } }
+      @keyframes lhc-flow-rev { to { stroke-dashoffset: 28; } }
+
       .cap { fill: #98A6BA; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+      .cap-s { fill: #7E8CA0; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
       .value-l {
-        fill: #FFFFFF; font-size: 30px; font-weight: 650;
+        fill: #FFFFFF; font-size: 28px; font-weight: 650;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums;
         paint-order: stroke; stroke: rgba(0,0,0,0.45); stroke-width: 5px;
-      }
-      .value-m {
-        fill: #FFFFFF; font-size: 26px; font-weight: 650;
-        font-family: ui-monospace, "SF Mono", Menlo, monospace;
-        font-variant-numeric: tabular-nums;
       }
       .value-s {
         fill: #98A6BA; font-size: 14px;
@@ -1009,22 +1222,25 @@ class LutarymHeatpumpCard extends HTMLElement {
       .coil { fill: none; stroke: rgba(255,255,255,0.28); stroke-width: 5; stroke-linecap: round; }
       .tag-l { fill: #8494AA; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
       .tag-v {
-        fill: #FFFFFF; font-size: 20px; font-weight: 600;
+        fill: #FFFFFF; font-size: 19px; font-weight: 600;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums;
       }
       .badge-t { fill: #E8EDF4; font-size: 13px; }
-      #defrost-badge, #roomheater-badge, #dhwheater-badge { transition: opacity 300ms ease; }
-      #mini-fill, #mini-bulb, #mini-neck, #valve-dot, #press-needle {
-        transition: all 900ms ease;
-      }
-      .cap-s { fill: #7E8CA0; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
+      .badge { opacity: 0; transition: opacity 300ms ease; }
+      .badge.is-on { opacity: 1; }
+      .badge.is-on.is-pulsing { animation: lhc-pulse 2.2s ease-in-out infinite; }
+      #unit-glow { transition: opacity 600ms ease; }
+      #unit-glow.is-on { animation: lhc-glow 2.6s ease-in-out infinite; }
+      #valve-dot, #press-needle { transition: all 900ms ease; }
+      @keyframes lhc-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+      @keyframes lhc-glow { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.5; } }
 
       .rotor {
         transform-origin: 0 0; animation: lhc-spin 2s linear infinite;
         animation-play-state: paused;
       }
-      #pump-rotor { transform-box: fill-box; transform-origin: center; }
+      #pump-rotor, [id$="-rotor"] { transform-box: fill-box; transform-origin: center; }
       .rotor .blades path { fill: #55637A; }
       .rotor.is-still .blades path, .rotor.is-still > path { fill: #3A4557; }
       @keyframes lhc-spin { to { transform: rotate(360deg); } }
@@ -1066,7 +1282,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       }
 
       .lhc-controls {
-        display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 16px; margin-top: 16px; padding-top: 20px; border-top: 1px solid var(--line);
       }
       .lhc-controls[hidden] { display: none; }
@@ -1108,10 +1324,11 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       @media (max-width: 860px) {
         .lhc-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        .lhc-controls { grid-template-columns: 1fr; }
         .lhc-title h2 { font-size: 20px; }
       }
-      @media (prefers-reduced-motion: reduce) { .rotor { animation: none !important; } }
+      @media (prefers-reduced-motion: reduce) {
+        .rotor, .flowdots, .badge, .lhc-alert, #unit-glow { animation: none !important; }
+      }
     `;
   }
 }
@@ -1205,6 +1422,10 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
             <select id="opt-fans"><option value="1">1 Luefter</option><option value="2">2 Luefter</option></select>
           </label>
           <label class="ed-row">
+            <span>Anzahl Heizkreise</span>
+            <select id="opt-hk"><option value="1">1 Heizkreis</option><option value="2">2 Heizkreise</option></select>
+          </label>
+          <label class="ed-row">
             <span>Heizungsskala kalt<em>Grad, faerbt Tanks und Leitungen</em></span>
             <input type="number" id="opt-min">
           </label>
@@ -1214,6 +1435,7 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
             <input type="number" id="opt-omin">
           </label>
           <label class="ed-row"><span>Aussenskala warm<em>Grad</em></span><input type="number" id="opt-omax"></label>
+          <label class="ed-row ed-check"><input type="checkbox" id="opt-animate"><span>Bewegung anzeigen</span></label>
           <label class="ed-row ed-check"><input type="checkbox" id="opt-switches"><span>Schalter anzeigen</span></label>
           <label class="ed-row ed-check"><input type="checkbox" id="opt-controls"><span>Sollwertregler anzeigen</span></label>
         </div>
@@ -1242,8 +1464,9 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
         <p class="ed-note">
           HeishaMon kennt keine getrennten Schalter fuer Heizung und Warmwasser.
           Was die Anlage wirklich umschaltet, ist die Betriebsart. Das Feld
-          "Heizung ein und aus" ist deshalb fuer einen eigenen Helfer gedacht,
-          etwa einen Schalter, der eine Automation ausloest.
+          "Heizung ein und aus" ist fuer einen eigenen Helfer gedacht.
+          Die Heizkreispumpen melden nur an oder aus, keine Drehzahl, sie drehen
+          sich daher mit fester Geschwindigkeit.
         </p>
       </div>
     `;
@@ -1258,10 +1481,12 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     };
     bind("opt-title", (el) => put({ title: el.value }));
     bind("opt-fans", (el) => put({ fan_count: parseInt(el.value, 10) }));
+    bind("opt-hk", (el) => put({ hk_count: parseInt(el.value, 10) }));
     bind("opt-min", (el) => put({ scale_min: parseFloat(el.value) }));
     bind("opt-max", (el) => put({ scale_max: parseFloat(el.value) }));
     bind("opt-omin", (el) => put({ outdoor_min: parseFloat(el.value) }));
     bind("opt-omax", (el) => put({ outdoor_max: parseFloat(el.value) }));
+    bind("opt-animate", (el) => put({ animate: el.checked }));
     bind("opt-switches", (el) => put({ show_switches: el.checked }));
     bind("opt-controls", (el) => put({ show_controls: el.checked }));
 
@@ -1302,16 +1527,20 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
       const el = sr.getElementById(id);
       if (el) el.value = value;
     };
+    const check = (id, value) => {
+      const el = sr.getElementById(id);
+      if (el) el.checked = value !== false;
+    };
     put("opt-title", this._config.title);
     put("opt-fans", String(this._config.fan_count));
+    put("opt-hk", String(this._config.hk_count));
     put("opt-min", this._config.scale_min);
     put("opt-max", this._config.scale_max);
     put("opt-omin", this._config.outdoor_min);
     put("opt-omax", this._config.outdoor_max);
-    const sw = sr.getElementById("opt-switches");
-    if (sw) sw.checked = this._config.show_switches !== false;
-    const ct = sr.getElementById("opt-controls");
-    if (ct) ct.checked = this._config.show_controls !== false;
+    check("opt-animate", this._config.animate);
+    check("opt-switches", this._config.show_switches);
+    check("opt-controls", this._config.show_controls);
 
     sr.querySelectorAll("[data-entity]").forEach((input) => {
       const v = (this._config.entities || {})[input.dataset.entity] || "";
@@ -1386,7 +1615,7 @@ window.customCards.push({
   type: "lutarym-heatpump-card",
   name: "Lutarym Waermepumpe",
   description:
-    "Anlagenschema mit Luefteranimation, Speichern, Ventil, Pumpe und Steuerung.",
+    "Anlagenschema mit zwei Heizkreisen, Pumpen, Speichern und Durchflussanimation.",
   preview: true,
   documentationURL: "https://github.com/Lutarym/lutarym-heatpump-card",
 });

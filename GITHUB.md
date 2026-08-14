@@ -49,16 +49,16 @@ Die Topics `home-assistant` und `lovelace` sind Voraussetzung, falls du das Repo
 Ein Release ist nötig, weil HACS Versionen darüber erkennt.
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
 Danach auf GitHub unter **Releases**, **Draft a new release**:
 
 | Feld | Wert |
 |---|---|
-| Choose a tag | `v0.2.0` |
-| Release title | `v0.2.0` |
+| Choose a tag | `v0.3.0` |
+| Release title | `v0.3.0` |
 | Beschreibung | siehe Vorlage unten |
 
 Vorlage für die Beschreibung:
@@ -108,8 +108,8 @@ Ist das erfüllt, kann das Repository unter https://github.com/hacs/default per 
 git add .
 git commit -m "Beschreibung der Änderung"
 git push
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
 Anschließend auf GitHub ein neues Release zu diesem Tag anlegen. Ohne Release sieht HACS die neue Version nicht.
