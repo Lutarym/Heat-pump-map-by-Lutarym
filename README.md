@@ -2,26 +2,21 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.8.3**
+**Version 0.8.4**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
 ## Was die Karte zeigt
 
-Das Schema ist im Breitformat angelegt, alle Baugruppen stehen in einer Reihe. Von links nach rechts: Außengerät, Pumpe, Puffer, Manometer, Heizkreis 1, Heizkreis 2, Dreiwegeventil, Warmwasserspeicher. Oben verläuft der Vorlauf, unten der Rücklauf.
+Das Schema ist im Breitformat angelegt, alle Baugruppen stehen in einer Reihe. Von links nach rechts: Außengerät, Puffer, Pumpe, Heizkreis 1, Heizkreis 2, Manometer, Dreiwegeventil, Warmwasserspeicher. Oben verläuft der Vorlauf, unten der Rücklauf.
 
 Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 
-**Außengerät** mit grüner Betriebs-LED, vier Kennwerten in zwei Spalten, ein oder zwei Lüftern, SG-Ready-Anzeige und dem Hinweis bei laufender Abtauung. Alle Werte stehen ohne Rahmen direkt im Gehäuse.
+**Außengerät** mit grüner Betriebs-LED, Außentemperatur und Verdichterdrehzahl, ein oder zwei Lüftern, SG-Ready-Anzeige und dem Hinweis bei laufender Abtauung. Alle Werte stehen ohne Rahmen direkt im Gehäuse.
 
-| Links | Rechts |
-|---|---|
-| Außentemperatur | Verdichterdrehzahl |
-| Vorlauftemperatur | Rücklauftemperatur |
+**Vorlauf und Rücklauf** als Schilder auf den Leitungen, direkt am Ausgang und am Eingang der Wärmepumpe. Beide Werte sind thermisch eingefärbt, in derselben Farbe wie die Leitung, auf der sie liegen. Die Spreizung ist damit als Zahl und als Farbunterschied ablesbar.
 
-Vorlauf und Rücklauf sind thermisch eingefärbt, in denselben Farben wie die Leitungen. Die Spreizung ist damit auch als Zahl ablesbar, nicht nur an der Leitungsfarbe.
-
-**Primärpumpe** mit Drehzahl und Durchflussmenge.
+**Primärpumpe** mit Drehzahl und Durchflussmenge, hinter dem Puffer auf der Rücklaufleitung.
 
 **Heizungspuffer** als großer Speicher, eingefärbt nach seiner Temperatur, darunter die Zieltemperatur.
 

@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "0.8.3";
+const CARD_VERSION = "0.8.4";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -567,8 +567,8 @@ class LutarymHeatpumpCard extends HTMLElement {
   _svg() {
     const two = this._config.fan_count === 2;
     const fans = two
-      ? `${this._fan("fan1", 180, 290, 58)}${this._fan("fan2", 180, 478, 58)}`
-      : this._fan("fan1", 180, 384, 100);
+      ? `${this._fan("fan1", 180, 280, 64)}${this._fan("fan2", 180, 468, 64)}`
+      : this._fan("fan1", 180, 370, 110);
 
     const F = L.FLOW_Y;
     const R = L.RET_Y;
@@ -642,18 +642,11 @@ class LutarymHeatpumpCard extends HTMLElement {
           <text class="badge-t" x="0" y="5" text-anchor="middle">Abtauung</text>
         </g>
 
-        <text class="unit-label" x="110" y="96" text-anchor="middle">Außen</text>
-        <text class="unit-value" id="outside-v" x="110" y="124"
+        <text class="unit-label" x="110" y="120" text-anchor="middle">Außen</text>
+        <text class="unit-value" id="outside-v" x="110" y="148"
               text-anchor="middle">--</text>
-        <text class="unit-label" x="250" y="96" text-anchor="middle">Verdichter</text>
-        <text class="unit-value" id="comp-v" x="250" y="124" text-anchor="middle">--</text>
-
-        <text class="unit-label" x="110" y="164" text-anchor="middle">Vorlauf</text>
-        <text class="unit-value" id="unit-flow-v" x="110" y="192"
-              text-anchor="middle">--</text>
-        <text class="unit-label" x="250" y="164" text-anchor="middle">Rücklauf</text>
-        <text class="unit-value" id="unit-ret-v" x="250" y="192"
-              text-anchor="middle">--</text>
+        <text class="unit-label" x="250" y="120" text-anchor="middle">Verdichter</text>
+        <text class="unit-value" id="comp-v" x="250" y="148" text-anchor="middle">--</text>
 
         ${fans}
 
@@ -670,18 +663,30 @@ class LutarymHeatpumpCard extends HTMLElement {
         </g>
       </g>
 
+      <!-- Vorlauf am Ausgang, Rücklauf am Eingang der Wärmepumpe -->
+      <g transform="translate(400 ${F})">
+        <rect x="-75" y="-24" width="150" height="48" rx="10" fill="#0B1017" opacity="0.92"/>
+        <text class="tag-l" x="-62" y="5">Vorlauf</text>
+        <text class="tag-v" id="unit-flow-v" x="62" y="6" text-anchor="end">--</text>
+      </g>
+      <g transform="translate(400 ${R})">
+        <rect x="-75" y="-24" width="150" height="48" rx="10" fill="#0B1017" opacity="0.92"/>
+        <text class="tag-l" x="-62" y="5">Rücklauf</text>
+        <text class="tag-v" id="unit-ret-v" x="62" y="6" text-anchor="end">--</text>
+      </g>
+
       <!-- Primärpumpe -->
       <g>
-        <text class="value-s" id="pump-v" x="380" y="540" text-anchor="middle">--</text>
-        <text class="unit-value" id="flow-v" x="380" y="564" text-anchor="middle">--</text>
-        <g transform="translate(380 ${R})">
+        <text class="value-s" id="pump-v" x="680" y="540" text-anchor="middle">--</text>
+        <text class="unit-value" id="flow-v" x="680" y="564" text-anchor="middle">--</text>
+        <g transform="translate(680 ${R})">
           <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <g class="rotor" id="pump-rotor">
             <path d="M0 -15 L5 -4 L16 0 L5 4 L0 15 L-5 4 L-16 0 L-5 -4 Z" fill="#55637A"/>
             <circle r="4" fill="#0D1219"/>
           </g>
         </g>
-        <text class="cap-s" x="380" y="${C}" text-anchor="middle">Pumpe</text>
+        <text class="cap-s" x="680" y="${C}" text-anchor="middle">Pumpe</text>
       </g>
 
       <!-- Heizungspuffer -->
@@ -702,15 +707,15 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Wasserdruck, nur sichtbar wenn ein Wert vorliegt -->
       <g id="press-group" opacity="0">
-        <text class="value-s" id="press-v" x="680" y="560" text-anchor="middle">--</text>
-        <g transform="translate(680 ${R})">
+        <text class="value-s" id="press-v" x="1290" y="560" text-anchor="middle">--</text>
+        <g transform="translate(1290 ${R})">
           <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <circle r="18" fill="none" stroke="#26303F" stroke-width="3"/>
           <line id="press-needle" x1="0" y1="0" x2="0" y2="-15"
                 stroke="${NEUTRAL}" stroke-width="3" stroke-linecap="round"/>
           <circle r="4" fill="#55637A"/>
         </g>
-        <text class="cap-s" x="680" y="${C}" text-anchor="middle">Druck</text>
+        <text class="cap-s" x="1290" y="${C}" text-anchor="middle">Druck</text>
       </g>
 
       ${this._circuit(1, 720, 940, 770, 890)}
