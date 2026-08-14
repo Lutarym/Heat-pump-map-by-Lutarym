@@ -2,45 +2,53 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.7.0**
+**Version 0.8.0**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
 ## Was die Karte zeigt
 
-**Außengerät** mit ein oder zwei Lüftern. Die Lüfter drehen sich einzeln und mit der tatsächlichen Drehzahl ihrer jeweiligen Entität. Bei 0 U/min stehen sie still und werden dunkler. Läuft eine Abtauung, erscheint ein Hinweis am Gerät.
+Das Schema ist im Breitformat angelegt, alle Baugruppen stehen in einer Reihe. Von links nach rechts: Außenfühler, Außengerät, Pumpe, Puffer, Manometer, Heizkreis 1, Heizkreis 2, Dreiwegeventil, Warmwasserspeicher. Oben verläuft der Vorlauf, unten der Rücklauf.
 
-Das Schema ist im Breitformat angelegt, alle Baugruppen stehen in einer Reihe nebeneinander. Von links nach rechts: Außengerät, Pumpe, Puffer, Manometer, Heizkreis 1, Heizkreis 2, Dreiwegeventil, Warmwasserspeicher. Oben verläuft der Vorlauf, unten der Rücklauf, jede Baugruppe hängt mit einer Stichleitung dazwischen.
+Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 
-Das Seitenverhältnis beträgt etwa 2,7 zu 1. Bei 900 Pixeln Kartenbreite ist die Karte rund 330 Pixel hoch.
+**Außenfühler** als eigenes kleines Gerät oben links, über eine gestrichelte Signalleitung mit dem Außengerät verbunden. Gestrichelt, weil es eine Messleitung ist und keine Rohrleitung.
+
+**Außengerät** mit grüner Betriebs-LED, Verdichterdrehzahl, ein oder zwei Lüftern, SG-Ready-Anzeige und dem Hinweis bei laufender Abtauung.
+
+**Primärpumpe** mit Drehzahl und Durchflussmenge.
 
 **Heizungspuffer** als großer Speicher, eingefärbt nach seiner Temperatur.
 
-**Heizkreis 1 und 2**, jeder mit eigener Pumpe, eigenem Heizkörper, eigener Wasser- und Raumtemperatur und eigenem Sollwertregler. Die Anzahl ist im Editor auf einen Heizkreis umstellbar.
+**Heizkreis 1 und 2**, jeder mit eigener Pumpe, eigenem Heizkörper, eigener Wasser- und Raumtemperatur und eigenem Sollwertregler.
 
-**Primärpumpe** auf der Rücklaufleitung, deren Rotor sich mit der tatsächlichen Drehzahl dreht.
+**Wasserdruck** als Manometer. Es erscheint nur, wenn ein Wert vorliegt, sonst bleibt die Stelle leer.
 
-**Dreiwegeventil** am Abzweig zum Warmwasserspeicher, das anzeigt, ob gerade geheizt oder Warmwasser bereitet wird.
+**Dreiwegeventil** am Abzweig zum Warmwasserspeicher, in Klartext als Heizung oder Warmwasser.
 
-**Wasserdruck** als Manometer mit Zeiger. Der Zeiger wird rot, wenn der Druck unter 0,8 oder über 2,8 bar liegt.
+**Warmwasserspeicher** mit Ist- und Zieltemperatur und einem Hinweis, wenn der Heizstab läuft.
 
-**Heizkreis** als Heizkörper, oben nach Vorlauf und unten nach Rücklauf eingefärbt, mit beiden Werten als Schild.
+**Störungsmeldung** als roter Balken über dem Schema, sobald ein Fehlercode anliegt.
 
-**Warmwasserspeicher** mit Isttemperatur, Zieltemperatur und einem Hinweis, wenn der Heizstab läuft. Am Puffer erscheint derselbe Hinweis für den Heizstab der Heizung.
+Unter der Zeichnung stehen die **Betriebsart** als Auswahlliste in Klartext und die **Sollwertregler** für Heizkreis 1, Heizkreis 2 und Warmwasser.
 
-**Störungsmeldung** als roter Balken über dem Schema, sobald die Wärmepumpe einen Fehlercode meldet.
+## Betriebsart im Klartext
 
-**Leitungen** zwischen den Baugruppen, die sich nach Vorlauf- und Rücklauftemperatur färben. Die Spreizung ist damit direkt in der Zeichnung ablesbar.
+Die Wärmepumpe und die Integration liefern englische Kürzel oder reine Zahlen. Die Karte übersetzt sie. DHW steht für Domestic Hot Water, also Trinkwarmwasser.
 
-Die **Verdichterdrehzahl** steht oben im Außengerät, die **Durchflussmenge** an der Primärpumpe. Beides steht damit dort, wo es hingehört, statt in einer eigenen Leiste.
+| Wert | Anzeige |
+|---|---|
+| 0 oder Heat | Nur Heizen |
+| 1 oder Cool | Nur Kühlen |
+| 2 oder Auto(heat) | Automatik Heizen |
+| 3 oder DHW | Nur Warmwasser |
+| 4 oder Heat+DHW | Heizen und Warmwasser |
+| 5 oder Cool+DHW | Kühlen und Warmwasser |
+| 6 oder Auto(heat)+DHW | Automatik Heizen und Warmwasser |
+| 7 oder Auto(cool) | Automatik Kühlen |
+| 8 oder Auto(cool)+DHW | Automatik Kühlen und Warmwasser |
 
-**Schalter** für Wärmepumpe und Warmwasser-Zwangsladung, dazu die Betriebsart als Auswahlliste.
-
-**Sollwertregler** für Heizkreis 1, Heizkreis 2 und Warmwasser. Minimum, Maximum und Schrittweite liest die Karte aus der Entität selbst.
-
-**SG Ready** direkt im Außengerät, ohne Rahmen. Der Betriebszustand wird aus zwei Kontakten abgeleitet, darunter zeigt ein Balken aus vier Segmenten, wo die Anlage gerade steht. Bei zwei Lüftern sitzt die Anzeige zwischen ihnen, bei einem darunter.
-
-Die **Außentemperatur** steht bewusst im Kopfbereich der Karte und nicht im Anlagenschema. Im Schema stünde sie in einer Flucht mit den Leitungen und ließe sich mit einer Temperatur im Heizungssystem verwechseln.
+Beim Dreiwegeventil wird Room zu Heizung und DHW zu Warmwasser.
 
 ## Installation
 
@@ -90,7 +98,6 @@ Ist in der Konfiguration gar keine Entität eingetragen, greift die Karte auch z
 
 ```yaml
 type: custom:lutarym-heatpump-card
-title: Wärmepumpe
 fan_count: 2
 hk_count: 2
 scale_min: 20
@@ -102,18 +109,20 @@ show_switches: true
 show_controls: true
 entities:
   outside_temp: sensor.heishamon_top14
-  operating_mode: sensor.heishamon_top4
+  power_state: switch.heishamon_setheatpump
   compressor: sensor.heishamon_top8
-  pump_flow: sensor.heishamon_top1
-  error: sensor.heishamon_top44
-  water_pressure: sensor.heishamon_top115
   fan1_rpm: sensor.heishamon_top62
   fan2_rpm: sensor.heishamon_top63
   defrost: sensor.heishamon_top26
+  error: sensor.heishamon_top44
+  # sg_k1: switch.sg_relais_k1   # eigene Entität, optional
+  # sg_k2: switch.sg_relais_k2   # eigene Entität, optional
   flow_temp: sensor.heishamon_top6
   return_temp: sensor.heishamon_top5
   pump_speed: sensor.heishamon_top65
+  pump_flow: sensor.heishamon_top1
   three_way_valve: sensor.heishamon_top20
+  water_pressure: sensor.heishamon_top115
   buffer_temp: sensor.heishamon_top46
   room_heater: sensor.heishamon_top59
   hk1_water: sensor.heishamon_top36
@@ -129,19 +138,14 @@ entities:
   dhw_temp: sensor.heishamon_top10
   dhw_setpoint: number.heishamon_top9
   dhw_heater: sensor.heishamon_top58
-  # sg_k1: switch.sg_relais_k1   # eigene Entitaet, optional
-  # sg_k2: switch.sg_relais_k2   # eigene Entitaet, optional
-  power_switch: switch.heishamon_setheatpump
   mode_select: select.heishamon_setoperationmode
-  dhw_switch: switch.heishamon_setforcedhw
-  # heating_switch: switch.mein_eigener_helfer   # eigene Entitaet, optional
+  # heating_switch: switch.mein_eigener_helfer   # eigene Entität, optional
 ```
 
 ### Optionen
 
 | Option | Standard | Bedeutung |
 |---|---|---|
-| `title` | Waermepumpe | Überschrift der Karte |
 | `fan_count` | 2 | Anzahl der dargestellten Lüfter, 1 oder 2 |
 | `hk_count` | 2 | Anzahl der dargestellten Heizkreise, 1 oder 2 |
 | `animate` | true | Bewegung anzeigen |
@@ -157,42 +161,40 @@ entities:
 
 Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei Striche.
 
-| Feld | HeishaMon | Bedeutung |
+| Feld | Quelle | Bedeutung |
 |---|---|---|
-| `outside_temp` | TOP14 | Außentemperatur, im Kopfbereich der Karte |
-| `operating_mode` | TOP4 | Betriebsart, wird als Klartext oben rechts angezeigt |
-| `compressor` | TOP8 | Verdichterdrehzahl, oben im Außengerät |
-| `pump_flow` | TOP1 | Durchflussmenge, an der Primärpumpe |
-| `fan1_rpm` | TOP62 | Drehzahl Lüfter 1 |
-| `fan2_rpm` | TOP63 | Drehzahl Lüfter 2 |
-| `defrost` | TOP26 | Abtauung, blendet den Hinweis ein |
+| `outside_temp` | TOP14 | Außentemperatur |
+| `power_state` | SetHeatpump oder TOP0 | Wärmepumpe Status, grüne LED |
+| `compressor` | TOP8 | Verdichterdrehzahl |
+| `fan1_rpm` | TOP62 | Lüfter 1 Drehzahl |
+| `fan2_rpm` | TOP63 | Lüfter 2 Drehzahl |
+| `defrost` | TOP26 | Abtauung läuft |
+| `error` | TOP44 | Fehlercode |
+| `sg_k1` | eigene Entität | Kontakt K1 Sperre |
+| `sg_k2` | eigene Entität | Kontakt K2 Anlauf |
 | `flow_temp` | TOP6 | Vorlauftemperatur |
 | `return_temp` | TOP5 | Rücklauftemperatur |
+| `pump_speed` | TOP65 | Primärpumpe Drehzahl |
+| `pump_flow` | TOP1 | Durchflussmenge |
+| `three_way_valve` | TOP20 | Dreiwegeventil |
+| `water_pressure` | TOP115 | Wasserdruck |
 | `buffer_temp` | TOP46 | Puffertemperatur |
+| `room_heater` | TOP59 | Heizstab Heizung |
+| `hk1_water` | TOP36 | HK1 Wassertemperatur |
+| `hk1_water_target` | TOP42 | HK1 Wasser Sollwert |
+| `hk1_room` | TOP56 | HK1 Raumtemperatur |
+| `hk1_pump` | TOP124 | HK1 Pumpe läuft |
+| `hk1_setpoint` | TOP27 | HK1 Sollwert einstellbar |
+| `hk2_water` | TOP37 | HK2 Wassertemperatur |
+| `hk2_water_target` | TOP43 | HK2 Wasser Sollwert |
+| `hk2_room` | TOP57 | HK2 Raumtemperatur |
+| `hk2_pump` | TOP123 | HK2 Pumpe läuft |
+| `hk2_setpoint` | TOP34 | HK2 Sollwert einstellbar |
 | `dhw_temp` | TOP10 | Warmwasser Isttemperatur |
-| `dhw_setpoint` | TOP9 | Sollwert Warmwasser, muss eine Number-Entität sein |
-| `dhw_heater` | TOP58 | Heizstab Warmwasser, blendet den Hinweis ein |
-| `error` | TOP44 | Fehlercode, blendet die Störungsmeldung ein |
-| `water_pressure` | TOP115 | Wasserdruck, Zeiger des Manometers |
-| `pump_speed` | TOP65 | Drehzahl der Primärpumpe |
-| `hk1_water` | TOP36 | Heizkreis 1 Wassertemperatur |
-| `hk1_water_target` | TOP42 | Heizkreis 1 Wasser Sollwert |
-| `hk1_room` | TOP56 | Heizkreis 1 Raumtemperatur |
-| `hk1_pump` | TOP124 | Heizkreis 1 Pumpe, treibt die Animation |
-| `hk1_setpoint` | TOP27 | Heizkreis 1 Sollwert, muss eine Number sein |
-| `hk2_water` | TOP37 | Heizkreis 2 Wassertemperatur |
-| `hk2_water_target` | TOP43 | Heizkreis 2 Wasser Sollwert |
-| `hk2_room` | TOP57 | Heizkreis 2 Raumtemperatur |
-| `hk2_pump` | TOP123 | Heizkreis 2 Pumpe, treibt die Animation |
-| `hk2_setpoint` | TOP34 | Heizkreis 2 Sollwert, muss eine Number sein |
-| `three_way_valve` | TOP20 | Dreiwegeventil, Heizen oder Warmwasser |
-| `room_heater` | TOP59 | Heizstab Heizung, blendet den Hinweis am Puffer ein |
-| `power_switch` | SetHeatpump | Wärmepumpe ein und aus, muss ein Switch sein |
-| `dhw_switch` | SetForceDHW | Warmwasser sofort laden, muss ein Switch sein |
-| `mode_select` | SetOperationMode | Betriebsart, muss ein Select sein |
-| `heating_switch` | keines | Optional, für einen eigenen Helfer |
-| `sg_k1` | keines | SG-Kontakt K1 Sperre, eigener Shelly oder Relais |
-| `sg_k2` | keines | SG-Kontakt K2 Anlauf, eigener Shelly oder Relais |
+| `dhw_setpoint` | TOP9 | Warmwasser Sollwert |
+| `dhw_heater` | TOP58 | Heizstab Warmwasser |
+| `mode_select` | SetOperationMode | Betriebsart umschalten |
+| `heating_switch` | eigene Entität | Heizung ein und aus |
 
 ## Farbskalen
 
