@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.9.0**
+**Version 0.9.1**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -18,7 +18,7 @@ Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 
 **Primärpumpe** mit Drehzahl und Durchflussmenge, hinter dem Puffer auf der Rücklaufleitung.
 
-**Heizungspuffer** als großer Speicher, eingefärbt nach seiner Temperatur, darunter die Zieltemperatur.
+**Heizungspuffer** als großer Speicher, eingefärbt nach seiner Temperatur, darunter die Zieltemperatur. Auch hier bewegt sich das Wasser, solange der Puffer beladen wird.
 
 **Heizkreis 1 und 2**, jeder mit eigener Pumpe und eigenem Heizkörper. Auf dem Heizkörper liegt eine Tafel mit Wassertemperatur samt Sollwert und der Raumtemperatur.
 
@@ -26,7 +26,7 @@ Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 
 **Dreiwegeventil** am Abzweig zum Warmwasserspeicher, in Klartext als Heizung oder Warmwasser.
 
-**Warmwasserspeicher** mit Ist- und Zieltemperatur und einem Hinweis, wenn der Heizstab läuft.
+**Warmwasserspeicher** mit Ist- und Zieltemperatur und einem Hinweis, wenn der Heizstab läuft. Das Wasser im Speicher bewegt sich, solange geladen wird.
 
 **Störungsmeldung** als roter Balken über dem Schema, sobald ein Fehlercode anliegt.
 
@@ -214,6 +214,8 @@ Bewegung zeigt an, dass etwas tatsächlich arbeitet. Steht ein Bauteil still, st
 | Stichleitung zum Speicher | zusätzlich das Dreiwegeventil auf Warmwasser |
 | Heizkreisleitungen | die jeweilige Kreispumpe läuft |
 | Gehäuserahmen außen | Verdichter läuft |
+| Wasser im Puffer | Dreiwegeventil auf Heizen und Umwälzung läuft |
+| Wasser im Warmwasserspeicher | Dreiwegeventil auf Warmwasser oder Heizstab läuft |
 | Hinweise Heizstab und Abtauung | solange sie aktiv sind |
 | SG Ready | in Zustand 1 Sperre und Zustand 4 Anlaufbefehl |
 | Störungsbalken | solange ein Fehlercode anliegt |

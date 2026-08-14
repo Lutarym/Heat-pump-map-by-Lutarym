@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "0.9.0";
+const CARD_VERSION = "0.9.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -608,6 +608,12 @@ class LutarymHeatpumpCard extends HTMLElement {
           <stop offset="0%" id="rad2-top" stop-color="${NEUTRAL}"/>
           <stop offset="100%" id="rad2-bottom" stop-color="${NEUTRAL}"/>
         </linearGradient>
+        <clipPath id="bufClip">
+          <rect x="548" y="258" width="174" height="274" rx="20"/>
+        </clipPath>
+        <clipPath id="dhwClip">
+          <rect x="1448" y="258" width="154" height="274" rx="28"/>
+        </clipPath>
       </defs>
 
       <!-- Sammelleitungen -->
@@ -694,6 +700,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <rect x="540" y="${T}" width="190" height="290" rx="26"
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
         <rect x="548" y="258" width="174" height="274" rx="20" fill="url(#bufferFill)"/>
+        <g clip-path="url(#bufClip)">${this._waves("buf-waves", 548, 258, 174, 274)}</g>
         <rect x="548" y="258" width="174" height="274" rx="20" fill="url(#glass)"/>
         <text class="value-l" id="buf-v" x="635" y="392" text-anchor="middle">--</text>
         <text class="value-sp" id="buf-sp" x="635" y="420" text-anchor="middle"></text>
@@ -735,10 +742,8 @@ class LutarymHeatpumpCard extends HTMLElement {
         <rect x="1440" y="${T}" width="170" height="290" rx="34"
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
         <rect x="1448" y="258" width="154" height="274" rx="28" fill="url(#dhwFill)"/>
+        <g clip-path="url(#dhwClip)">${this._waves("dhw-waves", 1448, 258, 154, 274)}</g>
         <rect x="1448" y="258" width="154" height="274" rx="28" fill="url(#glass)"/>
-        <path class="coil" d="M1470 396 q28 -18 55 0 q28 18 55 0
-                              M1470 430 q28 -18 55 0 q28 18 55 0
-                              M1470 464 q28 -18 55 0 q28 18 55 0"/>
         <text class="value-l" id="dhw-v" x="1525" y="330" text-anchor="middle">--</text>
         <text class="value-sp" id="dhw-sp" x="1525" y="354" text-anchor="middle"></text>
         <g id="dhwheater-badge" class="badge" transform="translate(1525 504)">
@@ -802,6 +807,28 @@ class LutarymHeatpumpCard extends HTMLElement {
 
         <text class="cap" x="${mid}" y="${L.CAP_Y}" text-anchor="middle">Heizkreis ${n}</text>
       </g>`;
+  }
+
+  /**
+   * Wasserbewegung in einem Speicher.
+   * Die Wellen laufen waagerecht durch. Die Periode entspricht genau
+   * dem Verschiebeweg, dadurch ist der Uebergang nahtlos.
+   * Die aeussere Gruppe traegt die Lage, die innere die Bewegung,
+   * sonst wuerde die Animation das Lage-Attribut ueberschreiben.
+   */
+  _waves(id, x, y, w, h, reihen) {
+    const p = 44; // Wellenlaenge und zugleich Verschiebeweg
+    const anzahl = reihen || 5;
+    let pfade = "";
+    for (let i = 1; i <= anzahl; i++) {
+      const yy = y + (h / (anzahl + 1)) * i;
+      let d = `M${x - p} ${yy}`;
+      for (let xx = x - p; xx < x + w + p; xx += p) {
+        d += ` q ${p / 4} -7, ${p / 2} 0 q ${p / 4} 7, ${p / 2} 0`;
+      }
+      pfade += `<path d="${d}"/>`;
+    }
+    return `<g class="waves" id="${id}">${pfade}</g>`;
   }
 
   _fan(id, cx, cy, r) {
@@ -961,7 +988,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     paint("dhw-bottom", col(dhw === null ? null : dhw - 6));
     set("dhw-v", dhw === null ? "--" : `${fmt(dhw)} °C`);
     set("dhw-sp", dhwSp === null ? "" : `Ziel ${fmt(dhwSp, 0)} °C`);
-    abzeichen("dhwheater-badge", isOn(hass, this._e("dhw_heater")) === true);
+    const dhwHeizt = isOn(hass, this._e("dhw_heater")) === true;
+    abzeichen("dhwheater-badge", dhwHeizt);
 
     /* Primärpumpe und Durchfluss */
     const pumpRpm = numState(hass, this._e("pump_speed"));
@@ -1015,6 +1043,16 @@ class LutarymHeatpumpCard extends HTMLElement {
     flowing(["dots-primary"], primaer, col(ret));
     flowing(["dots-buf"], primaer && !zuWarmwasser, col(flow));
     flowing(["dots-dhw"], primaer && zuWarmwasser, col(flow));
+
+    // Wasser bewegt sich im Speicher, der gerade beladen wird.
+    const bufLaeuft = primaer && !zuWarmwasser;
+    const dhwLaeuft = (primaer && zuWarmwasser) || dhwHeizt;
+    const wellen = (id, an) => {
+      const el = sr.getElementById(id);
+      if (el) el.classList.toggle("is-on", animate && an);
+    };
+    wellen("buf-waves", bufLaeuft);
+    wellen("dhw-waves", dhwLaeuft);
 
     /* Bedienung */
     this._syncToggle("sw-heat", "heating_switch");
@@ -1237,7 +1275,16 @@ class LutarymHeatpumpCard extends HTMLElement {
         font-variant-numeric: tabular-nums;
       }
       .value-sp { fill: rgba(255,255,255,0.85); font-size: 17px; }
-      .coil { fill: none; stroke: rgba(255,255,255,0.28); stroke-width: 5; stroke-linecap: round; }
+      /* Wasserbewegung in den Speichern. Laeuft nur, wenn beladen wird. */
+      .waves path {
+        fill: none; stroke: #FFFFFF; stroke-width: 3; stroke-linecap: round;
+      }
+      .waves {
+        opacity: 0; animation: lhc-wave 3s linear infinite;
+        animation-play-state: paused; transition: opacity 600ms ease;
+      }
+      .waves.is-on { opacity: 0.32; animation-play-state: running; }
+      @keyframes lhc-wave { to { transform: translateX(-44px); } }
       .tag-l { fill: #8494AA; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
       .tag-v {
         fill: #FFFFFF; font-size: 19px; font-weight: 600;
