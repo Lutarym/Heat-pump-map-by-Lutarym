@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "0.4.0";
+const CARD_VERSION = "0.5.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -113,6 +113,24 @@ function escapeHtml(text) {
 }
 
 /* ------------------------------------------------------------------ *
+ *  SG Ready
+ *
+ *  Vier Betriebszustaende nach der Schnittstellenbeschreibung des
+ *  Bundesverbands Waermepumpe. Die Klemmenloesung codiert sie ueber
+ *  zwei Kontakte, K1 gesperrt und K2 Anlauf:
+ *    1:0 Zustand 1, 0:0 Zustand 2, 0:1 Zustand 3, 1:1 Zustand 4.
+ *
+ *  HeishaMon liefert SG Ready nicht. Die Werte muessen aus der
+ *  eigenen Verkabelung kommen, etwa aus zwei Relais.
+ * ------------------------------------------------------------------ */
+const SG_STATES = {
+  1: { kurz: "Sperre", lang: "Sperre, hoechstens zwei Stunden", farbe: "#D6534A" },
+  2: { kurz: "Normal", lang: "Energieeffizienter Normalbetrieb", farbe: "#7E8CA0" },
+  3: { kurz: "Empfehlung", lang: "Einschaltempfehlung, verstaerkter Betrieb", farbe: "#F2B233" },
+  4: { kurz: "Anlauf", lang: "Anlaufbefehl", farbe: "#46C07A" },
+};
+
+/* ------------------------------------------------------------------ *
  *  Erkennung der Integration "Heishamon by Lutarym"
  * ------------------------------------------------------------------ */
 const INTEGRATION_DOMAIN = "heishamon_lutarym";
@@ -167,6 +185,8 @@ const FIELD_DOMAIN = {
   heating_switch: ["switch", "input_boolean"],
   dhw_switch: ["switch", "input_boolean"],
   mode_select: ["select", "input_select"],
+  sg_k1: ["switch", "input_boolean", "binary_sensor"],
+  sg_k2: ["switch", "input_boolean", "binary_sensor"],
 };
 
 function detectIntegration(hass) {
@@ -280,6 +300,10 @@ const ENTITY_FIELDS = [
   { key: "dhw_setpoint", label: "Warmwasser Sollwert", group: "Warmwasser", hint: "TOP9, number" },
   { key: "dhw_heater", label: "Heizstab Warmwasser", group: "Warmwasser", hint: "TOP58" },
 
+  { key: "sg_mode", label: "SG Ready Zustand", group: "SG Ready", hint: "eigene Entitaet mit 1 bis 4" },
+  { key: "sg_k1", label: "SG Kontakt K1 Sperre", group: "SG Ready", hint: "alternativ zu oben" },
+  { key: "sg_k2", label: "SG Kontakt K2 Anlauf", group: "SG Ready", hint: "alternativ zu oben" },
+
   { key: "power_switch", label: "Waermepumpe ein und aus", group: "Steuerung", hint: "SetHeatpump, switch" },
   { key: "mode_select", label: "Betriebsart umschalten", group: "Steuerung", hint: "SetOperationMode, select" },
   { key: "dhw_switch", label: "Warmwasser sofort laden", group: "Steuerung", hint: "SetForceDHW, switch" },
@@ -356,6 +380,36 @@ class LutarymHeatpumpCard extends HTMLElement {
     return this._auto[key] || "";
   }
 
+  /**
+   * Ermittelt den SG-Ready-Zustand 1 bis 4.
+   * Zuerst aus einer direkten Entitaet, sonst aus den beiden Kontakten.
+   * Gibt null zurueck, wenn nichts konfiguriert oder auswertbar ist.
+   */
+  _sgMode() {
+    const hass = this._hass;
+    const direkt = this._e("sg_mode");
+    if (direkt && hass.states[direkt]) {
+      const roh = String(hass.states[direkt].state);
+      const zahl = parseInt(roh, 10);
+      if (zahl >= 1 && zahl <= 4) return zahl;
+      const treffer = roh.match(/[1-4]/);
+      if (treffer) return parseInt(treffer[0], 10);
+      return null;
+    }
+    const k1 = this._e("sg_k1");
+    const k2 = this._e("sg_k2");
+    if (k1 && k2) {
+      const a = isOn(hass, k1);
+      const b = isOn(hass, k2);
+      if (a === null || b === null) return null;
+      if (a && !b) return 1;
+      if (!a && !b) return 2;
+      if (!a && b) return 3;
+      return 4;
+    }
+    return null;
+  }
+
   _render() {
     if (!this._built) {
       this._build();
@@ -389,6 +443,15 @@ class LutarymHeatpumpCard extends HTMLElement {
               <span class="lhc-outside-text">
                 <span class="lhc-outside-label">Aussen</span>
                 <span class="lhc-outside-value" id="outside-v">--</span>
+              </span>
+            </div>
+            <div class="lhc-sg" id="sg-chip" hidden>
+              <span class="lhc-sg-head">
+                <span class="lhc-outside-label">SG Ready</span>
+                <span class="lhc-sg-value" id="sg-text">--</span>
+              </span>
+              <span class="lhc-sg-bar">
+                <i id="sg-seg-1"></i><i id="sg-seg-2"></i><i id="sg-seg-3"></i><i id="sg-seg-4"></i>
               </span>
             </div>
             <div class="lhc-mode" id="mode">--</div>
@@ -853,6 +916,27 @@ class LutarymHeatpumpCard extends HTMLElement {
       column.setAttribute("y", String(28 - h));
     }
 
+    /* SG Ready */
+    const chip = sr.getElementById("sg-chip");
+    if (chip) {
+      const sg = this._sgMode();
+      const konfiguriert =
+        Boolean(this._e("sg_mode")) || (this._e("sg_k1") && this._e("sg_k2"));
+      chip.hidden = !konfiguriert;
+      if (konfiguriert) {
+        const info = SG_STATES[sg];
+        set("sg-text", sg === null ? "unbekannt" : `${sg} ${info.kurz}`);
+        chip.title = sg === null ? "SG Ready nicht auswertbar" : info.lang;
+        chip.style.setProperty("--sg", info ? info.farbe : NEUTRAL);
+        // Sperre und Anlaufbefehl sind Ausnahmezustaende und blinken.
+        chip.classList.toggle("is-pulsing", animate && (sg === 1 || sg === 4));
+        for (let i = 1; i <= 4; i++) {
+          const seg = sr.getElementById(`sg-seg-${i}`);
+          if (seg) seg.classList.toggle("is-on", sg === i);
+        }
+      }
+    }
+
     /* Aussengeraet */
     this._spin("fan1", numState(hass, this._e("fan1_rpm")), "fan1-rpm", "U/min");
     if (this._config.fan_count === 2) {
@@ -1123,6 +1207,26 @@ class LutarymHeatpumpCard extends HTMLElement {
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums;
       }
+      .lhc-sg {
+        --sg: ${NEUTRAL};
+        display: flex; flex-direction: column; gap: 6px;
+        padding: 7px 14px; border-radius: 12px;
+        background: #1B2431; border: 1px solid var(--line);
+      }
+      .lhc-sg[hidden] { display: none; }
+      .lhc-sg-head { display: flex; flex-direction: column; line-height: 1.25; }
+      .lhc-sg-value {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 16px; font-weight: 600; color: var(--sg); white-space: nowrap;
+      }
+      .lhc-sg-bar { display: flex; gap: 3px; }
+      .lhc-sg-bar i {
+        width: 16px; height: 4px; border-radius: 2px; background: #2C3646;
+        transition: background 300ms ease;
+      }
+      .lhc-sg-bar i.is-on { background: var(--sg); }
+      .lhc-sg.is-pulsing .lhc-sg-bar i.is-on,
+      .lhc-sg.is-pulsing .lhc-sg-value { animation: lhc-pulse 1.6s ease-in-out infinite; }
       .lhc-mode {
         font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
         font-size: 13px; padding: 7px 14px; border-radius: 999px;
@@ -1294,7 +1398,8 @@ class LutarymHeatpumpCard extends HTMLElement {
         .lhc-title h2 { font-size: 20px; }
       }
       @media (prefers-reduced-motion: reduce) {
-        .rotor, .flowdots, .badge, .lhc-alert, #unit-glow { animation: none !important; }
+        .rotor, .flowdots, .badge, .lhc-alert, #unit-glow,
+        .lhc-sg-bar i, .lhc-sg-value { animation: none !important; }
       }
     `;
   }
@@ -1434,6 +1539,9 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
           "Heizung ein und aus" ist fuer einen eigenen Helfer gedacht.
           Die Heizkreispumpen melden nur an oder aus, keine Drehzahl, sie drehen
           sich daher mit fester Geschwindigkeit.
+          SG Ready liefert HeishaMon nicht. Trage entweder eine eigene Entitaet
+          mit den Werten 1 bis 4 ein, oder die beiden Kontakte K1 und K2.
+          Die Knoepfe oben fuehren zusammen und loeschen eigene Eintraege nicht.
         </p>
       </div>
     `;
@@ -1457,21 +1565,24 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     bind("opt-switches", (el) => put({ show_switches: el.checked }));
     bind("opt-controls", (el) => put({ show_controls: el.checked }));
 
-    const applyMap = (map) => {
-      this._config = { ...this._config, entities: { ...map } };
+    // Beim Uebernehmen wird zusammengefuehrt, damit eigene Eintraege
+    // wie SG Ready oder der Heizungshelfer nicht verloren gehen.
+    const applyMap = (map, merge) => {
+      const entities = merge ? { ...this._config.entities, ...map } : { ...map };
+      this._config = { ...this._config, entities };
       this._syncValues();
       this._emit();
     };
     this.shadowRoot.getElementById("btn-adopt").addEventListener("click", () => {
       const f = detectIntegration(this._hass);
-      if (f.found) applyMap(f.entities);
+      if (f.found) applyMap(f.entities, true);
     });
     this.shadowRoot
       .getElementById("btn-default")
-      .addEventListener("click", () => applyMap(defaultEntityMap()));
+      .addEventListener("click", () => applyMap(defaultEntityMap(), true));
     this.shadowRoot
       .getElementById("btn-clear")
-      .addEventListener("click", () => applyMap({}));
+      .addEventListener("click", () => applyMap({}, false));
 
     this.shadowRoot.querySelectorAll("[data-entity]").forEach((input) => {
       input.addEventListener("change", () => {

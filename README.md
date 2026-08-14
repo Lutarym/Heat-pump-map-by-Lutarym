@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.4.0**
+**Version 0.5.0**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -38,6 +38,8 @@ Das Seitenverhältnis beträgt etwa 2,7 zu 1. Bei 900 Pixeln Kartenbreite ist di
 
 **Sollwertregler** für Heizkreis 1, Heizkreis 2 und Warmwasser. Minimum, Maximum und Schrittweite liest die Karte aus der Entität selbst.
 
+**SG Ready** im Kopfbereich mit dem aktiven Betriebszustand und einem Balken aus vier Segmenten, der zeigt, wo die Anlage gerade steht.
+
 Die **Außentemperatur** steht bewusst im Kopfbereich der Karte und nicht im Anlagenschema. Im Schema stünde sie in einer Flucht mit den Leitungen und ließe sich mit einer Temperatur im Heizungssystem verwechseln.
 
 ## Installation
@@ -63,6 +65,8 @@ Danach erscheint beim Hinzufügen einer Karte der Eintrag **Lutarym Waermepumpe*
 Die Karte hat einen vollständigen grafischen Editor. Alle Felder sind nach Baugruppen sortiert und haben eine Vorschlagsliste der passenden Entitäten. Ein Feld mit einer Entität, die es nicht gibt, wird rot umrandet.
 
 ### Automatische Erkennung
+
+Die drei Schaltflächen führen zusammen und löschen eigene Einträge wie SG Ready oder den Heizungshelfer nicht. Nur **Alle leeren** setzt wirklich alles zurück.
 
 Ganz oben im Editor steht, ob die Integration [heishamon-homeassistant-lutarym](https://github.com/Lutarym/heishamon-homeassistant-lutarym) gefunden wurde, und wie viele ihrer Entitäten zu dieser Karte passen.
 
@@ -127,10 +131,13 @@ entities:
   dhw_temp: sensor.heishamon_top10
   dhw_setpoint: number.heishamon_top9
   dhw_heater: sensor.heishamon_top58
+  # sg_mode: sensor.sg_ready_zustand   # eigene Entitaet, optional
+  # sg_k1: switch.sg_relais_k1   # eigene Entitaet, optional
+  # sg_k2: switch.sg_relais_k2   # eigene Entitaet, optional
   power_switch: switch.heishamon_setheatpump
   mode_select: select.heishamon_setoperationmode
   dhw_switch: switch.heishamon_setforcedhw
-  # heating_switch: switch.mein_eigener_helfer   # optional
+  # heating_switch: switch.mein_eigener_helfer   # eigene Entitaet, optional
 ```
 
 ### Optionen
@@ -189,6 +196,9 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `dhw_switch` | SetForceDHW | Warmwasser sofort laden, muss ein Switch sein |
 | `mode_select` | SetOperationMode | Betriebsart, muss ein Select sein |
 | `heating_switch` | keines | Optional, für einen eigenen Helfer |
+| `sg_mode` | keines | SG-Ready-Zustand 1 bis 4 aus eigener Entität |
+| `sg_k1` | keines | SG-Kontakt K1 Sperre, alternativ zu `sg_mode` |
+| `sg_k2` | keines | SG-Kontakt K2 Anlauf, alternativ zu `sg_mode` |
 
 ## Farbskalen
 
@@ -218,6 +228,33 @@ Bewegung zeigt an, dass etwas tatsächlich arbeitet. Steht ein Bauteil still, st
 Die Heizkreispumpen melden bei HeishaMon nur an oder aus, keine Drehzahl. Sie drehen sich daher mit fester Geschwindigkeit, im Gegensatz zu Lüftern und Primärpumpe.
 
 Die gesamte Bewegung lässt sich im Editor mit der Option **Bewegung anzeigen** abschalten. Ist im Betriebssystem reduzierte Bewegung eingestellt, schaltet sich die Animation ohnehin ab.
+
+## SG Ready
+
+**HeishaMon liefert SG Ready nicht.** Geprüft sind alle 144 Topics, die sechs Zusatzwerte und die sieben Werte der optionalen Platine. Der Zustand muss deshalb aus deiner eigenen Verkabelung kommen, üblicherweise aus zwei Relais, die die Kontakte der Wärmepumpe schalten.
+
+Die Karte zeigt die vier Betriebszustände nach der Schnittstellenbeschreibung des Bundesverbands Wärmepumpe:
+
+| Zustand | Kontakte K1:K2 | Bedeutung | Farbe |
+|---|---|---|---|
+| 1 | 1:0 | Sperre, höchstens zwei Stunden | rot |
+| 2 | 0:0 | Energieeffizienter Normalbetrieb | grau |
+| 3 | 0:1 | Einschaltempfehlung, verstärkter Betrieb | bernstein |
+| 4 | 1:1 | Anlaufbefehl | grün |
+
+K1 ist der Sperrkontakt, K2 der Anlaufkontakt.
+
+Es gibt zwei Wege, den Zustand einzutragen:
+
+**Ein Feld.** Trage bei `sg_mode` eine eigene Entität ein, die 1 bis 4 liefert. Das kann ein Sensor, ein `input_number` oder ein `input_select` sein. Die Karte liest auch Texte wie "Zustand 3" und zieht die Ziffer heraus.
+
+**Zwei Kontakte.** Trage bei `sg_k1` und `sg_k2` die beiden Relais ein, etwa zwei Shelly-Schalter. Die Karte leitet den Zustand daraus nach obiger Tabelle ab.
+
+Ist `sg_mode` gesetzt, hat es Vorrang. Ist gar nichts gesetzt, blendet sich die Anzeige aus.
+
+Zustand 1 und Zustand 4 sind Ausnahmezustände und blinken, damit sie auffallen. Zustand 2 und 3 stehen ruhig.
+
+Die Karte zeigt SG Ready nur an, sie schaltet nicht. Wer umschalten will, steuert die Relais über eine Automation.
 
 ## Heizung und Warmwasser schalten
 
