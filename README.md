@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.5.0**
+**Version 0.5.1**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -38,7 +38,7 @@ Das Seitenverhältnis beträgt etwa 2,7 zu 1. Bei 900 Pixeln Kartenbreite ist di
 
 **Sollwertregler** für Heizkreis 1, Heizkreis 2 und Warmwasser. Minimum, Maximum und Schrittweite liest die Karte aus der Entität selbst.
 
-**SG Ready** im Kopfbereich mit dem aktiven Betriebszustand und einem Balken aus vier Segmenten, der zeigt, wo die Anlage gerade steht.
+**SG Ready** im Kopfbereich mit dem aus zwei Kontakten abgeleiteten Betriebszustand und einem Balken aus vier Segmenten, der zeigt, wo die Anlage gerade steht.
 
 Die **Außentemperatur** steht bewusst im Kopfbereich der Karte und nicht im Anlagenschema. Im Schema stünde sie in einer Flucht mit den Leitungen und ließe sich mit einer Temperatur im Heizungssystem verwechseln.
 
@@ -131,7 +131,6 @@ entities:
   dhw_temp: sensor.heishamon_top10
   dhw_setpoint: number.heishamon_top9
   dhw_heater: sensor.heishamon_top58
-  # sg_mode: sensor.sg_ready_zustand   # eigene Entitaet, optional
   # sg_k1: switch.sg_relais_k1   # eigene Entitaet, optional
   # sg_k2: switch.sg_relais_k2   # eigene Entitaet, optional
   power_switch: switch.heishamon_setheatpump
@@ -196,9 +195,8 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `dhw_switch` | SetForceDHW | Warmwasser sofort laden, muss ein Switch sein |
 | `mode_select` | SetOperationMode | Betriebsart, muss ein Select sein |
 | `heating_switch` | keines | Optional, für einen eigenen Helfer |
-| `sg_mode` | keines | SG-Ready-Zustand 1 bis 4 aus eigener Entität |
-| `sg_k1` | keines | SG-Kontakt K1 Sperre, alternativ zu `sg_mode` |
-| `sg_k2` | keines | SG-Kontakt K2 Anlauf, alternativ zu `sg_mode` |
+| `sg_k1` | keines | SG-Kontakt K1 Sperre, eigener Shelly oder Relais |
+| `sg_k2` | keines | SG-Kontakt K2 Anlauf, eigener Shelly oder Relais |
 
 ## Farbskalen
 
@@ -244,13 +242,11 @@ Die Karte zeigt die vier Betriebszustände nach der Schnittstellenbeschreibung d
 
 K1 ist der Sperrkontakt, K2 der Anlaufkontakt.
 
-Es gibt zwei Wege, den Zustand einzutragen:
+Du trägst nur die beiden Kontakte ein, `sg_k1` für Sperre und `sg_k2` für Anlauf, zum Beispiel zwei Shellys. Den Betriebszustand 1 bis 4 leitet die Karte daraus nach obiger Tabelle selbst ab.
 
-**Ein Feld.** Trage bei `sg_mode` eine eigene Entität ein, die 1 bis 4 liefert. Das kann ein Sensor, ein `input_number` oder ein `input_select` sein. Die Karte liest auch Texte wie "Zustand 3" und zieht die Ziffer heraus.
+Erlaubt sind die Domänen `switch`, `input_boolean`, `binary_sensor` und `sensor`. Damit passt sowohl ein Shelly, der schaltet, als auch einer, der nur einen Eingang misst.
 
-**Zwei Kontakte.** Trage bei `sg_k1` und `sg_k2` die beiden Relais ein, etwa zwei Shelly-Schalter. Die Karte leitet den Zustand daraus nach obiger Tabelle ab.
-
-Ist `sg_mode` gesetzt, hat es Vorrang. Ist gar nichts gesetzt, blendet sich die Anzeige aus.
+Fehlt einer der beiden Kontakte, blendet sich die Anzeige aus. Ist einer nicht erreichbar, zeigt die Karte "unbekannt", statt einen Zustand zu raten. Ein ausgefallener Shelly darf nicht als offener Kontakt gelten, sonst stünde dort Normalbetrieb, obwohl niemand weiß, was tatsächlich anliegt.
 
 Zustand 1 und Zustand 4 sind Ausnahmezustände und blinken, damit sie auffallen. Zustand 2 und 3 stehen ruhig.
 

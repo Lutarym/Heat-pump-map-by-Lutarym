@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "0.5.0";
+const CARD_VERSION = "0.5.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -185,8 +185,8 @@ const FIELD_DOMAIN = {
   heating_switch: ["switch", "input_boolean"],
   dhw_switch: ["switch", "input_boolean"],
   mode_select: ["select", "input_select"],
-  sg_k1: ["switch", "input_boolean", "binary_sensor"],
-  sg_k2: ["switch", "input_boolean", "binary_sensor"],
+  sg_k1: ["switch", "input_boolean", "binary_sensor", "sensor"],
+  sg_k2: ["switch", "input_boolean", "binary_sensor", "sensor"],
 };
 
 function detectIntegration(hass) {
@@ -300,9 +300,8 @@ const ENTITY_FIELDS = [
   { key: "dhw_setpoint", label: "Warmwasser Sollwert", group: "Warmwasser", hint: "TOP9, number" },
   { key: "dhw_heater", label: "Heizstab Warmwasser", group: "Warmwasser", hint: "TOP58" },
 
-  { key: "sg_mode", label: "SG Ready Zustand", group: "SG Ready", hint: "eigene Entitaet mit 1 bis 4" },
-  { key: "sg_k1", label: "SG Kontakt K1 Sperre", group: "SG Ready", hint: "alternativ zu oben" },
-  { key: "sg_k2", label: "SG Kontakt K2 Anlauf", group: "SG Ready", hint: "alternativ zu oben" },
+  { key: "sg_k1", label: "Kontakt K1 Sperre", group: "SG Ready", hint: "Shelly, Relais oder Eingang" },
+  { key: "sg_k2", label: "Kontakt K2 Anlauf", group: "SG Ready", hint: "Shelly, Relais oder Eingang" },
 
   { key: "power_switch", label: "Waermepumpe ein und aus", group: "Steuerung", hint: "SetHeatpump, switch" },
   { key: "mode_select", label: "Betriebsart umschalten", group: "Steuerung", hint: "SetOperationMode, select" },
@@ -381,33 +380,26 @@ class LutarymHeatpumpCard extends HTMLElement {
   }
 
   /**
-   * Ermittelt den SG-Ready-Zustand 1 bis 4.
-   * Zuerst aus einer direkten Entitaet, sonst aus den beiden Kontakten.
-   * Gibt null zurueck, wenn nichts konfiguriert oder auswertbar ist.
+   * Leitet den SG-Ready-Zustand 1 bis 4 aus den beiden Kontakten ab.
+   * K1 ist der Sperrkontakt, K2 der Anlaufkontakt.
+   * Gibt null zurueck, solange ein Kontakt fehlt oder unbekannt ist.
    */
   _sgMode() {
-    const hass = this._hass;
-    const direkt = this._e("sg_mode");
-    if (direkt && hass.states[direkt]) {
-      const roh = String(hass.states[direkt].state);
-      const zahl = parseInt(roh, 10);
-      if (zahl >= 1 && zahl <= 4) return zahl;
-      const treffer = roh.match(/[1-4]/);
-      if (treffer) return parseInt(treffer[0], 10);
-      return null;
-    }
     const k1 = this._e("sg_k1");
     const k2 = this._e("sg_k2");
-    if (k1 && k2) {
-      const a = isOn(hass, k1);
-      const b = isOn(hass, k2);
-      if (a === null || b === null) return null;
-      if (a && !b) return 1;
-      if (!a && !b) return 2;
-      if (!a && b) return 3;
-      return 4;
-    }
-    return null;
+    if (!k1 || !k2) return null;
+    // Ein nicht erreichbarer Kontakt darf nicht als "offen" gelten,
+    // sonst zeigt die Karte Normalbetrieb, obwohl der Zustand unbekannt ist.
+    const unklar = [null, "unknown", "unavailable", ""];
+    if (unklar.includes(rawState(this._hass, k1))) return null;
+    if (unklar.includes(rawState(this._hass, k2))) return null;
+    const a = isOn(this._hass, k1);
+    const b = isOn(this._hass, k2);
+    if (a === null || b === null) return null;
+    if (a && !b) return 1; // 1:0 Sperre
+    if (!a && !b) return 2; // 0:0 Normalbetrieb
+    if (!a && b) return 3; // 0:1 Einschaltempfehlung
+    return 4; // 1:1 Anlaufbefehl
   }
 
   _render() {
@@ -920,8 +912,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     const chip = sr.getElementById("sg-chip");
     if (chip) {
       const sg = this._sgMode();
-      const konfiguriert =
-        Boolean(this._e("sg_mode")) || (this._e("sg_k1") && this._e("sg_k2"));
+      const konfiguriert = Boolean(this._e("sg_k1")) && Boolean(this._e("sg_k2"));
       chip.hidden = !konfiguriert;
       if (konfiguriert) {
         const info = SG_STATES[sg];
@@ -1539,8 +1530,9 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
           "Heizung ein und aus" ist fuer einen eigenen Helfer gedacht.
           Die Heizkreispumpen melden nur an oder aus, keine Drehzahl, sie drehen
           sich daher mit fester Geschwindigkeit.
-          SG Ready liefert HeishaMon nicht. Trage entweder eine eigene Entitaet
-          mit den Werten 1 bis 4 ein, oder die beiden Kontakte K1 und K2.
+          SG Ready liefert HeishaMon nicht. Trage die beiden Kontakte ein,
+          K1 fuer Sperre und K2 fuer Anlauf. Den Betriebszustand 1 bis 4
+          leitet die Karte daraus selbst ab.
           Die Knoepfe oben fuehren zusammen und loeschen eigene Eintraege nicht.
         </p>
       </div>
