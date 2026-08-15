@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.4.0**
+**Version 1.5.0**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -307,6 +307,14 @@ Der Regler für einen Heizkreis zeigt den tatsächlichen Sollwert des Kreises au
 Verstellst du den Regler, schreibt die Karte auf `hk1_setpoint` beziehungsweise `hk2_setpoint`, also TOP27 und TOP34. Das sind die stellbaren Entitäten, denn TOP42 und TOP43 sind reine Messwerte ohne Schreibzugriff.
 
 Ist keine Anzeigequelle eingetragen, zeigt der Regler den Wert der stellbaren Entität, wie zuvor.
+
+## Temperatur im Schaubild einstellen
+
+Ein Klick auf den Warmwasserspeicher, auf Heizkreis 1 oder auf Heizkreis 2 öffnet ein Fenster, in dem sich die Temperatur einstellen lässt. Es zeigt den aktuellen Wert groß, darunter einen Schieberegler und je einen Knopf für einen Schritt nach oben und unten. Die Schrittweite kommt aus der Entität.
+
+Das Fenster schließt über das Kreuz oben rechts oder über einen Klick auf den Hintergrund. Solange es offen ist, folgt es Änderungen, die von anderer Seite kommen, außer während du selbst schiebst.
+
+Anklickbar sind nur Baugruppen, für die eine stellbare Entität eingetragen ist. Fehlt sie, bleibt die Baugruppe wie bisher.
 
 ## Eigene Beschriftungen
 

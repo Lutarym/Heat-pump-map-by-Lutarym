@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.4.0";
+const CARD_VERSION = "1.5.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -520,11 +520,134 @@ class LutarymHeatpumpCard extends HTMLElement {
         <div class="lhc-scene">${this._svg()}</div>
         <section class="lhc-switches" id="switches"></section>
         <section class="lhc-controls" id="controls"></section>
+
+        <div class="lhc-dialog" id="dialog" hidden>
+          <div class="lhc-dialog-box" role="dialog" aria-modal="true">
+            <div class="lhc-dialog-head">
+              <span class="lhc-dialog-title" id="dlg-title">--</span>
+              <button type="button" class="lhc-dialog-close" id="dlg-close"
+                      aria-label="Schließen">&times;</button>
+            </div>
+            <output class="lhc-dialog-value" id="dlg-value">--</output>
+            <div class="lhc-dialog-row">
+              <button type="button" class="lhc-step" id="dlg-minus" aria-label="Kleiner">&minus;</button>
+              <input class="lhc-slider" type="range" id="dlg-range"
+                     min="0" max="100" step="1" value="0" aria-label="Temperatur">
+              <button type="button" class="lhc-step" id="dlg-plus" aria-label="Größer">+</button>
+            </div>
+            <div class="lhc-ctl-scale">
+              <span id="dlg-min">--</span><span id="dlg-max">--</span>
+            </div>
+          </div>
+        </div>
       </ha-card>
     `;
     this.shadowRoot.appendChild(root);
+    this._buildDialog();
+    this._buildKlicks();
     this._buildSwitches();
     this._buildControls();
+  }
+
+  /** Verdrahtet das Einstellfenster. */
+  _buildDialog() {
+    const sr = this.shadowRoot;
+    // Ausdruecklich schliessen, nicht nur auf das Attribut im Markup vertrauen.
+    sr.getElementById("dialog").hidden = true;
+    this._dialogKey = null;
+    const range = sr.getElementById("dlg-range");
+    const out = sr.getElementById("dlg-value");
+
+    const schreiben = (wert) => {
+      const id = this._e(this._dialogKey);
+      if (!id) return;
+      this._hass.callService(id.split(".")[0], "set_value", {
+        entity_id: id,
+        value: wert,
+      });
+    };
+    const schritt = (richtung) => {
+      const neu =
+        Math.round(
+          (Number(range.value) + richtung * Number(range.step || 1)) * 10
+        ) / 10;
+      const begrenzt = clamp(neu, Number(range.min), Number(range.max));
+      range.value = begrenzt;
+      out.textContent = `${begrenzt} °C`;
+      schreiben(begrenzt);
+    };
+
+    range.addEventListener("input", () => {
+      this._dialogZieht = true;
+      out.textContent = `${range.value} °C`;
+    });
+    range.addEventListener("change", () => {
+      this._dialogZieht = false;
+      schreiben(parseFloat(range.value));
+    });
+    sr.getElementById("dlg-minus").addEventListener("click", () => schritt(-1));
+    sr.getElementById("dlg-plus").addEventListener("click", () => schritt(1));
+    sr.getElementById("dlg-close").addEventListener("click", () => this._schliesseDialog());
+    sr.getElementById("dialog").addEventListener("click", (ev) => {
+      // Klick auf den Hintergrund schliesst, Klick im Kasten nicht.
+      if (ev.target && ev.target.id === "dialog") this._schliesseDialog();
+    });
+  }
+
+  /** Macht Speicher und Heizkörper anklickbar. */
+  _buildKlicks() {
+    const sr = this.shadowRoot;
+    [
+      ["dhw-group", "dhw_setpoint", "label_dhw"],
+      ["hk1-group", "hk1_setpoint", "label_hk1"],
+      ["hk2-group", "hk2_setpoint", "label_hk2"],
+    ].forEach(([gruppe, feld, beschriftung]) => {
+      const el = sr.getElementById(gruppe);
+      if (!el || !this._e(feld)) return;
+      el.classList.add("klickbar");
+      el.addEventListener("click", () =>
+        this._oeffneDialog(feld, this._config[beschriftung])
+      );
+    });
+  }
+
+  _oeffneDialog(feld, titel) {
+    const id = this._e(feld);
+    if (!id || !this._hass.states[id]) return;
+    this._dialogKey = feld;
+    const sr = this.shadowRoot;
+    sr.getElementById("dlg-title").textContent = titel || "Temperatur";
+    sr.getElementById("dialog").hidden = false;
+    this._syncDialog();
+  }
+
+  _schliesseDialog() {
+    this._dialogKey = null;
+    this._dialogZieht = false;
+    this.shadowRoot.getElementById("dialog").hidden = true;
+  }
+
+  /** Haelt das offene Fenster auf dem aktuellen Stand. */
+  _syncDialog() {
+    if (!this._dialogKey) return;
+    const sr = this.shadowRoot;
+    const st = this._hass.states[this._e(this._dialogKey)];
+    if (!st) return this._schliesseDialog();
+    const range = sr.getElementById("dlg-range");
+    const wert = parseFloat(st.state);
+    if (Number.isNaN(wert)) return;
+    let lo = Number(st.attributes.min !== undefined ? st.attributes.min : 15);
+    let hi = Number(st.attributes.max !== undefined ? st.attributes.max : 65);
+    if (wert < lo) lo = Math.floor(wert);
+    if (wert > hi) hi = Math.ceil(wert);
+    range.min = lo;
+    range.max = hi;
+    range.step = Number(st.attributes.step !== undefined ? st.attributes.step : 1);
+    sr.getElementById("dlg-min").textContent = `${lo} °C`;
+    sr.getElementById("dlg-max").textContent = `${hi} °C`;
+    if (this._dialogZieht) return;
+    range.value = wert;
+    sr.getElementById("dlg-value").textContent = `${wert} °C`;
   }
 
   _buildSwitches() {
@@ -1253,6 +1376,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     this._syncSlider("ctl-hk1", "hk1_setpoint", "hk1_water_target");
     this._syncSlider("ctl-hk2", "hk2_setpoint", "hk2_water_target");
     this._syncSlider("ctl-dhw", "dhw_setpoint");
+    this._syncDialog();
   }
 
   _circuitUpdate(n, col, animate) {
@@ -1444,6 +1568,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         --ink: #E8EDF4; --muted: #7E8CA0; --line: #26303F; --panel: #131A24;
         background: linear-gradient(180deg, #131A24 0%, #0D131B 100%);
         color: var(--ink); padding: 16px 20px 22px; overflow: hidden;
+        position: relative;
       }
       .lhc-alert {
         margin-bottom: 14px; padding: 12px 16px; border-radius: 10px;
@@ -1666,6 +1791,46 @@ class LutarymHeatpumpCard extends HTMLElement {
       }
       .lhc-slider:focus-visible { box-shadow: 0 0 0 3px rgba(224,118,46,0.4); }
       .lhc-empty { color: var(--muted); font-size: 13px; margin: 0; }
+
+      /* Anklickbare Baugruppen und das Einstellfenster. */
+      .klickbar { cursor: pointer; }
+      .klickbar:hover { filter: brightness(1.15); }
+      .lhc-dialog {
+        position: absolute; inset: 0; z-index: 5;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(6, 10, 16, 0.72);
+      }
+      .lhc-dialog[hidden] { display: none; }
+      .lhc-dialog-box {
+        width: min(360px, 90%); padding: 20px 22px 18px; border-radius: 16px;
+        background: #161D28; border: 1px solid var(--line);
+        box-shadow: 0 18px 48px rgba(0,0,0,0.55);
+      }
+      .lhc-dialog-head {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      }
+      .lhc-dialog-title {
+        font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+        color: var(--muted);
+      }
+      .lhc-dialog-close {
+        background: none; border: none; color: var(--muted); cursor: pointer;
+        font-size: 26px; line-height: 1; padding: 0 4px;
+      }
+      .lhc-dialog-close:hover { color: var(--ink); }
+      .lhc-dialog-value {
+        display: block; margin: 10px 0 18px; text-align: center;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 40px; font-weight: 650; font-variant-numeric: tabular-nums;
+      }
+      .lhc-dialog-row { display: flex; align-items: center; gap: 14px; }
+      .lhc-step {
+        width: 44px; height: 44px; flex: 0 0 auto; border-radius: 12px;
+        background: #1B2431; border: 1px solid var(--line); color: var(--ink);
+        font-size: 24px; line-height: 1; cursor: pointer;
+      }
+      .lhc-step:hover { border-color: #3E4C61; }
+      .lhc-step:focus-visible { outline: 2px solid #E0762E; outline-offset: 2px; }
 
       @media (prefers-reduced-motion: reduce) {
         .rotor, .bubble, .flowdots, .badge, .lhc-alert, #unit-glow, #sg-group {
