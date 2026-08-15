@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.5.5";
+const CARD_VERSION = "1.6.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -221,6 +221,7 @@ const TOPIC_TO_FIELD = {
 const COMMAND_TO_FIELD = {
   setheatpump: "power_state",
   setoperationmode: "mode_select",
+  setforcedhw: "dhw_force",
 };
 
 const FIELD_DOMAIN = {
@@ -230,6 +231,7 @@ const FIELD_DOMAIN = {
   power_state: ["switch", "input_boolean", "binary_sensor", "sensor"],
   heating_switch: ["switch", "input_boolean"],
   mode_select: ["select", "input_select"],
+  dhw_force: ["switch", "input_boolean"],
   circulation_pump: ["switch", "input_boolean", "binary_sensor", "sensor"],
   sg_k1: ["switch", "input_boolean", "binary_sensor", "sensor"],
   sg_k2: ["switch", "input_boolean", "binary_sensor", "sensor"],
@@ -351,6 +353,7 @@ const ENTITY_FIELDS = [
   { key: "dhw_temp", label: "Warmwasser Isttemperatur", group: "Warmwasser", hint: "TOP10" },
   { key: "dhw_setpoint", label: "Warmwasser Sollwert", group: "Warmwasser", hint: "TOP9, number" },
   { key: "dhw_heater", label: "Heizstab Warmwasser", group: "Warmwasser", hint: "TOP58" },
+  { key: "dhw_force", label: "Warmwasser sofort laden", group: "Warmwasser", hint: "SetForceDHW, switch" },
   { key: "circulation_pump", label: "Zirkulationspumpe läuft", group: "Warmwasser", hint: "Shelly oder eigener Schalter" },
 
   { key: "mode_select", label: "Betriebsart umschalten", group: "Steuerung", hint: "SetOperationMode, select" },
@@ -538,6 +541,9 @@ class LutarymHeatpumpCard extends HTMLElement {
             <div class="lhc-ctl-scale">
               <span id="dlg-min">--</span><span id="dlg-max">--</span>
             </div>
+            <button type="button" class="lhc-dialog-action" id="dlg-force" hidden>
+              Jetzt laden
+            </button>
           </div>
         </div>
       </ha-card>
@@ -587,6 +593,14 @@ class LutarymHeatpumpCard extends HTMLElement {
     });
     sr.getElementById("dlg-minus").addEventListener("click", () => schritt(-1));
     sr.getElementById("dlg-plus").addEventListener("click", () => schritt(1));
+    sr.getElementById("dlg-force").addEventListener("click", () => {
+      const id = this._e("dhw_force");
+      if (!id) return;
+      const an = isOn(this._hass, id) === true;
+      this._hass.callService("homeassistant", an ? "turn_off" : "turn_on", {
+        entity_id: id,
+      });
+    });
     sr.getElementById("dlg-close").addEventListener("click", () => this._schliesseDialog());
     sr.getElementById("dialog").addEventListener("click", (ev) => {
       // Klick auf den Hintergrund schliesst, Klick im Kasten nicht.
@@ -598,23 +612,24 @@ class LutarymHeatpumpCard extends HTMLElement {
   _buildKlicks() {
     const sr = this.shadowRoot;
     [
-      ["dhw-group", "dhw_setpoint", "label_dhw"],
-      ["hk1-group", "hk1_setpoint", "label_hk1"],
-      ["hk2-group", "hk2_setpoint", "label_hk2"],
-    ].forEach(([gruppe, feld, beschriftung]) => {
+      ["dhw-group", "dhw_setpoint", "label_dhw", null],
+      ["hk1-group", "hk1_setpoint", "label_hk1", "hk1_water_target"],
+      ["hk2-group", "hk2_setpoint", "label_hk2", "hk2_water_target"],
+    ].forEach(([gruppe, feld, beschriftung, anzeige]) => {
       const el = sr.getElementById(gruppe);
       if (!el || !this._e(feld)) return;
       el.classList.add("klickbar");
       el.addEventListener("click", () =>
-        this._oeffneDialog(feld, this._config[beschriftung])
+        this._oeffneDialog(feld, this._config[beschriftung], anzeige)
       );
     });
   }
 
-  _oeffneDialog(feld, titel) {
+  _oeffneDialog(feld, titel, anzeige) {
     const id = this._e(feld);
     if (!id || !this._hass.states[id]) return;
     this._dialogKey = feld;
+    this._dialogAnzeige = anzeige || null;
     const sr = this.shadowRoot;
     sr.getElementById("dlg-title").textContent = titel || "Temperatur";
     sr.getElementById("dialog").hidden = false;
@@ -623,6 +638,7 @@ class LutarymHeatpumpCard extends HTMLElement {
 
   _schliesseDialog() {
     this._dialogKey = null;
+    this._dialogAnzeige = null;
     this._dialogZieht = false;
     this.shadowRoot.getElementById("dialog").hidden = true;
   }
@@ -634,10 +650,22 @@ class LutarymHeatpumpCard extends HTMLElement {
     const st = this._hass.states[this._e(this._dialogKey)];
     if (!st) return this._schliesseDialog();
     const range = sr.getElementById("dlg-range");
-    const wert = parseFloat(st.state);
+
+    // Angezeigt wird der tatsaechliche Sollwert des Kreises, geschrieben
+    // wird weiterhin auf die stellbare Entitaet. Gleiche Trennung wie
+    // bei den Schiebereglern unter dem Schaubild.
+    const anzeigeId = this._dialogAnzeige ? this._e(this._dialogAnzeige) : "";
+    const stAnzeige = anzeigeId ? this._hass.states[anzeigeId] : null;
+    const quelle =
+      stAnzeige && !Number.isNaN(parseFloat(stAnzeige.state)) ? stAnzeige : st;
+    const wert = parseFloat(quelle.state);
     if (Number.isNaN(wert)) return;
     let lo = Number(st.attributes.min !== undefined ? st.attributes.min : 15);
     let hi = Number(st.attributes.max !== undefined ? st.attributes.max : 65);
+    if (quelle !== st) {
+      lo = Math.min(lo, Math.floor(wert) - 10);
+      hi = Math.max(hi, Math.ceil(wert) + 10);
+    }
     if (wert < lo) lo = Math.floor(wert);
     if (wert > hi) hi = Math.ceil(wert);
     range.min = lo;
@@ -645,6 +673,19 @@ class LutarymHeatpumpCard extends HTMLElement {
     range.step = Number(st.attributes.step !== undefined ? st.attributes.step : 1);
     sr.getElementById("dlg-min").textContent = `${lo} °C`;
     sr.getElementById("dlg-max").textContent = `${hi} °C`;
+    // Zwangsladung nur beim Warmwasserspeicher und nur wenn eingetragen.
+    const force = sr.getElementById("dlg-force");
+    if (force) {
+      const forceId = this._e("dhw_force");
+      const zeigen = this._dialogKey === "dhw_setpoint" && Boolean(forceId);
+      force.hidden = !zeigen;
+      if (zeigen) {
+        const laeuft = isOn(this._hass, forceId) === true;
+        force.textContent = laeuft ? "Ladung läuft, beenden" : "Jetzt laden";
+        force.classList.toggle("is-on", laeuft);
+      }
+    }
+
     if (this._dialogZieht) return;
     range.value = wert;
     sr.getElementById("dlg-value").textContent = `${wert} °C`;
@@ -1831,6 +1872,17 @@ class LutarymHeatpumpCard extends HTMLElement {
       }
       .lhc-step:hover { border-color: #3E4C61; }
       .lhc-step:focus-visible { outline: 2px solid #E0762E; outline-offset: 2px; }
+      .lhc-dialog-action {
+        width: 100%; margin-top: 18px; padding: 13px 16px; border-radius: 12px;
+        font: inherit; font-size: 15px; font-weight: 500; cursor: pointer;
+        background: #1B2431; border: 1px solid var(--line); color: var(--ink);
+      }
+      .lhc-dialog-action[hidden] { display: none; }
+      .lhc-dialog-action:hover { border-color: #3E4C61; }
+      .lhc-dialog-action.is-on {
+        background: #3A1B08; border-color: #E0762E; color: #FFD9B0;
+      }
+      .lhc-dialog-action:focus-visible { outline: 2px solid #E0762E; outline-offset: 2px; }
 
       @media (prefers-reduced-motion: reduce) {
         .rotor, .bubble, .flowdots, .badge, .lhc-alert, #unit-glow, #sg-group {

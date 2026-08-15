@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.5.5**
+**Version 1.6.0**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -188,7 +188,7 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `defrost` | TOP26 | Abtauung läuft |
 | `error` | TOP44 | Fehlercode |
 | `power_now` | eigene Entität | Aktuelle Leistungsaufnahme |
-| `energy_today` | eigene Entität | Verbrauch heute |
+| `energy_today` | eigene Entität | Energiezähler |
 | `sg_k1` | eigene Entität | Kontakt K1 Sperre |
 | `sg_k2` | eigene Entität | Kontakt K2 Anlauf |
 | `flow_temp` | TOP6 | Vorlauftemperatur |
@@ -216,6 +216,7 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `dhw_temp` | TOP10 | Warmwasser Isttemperatur |
 | `dhw_setpoint` | TOP9 | Warmwasser Sollwert |
 | `dhw_heater` | TOP58 | Heizstab Warmwasser |
+| `dhw_force` | SetForceDHW | Warmwasser sofort laden |
 | `circulation_pump` | eigene Entität | Zirkulationspumpe läuft |
 | `mode_select` | SetOperationMode | Betriebsart umschalten |
 | `heating_switch` | eigene Entität | Heizung ein und aus |
@@ -312,7 +313,11 @@ Ist keine Anzeigequelle eingetragen, zeigt der Regler den Wert der stellbaren En
 
 Ein Klick auf den Warmwasserspeicher, auf Heizkreis 1 oder auf Heizkreis 2 öffnet ein Fenster, in dem sich die Temperatur einstellen lässt. Es zeigt den aktuellen Wert groß, darunter einen Schieberegler und je einen Knopf für einen Schritt nach oben und unten. Die Schrittweite kommt aus der Entität.
 
+Das Fenster zeigt denselben Wert wie der Schieberegler unter dem Schaubild. Bei den Heizkreisen ist das der tatsächliche Sollwert des Kreises aus TOP42 und TOP43, geschrieben wird auf TOP27 und TOP34.
+
 Das Fenster schließt über das Kreuz oben rechts oder über einen Klick auf den Hintergrund. Solange es offen ist, folgt es Änderungen, die von anderer Seite kommen, außer während du selbst schiebst.
+
+Im Fenster des Warmwasserspeichers steht zusätzlich ein Knopf für die **Zwangsladung**. Er schaltet `SetForceDHW` und heißt "Jetzt laden". Läuft die Ladung bereits, ist er hervorgehoben und heißt "Ladung läuft, beenden". Der Knopf erscheint nur, wenn die Entität dafür eingetragen ist, und nur beim Warmwasserspeicher.
 
 Anklickbar sind nur Baugruppen, für die eine stellbare Entität eingetragen ist. Fehlt sie, bleibt die Baugruppe wie bisher.
 
