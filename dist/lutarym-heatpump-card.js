@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "0.9.8";
+const CARD_VERSION = "1.0.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -224,6 +224,7 @@ const FIELD_DOMAIN = {
   power_state: ["switch", "input_boolean", "binary_sensor", "sensor"],
   heating_switch: ["switch", "input_boolean"],
   mode_select: ["select", "input_select"],
+  circulation_pump: ["switch", "input_boolean", "binary_sensor", "sensor"],
   sg_k1: ["switch", "input_boolean", "binary_sensor", "sensor"],
   sg_k2: ["switch", "input_boolean", "binary_sensor", "sensor"],
 };
@@ -309,6 +310,8 @@ const ENTITY_FIELDS = [
   { key: "fan2_rpm", label: "Lüfter 2 Drehzahl", group: "Außengerät", hint: "TOP63" },
   { key: "defrost", label: "Abtauung läuft", group: "Außengerät", hint: "TOP26" },
   { key: "error", label: "Fehlercode", group: "Außengerät", hint: "TOP44" },
+  { key: "power_now", label: "Aktuelle Leistungsaufnahme", group: "Außengerät", hint: "Shelly PM, Watt" },
+  { key: "energy_today", label: "Verbrauch heute", group: "Außengerät", hint: "Shelly PM, kWh" },
 
   { key: "sg_k1", label: "Kontakt K1 Sperre", group: "SG Ready", hint: "Shelly, Relais oder Eingang" },
   { key: "sg_k2", label: "Kontakt K2 Anlauf", group: "SG Ready", hint: "Shelly, Relais oder Eingang" },
@@ -339,6 +342,7 @@ const ENTITY_FIELDS = [
   { key: "dhw_temp", label: "Warmwasser Isttemperatur", group: "Warmwasser", hint: "TOP10" },
   { key: "dhw_setpoint", label: "Warmwasser Sollwert", group: "Warmwasser", hint: "TOP9, number" },
   { key: "dhw_heater", label: "Heizstab Warmwasser", group: "Warmwasser", hint: "TOP58" },
+  { key: "circulation_pump", label: "Zirkulationspumpe läuft", group: "Warmwasser", hint: "Shelly oder eigener Schalter" },
 
   { key: "mode_select", label: "Betriebsart umschalten", group: "Steuerung", hint: "SetOperationMode, select" },
   { key: "heating_switch", label: "Heizung ein und aus", group: "Steuerung", hint: "eigener Helfer, optional" },
@@ -689,6 +693,16 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="tag-v" id="unit-ret-v" x="0" y="7" text-anchor="middle">--</text>
       </g>
 
+      <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
+      <g id="verbrauch-group" opacity="0">
+        <text class="unit-label" x="410" y="404" text-anchor="middle">Leistung</text>
+        <text class="verbrauch-v" id="power-now-v" x="410" y="440"
+              text-anchor="middle">--</text>
+        <text class="unit-label" x="410" y="492" text-anchor="middle">Heute</text>
+        <text class="unit-value" id="energy-today-v" x="410" y="524"
+              text-anchor="middle">--</text>
+      </g>
+
       <!-- Primärpumpe -->
       <g>
         <text class="value-s" id="pump-v" x="780" y="640" text-anchor="middle">--</text>
@@ -762,6 +776,22 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="cap" x="1525" y="${C}" text-anchor="middle">Warmwasser</text>
       </g>
 
+      <!-- Zirkulationskreis am Warmwasserspeicher -->
+      <g id="zirkulation-group" opacity="0">
+        <path class="pipe-shell" fill="none" d="M1610 420 H 1672 V 560 H 1610"/>
+        <path class="pipe" id="pipe-zirk" fill="none" d="M1610 420 H 1672 V 560 H 1610"/>
+        <path class="flowdots" id="dots-zirk" fill="none" d="M1610 420 H 1672 V 560 H 1610"/>
+        <g transform="translate(1672 490)">
+          <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+          <g class="rotor" id="zirk-rotor">
+            <path d="M0 -13 L4 -3 L14 0 L4 3 L0 13 L-4 3 L-14 0 L-4 -3 Z" fill="#55637A"/>
+            <circle r="4" fill="#0D1219"/>
+          </g>
+        </g>
+        <text class="value-s" id="zirk-v" x="1672" y="452" text-anchor="middle">--</text>
+        <text class="cap-s" x="1672" y="${C}" text-anchor="middle">Zirkulation</text>
+      </g>
+
       <text class="version" x="${L.W - 10}" y="${L.H - 8}"
             text-anchor="end">v${CARD_VERSION}</text>
     </svg>`;
@@ -774,6 +804,9 @@ class LutarymHeatpumpCard extends HTMLElement {
     const RB = L.RAD_BOTTOM;
     const mid = (x1 + x2) / 2;
     const drop = `M${dropX} ${F} V ${RT}`;
+    // Die Pumpe sitzt in der Mitte der Stichleitung, rechnerisch aus
+    // Vorlauf und Heizkoerper. So verrutscht sie bei Rasteraenderungen nicht.
+    const pumpY = Math.round((F + RT) / 2);
     const back = `M${backX} ${RB} V ${R}`;
 
     let fins = "";
@@ -789,14 +822,14 @@ class LutarymHeatpumpCard extends HTMLElement {
         <path class="flowdots" id="dots-hk${n}" d="${drop}"/>
         <path class="flowdots rev" id="dots-hk${n}b" d="${back}"/>
 
-        <g transform="translate(${dropX} 212)">
+        <g transform="translate(${dropX} ${pumpY})">
           <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <g class="rotor" id="hk${n}-rotor">
             <path d="M0 -13 L4 -3 L14 0 L4 3 L0 13 L-4 3 L-14 0 L-4 -3 Z" fill="#55637A"/>
             <circle r="4" fill="#0D1219"/>
           </g>
         </g>
-        <text class="value-s" id="hk${n}-pump-v" x="${dropX + 34}" y="218"
+        <text class="value-s" id="hk${n}-pump-v" x="${dropX + 34}" y="${pumpY + 6}"
               text-anchor="start">--</text>
 
         <rect x="${x1}" y="${RT}" width="${x2 - x1}" height="${RB - RT}" rx="10"
@@ -974,7 +1007,11 @@ class LutarymHeatpumpCard extends HTMLElement {
         const farbe = info ? info.farbe : NEUTRAL;
         set("sg-text", sg === null ? "unbekannt" : info.kurz);
         const t = sr.getElementById("sg-text");
-        if (t) t.setAttribute("fill", farbe);
+        if (t) {
+          t.setAttribute("fill", farbe);
+          t.style.color = farbe;
+          t.classList.toggle("is-active", sg !== null);
+        }
         for (let i = 1; i <= 4; i++) {
           const seg = sr.getElementById(`sg-seg-${i}`);
           if (!seg) continue;
@@ -983,8 +1020,26 @@ class LutarymHeatpumpCard extends HTMLElement {
           seg.style.color = farbe;
           seg.classList.toggle("is-active", aktiv);
         }
-        sgGroup.classList.toggle("is-pulsing", animate && (sg === 1 || sg === 4));
       }
+    }
+
+    /* Stromverbrauch, nur sichtbar wenn ein Wert vorliegt */
+    const leistung = numState(hass, this._e("power_now"));
+    const energie = numState(hass, this._e("energy_today"));
+    zeige("verbrauch-group", leistung !== null || energie !== null);
+    set("power-now-v", leistung === null ? "--" : `${fmt(leistung, 0)} W`);
+    set("energy-today-v", energie === null ? "--" : `${fmt(energie, 1)} kWh`);
+
+    /* Zirkulationspumpe */
+    const zirkId = this._e("circulation_pump");
+    const zirkAn = isOn(hass, zirkId) === true;
+    zeige("zirkulation-group", Boolean(zirkId) && hass.states[zirkId] !== undefined);
+    set("zirk-v", !zirkId ? "--" : zirkAn ? "läuft" : "aus");
+    const zirkRotor = sr.getElementById("zirk-rotor");
+    if (zirkRotor) {
+      zirkRotor.classList.toggle("is-still", !zirkAn);
+      zirkRotor.style.animationDuration = `${PUMP_SECONDS}s`;
+      zirkRotor.style.animationPlayState = zirkAn && animate ? "running" : "paused";
     }
 
     /* Temperaturen und Leitungsfarben */
@@ -1070,6 +1125,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     stroemt(["dots-ruecklauf"], primaer, col(ret));
     stroemt(["dots-buf", "dots-buf2"], primaer && !zuWarmwasser, col(buf));
     stroemt(["dots-dhw", "dots-dhw2"], primaer && zuWarmwasser, col(dhw));
+    stroemt(["dots-zirk"], zirkAn, col(dhw));
+    stroke("pipe-zirk", col(dhw));
 
     // Wasser bewegt sich im Speicher, der gerade beladen wird.
     const bufLaeuft = primaer && !zuWarmwasser;
@@ -1323,6 +1380,12 @@ class LutarymHeatpumpCard extends HTMLElement {
       .unit-label {
         fill: #7E8CA0; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase;
       }
+      .verbrauch-v {
+        fill: #E0762E; font-size: 26px; font-weight: 650;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-variant-numeric: tabular-nums;
+      }
+      #verbrauch-group, #zirkulation-group { transition: opacity 300ms ease; }
       .unit-value {
         fill: #E8EDF4; font-size: 20px; font-weight: 600;
         transition: fill 600ms ease;
@@ -1374,18 +1437,20 @@ class LutarymHeatpumpCard extends HTMLElement {
       .badge.is-on.is-pulsing { animation: lhc-pulse 2.2s ease-in-out infinite; }
 
       .sg-label {
-        fill: #A3B2C6; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
+        fill: #C3D0E0; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
       }
       .sg-value {
-        fill: ${NEUTRAL}; font-size: 19px; font-weight: 650;
+        fill: ${NEUTRAL}; font-size: 23px; font-weight: 700;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums; transition: fill 400ms ease;
       }
+      /* Der Zustandstext leuchtet leicht in seiner eigenen Farbe,
+         damit er sich vom dunklen Gehaeuse abhebt. */
+      .sg-value.is-active { filter: drop-shadow(0 0 6px currentColor); }
       #sg-group { transition: opacity 300ms ease; }
       #sg-group rect { transition: fill 400ms ease; }
       /* Der aktive Balken leuchtet, damit er sich klar abhebt. */
       #sg-group rect.is-active { filter: drop-shadow(0 0 5px currentColor); }
-      #sg-group.is-pulsing { animation: lhc-pulse 1.6s ease-in-out infinite; }
       #power-led { transition: fill 400ms ease; }
       #power-led.is-on { filter: drop-shadow(0 0 6px rgba(70,192,122,0.9)); }
       #unit-glow { transition: opacity 600ms ease; }

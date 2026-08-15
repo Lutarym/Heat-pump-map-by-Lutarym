@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.9.8**
+**Version 1.0.1**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -20,7 +20,7 @@ Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 
 **Heizungspuffer** als großer Speicher, eingefärbt nach seiner Temperatur, darunter die Zieltemperatur. Auch hier bewegt sich das Wasser, solange der Puffer beladen wird.
 
-**Heizkreis 1 und 2**, jeder mit eigener Pumpe und eigenem Heizkörper. Auf dem Heizkörper liegt eine Tafel mit Wassertemperatur samt Sollwert und der Raumtemperatur.
+**Heizkreis 1 und 2**, jeder mit eigener Pumpe mittig auf seiner Stichleitung und eigenem Heizkörper. Auf dem Heizkörper liegt eine Tafel mit Wassertemperatur samt Sollwert und der Raumtemperatur.
 
 **Wasserdruck** als Manometer. Es erscheint nur, wenn ein Wert vorliegt, sonst bleibt die Stelle leer.
 
@@ -29,6 +29,10 @@ Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 **Warmwasserspeicher** mit Ist- und Zieltemperatur und einem Hinweis, wenn der Heizstab läuft. Das Wasser im Speicher bewegt sich, solange geladen wird.
 
 **Hinweis** als gelber Balken, wenn gar keine Entität zugeordnet ist. Sonst zeigt die Karte nur Striche und man sucht an der falschen Stelle.
+
+**Stromverbrauch** zwischen Außengerät und Puffer, mit der aktuellen Leistungsaufnahme in Watt und dem Verbrauch heute in Kilowattstunden. Beide Werte kommen aus einem eigenen Messgerät, etwa einem Shelly PM. Der Block erscheint nur, wenn mindestens einer der beiden Werte vorliegt.
+
+**Zirkulationspumpe** als Schleife rechts am Warmwasserspeicher, mit eigener Pumpe. Sie erscheint nur, wenn eine Entität dafür eingetragen ist, etwa ein Shelly. Läuft die Pumpe, dreht der Rotor und die Schleife wird durchströmt.
 
 **Störungsmeldung** als roter Balken über dem Schema, sobald ein Fehlercode anliegt.
 
@@ -165,7 +169,7 @@ entities:
 
 ### Entitäten
 
-Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei Striche.
+Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei Striche oder blendet das Bauteil aus.
 
 | Feld | Quelle | Bedeutung |
 |---|---|---|
@@ -176,6 +180,8 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `fan2_rpm` | TOP63 | Lüfter 2 Drehzahl |
 | `defrost` | TOP26 | Abtauung läuft |
 | `error` | TOP44 | Fehlercode |
+| `power_now` | eigene Entität | Aktuelle Leistungsaufnahme |
+| `energy_today` | eigene Entität | Verbrauch heute |
 | `sg_k1` | eigene Entität | Kontakt K1 Sperre |
 | `sg_k2` | eigene Entität | Kontakt K2 Anlauf |
 | `flow_temp` | TOP6 | Vorlauftemperatur |
@@ -200,10 +206,9 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `dhw_temp` | TOP10 | Warmwasser Isttemperatur |
 | `dhw_setpoint` | TOP9 | Warmwasser Sollwert |
 | `dhw_heater` | TOP58 | Heizstab Warmwasser |
+| `circulation_pump` | eigene Entität | Zirkulationspumpe läuft |
 | `mode_select` | SetOperationMode | Betriebsart umschalten |
 | `heating_switch` | eigene Entität | Heizung ein und aus |
-
-HeishaMon kennt keinen eigenen Puffer-Sollwert. `buffer_target` nutzt deshalb TOP7, die Soll-Vorlauftemperatur, auf die der Puffer geladen wird.
 
 ## Animation
 
@@ -219,10 +224,10 @@ Bewegung zeigt an, dass etwas tatsächlich arbeitet. Steht ein Bauteil still, st
 | Stichleitung zum Puffer | zusätzlich Dreiwegeventil auf Heizen |
 | Stichleitung zum Speicher | zusätzlich Dreiwegeventil auf Warmwasser |
 | Leitungen eines Heizkreises | nur dessen eigene Kreispumpe |
+| Zirkulationsschleife | die Zirkulationspumpe läuft |
 | Wasser im Puffer | Dreiwegeventil auf Heizen und Umwälzung läuft |
 | Wasser im Warmwasserspeicher | Dreiwegeventil auf Warmwasser oder Heizstab läuft |
 | Hinweise Heizstab und Abtauung | solange sie aktiv sind |
-| SG Ready | in Zustand 1 Sperre und Zustand 4 Anlaufbefehl |
 | Störungsbalken | solange ein Fehlercode anliegt |
 
 Jeder Leitungsabschnitt wird einzeln geschaltet. Läuft nur Heizkreis 1, bewegt sich auch nur dessen Leitung. Fehlen die Entitäten für Pumpendrehzahl und Durchfluss, bewegt sich nichts. Die Karte nimmt nichts an, was sie nicht messen kann.
@@ -254,7 +259,7 @@ Erlaubt sind die Domänen `switch`, `input_boolean`, `binary_sensor` und `sensor
 
 Fehlt einer der beiden Kontakte, blendet sich die Anzeige aus. Ist einer nicht erreichbar, zeigt die Karte "unbekannt", statt einen Zustand zu raten. Ein ausgefallener Shelly darf nicht als offener Kontakt gelten, sonst stünde dort Normalbetrieb, obwohl niemand weiß, was tatsächlich anliegt.
 
-Die Anzeige sitzt im Gehäuse des Außengeräts, ohne eigenen Rahmen. Zustand 1 und Zustand 4 sind Ausnahmezustände und blinken, damit sie auffallen. Zustand 2 und 3 stehen ruhig. Ist kein Kontakt eingetragen, blendet sich die Anzeige vollständig aus.
+Die Anzeige sitzt im Gehäuse des Außengeräts, ohne eigenen Rahmen. Nichts blinkt. Der Zustandstext steht groß in der Farbe seines Zustands und leuchtet leicht in derselben Farbe, damit er sich vom dunklen Gehäuse abhebt. Ist kein Kontakt eingetragen, blendet sich die Anzeige vollständig aus.
 
 Die Karte zeigt SG Ready nur an, sie schaltet nicht. Wer umschalten will, steuert die Relais über eine Automation.
 
