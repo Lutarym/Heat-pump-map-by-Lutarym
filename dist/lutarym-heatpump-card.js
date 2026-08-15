@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.0.3";
+const CARD_VERSION = "1.1.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -196,6 +196,9 @@ const TOPIC_TO_FIELD = {
   top20: "three_way_valve",
   top59: "room_heater",
   top46: "buffer_temp",
+  top94: "zones_state",
+  top99: "buffer_installed",
+  top100: "dhw_installed",
   top7: "buffer_target",
   top36: "hk1_water",
   top42: "hk1_water_target",
@@ -324,9 +327,11 @@ const ENTITY_FIELDS = [
   { key: "water_pressure", label: "Wasserdruck", group: "Primärkreis", hint: "TOP115" },
 
   { key: "buffer_temp", label: "Puffertemperatur", group: "Heizungspuffer", hint: "TOP46" },
+  { key: "buffer_installed", label: "Puffer vorhanden", group: "Heizungspuffer", hint: "TOP99" },
   { key: "buffer_target", label: "Puffer Zieltemperatur", group: "Heizungspuffer", hint: "TOP7, Soll Vorlauf" },
   { key: "room_heater", label: "Heizstab Heizung", group: "Heizungspuffer", hint: "TOP59" },
 
+  { key: "zones_state", label: "Aktivierte Zonen", group: "Heizkreis 1", hint: "TOP94, gilt für beide" },
   { key: "hk1_water", label: "HK1 Wassertemperatur", group: "Heizkreis 1", hint: "TOP36" },
   { key: "hk1_water_target", label: "HK1 Wasser Sollwert", group: "Heizkreis 1", hint: "TOP42" },
   { key: "hk1_room", label: "HK1 Raumtemperatur", group: "Heizkreis 1", hint: "TOP56" },
@@ -339,6 +344,7 @@ const ENTITY_FIELDS = [
   { key: "hk2_pump", label: "HK2 Pumpe läuft", group: "Heizkreis 2", hint: "TOP123" },
   { key: "hk2_setpoint", label: "HK2 Sollwert einstellbar", group: "Heizkreis 2", hint: "TOP34, number" },
 
+  { key: "dhw_installed", label: "Warmwasser vorhanden", group: "Warmwasser", hint: "TOP100" },
   { key: "dhw_temp", label: "Warmwasser Isttemperatur", group: "Warmwasser", hint: "TOP10" },
   { key: "dhw_setpoint", label: "Warmwasser Sollwert", group: "Warmwasser", hint: "TOP9, number" },
   { key: "dhw_heater", label: "Heizstab Warmwasser", group: "Warmwasser", hint: "TOP58" },
@@ -720,7 +726,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       </g>
 
       <!-- Heizungspuffer -->
-      <g>
+      <g id="buffer-group">
         <rect x="540" y="${T}" width="190" height="350" rx="26"
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
         <rect x="548" y="298" width="174" height="334" rx="20" fill="url(#bufferFill)"/>
@@ -762,7 +768,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       </g>
 
       <!-- Warmwasserspeicher -->
-      <g>
+      <g id="dhw-group">
         <rect x="1440" y="${T}" width="170" height="350" rx="34"
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
         <rect x="1448" y="298" width="154" height="334" rx="28" fill="url(#dhwFill)"/>
@@ -817,7 +823,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     }
 
     return `
-      <g class="circuit">
+      <g class="circuit" id="hk${n}-group">
         <path class="pipe-shell" d="${drop} ${back}"/>
         <path class="pipe" id="pipe-hk${n}-in" d="${drop}"/>
         <path class="pipe" id="pipe-hk${n}-out" d="${back}"/>
@@ -1113,6 +1119,29 @@ class LutarymHeatpumpCard extends HTMLElement {
       );
     }
 
+    /* Welche Kreise sind ueberhaupt aktiviert?
+       TOP94 kennt drei Zustaende, TOP99 und TOP100 je zwei.
+       Ist nichts zugeordnet, wird nichts abgeblendet. */
+    const zonen = numState(hass, this._e("zones_state"));
+    const zone1 = zonen === null ? true : zonen === 0 || zonen === 2;
+    const zone2 = zonen === null ? true : zonen === 1 || zonen === 2;
+    const pufferDa = (() => {
+      const v = numState(hass, this._e("buffer_installed"));
+      return v === null ? true : v > 0;
+    })();
+    const wasserDa = (() => {
+      const v = numState(hass, this._e("dhw_installed"));
+      return v === null ? true : v > 0;
+    })();
+    const blende = (id, aktiv) => {
+      const el = sr.getElementById(id);
+      if (el) el.classList.toggle("is-inaktiv", !aktiv);
+    };
+    blende("hk1-group", zone1);
+    blende("hk2-group", zone2);
+    blende("buffer-group", pufferDa);
+    blende("dhw-group", wasserDa);
+
     /* Heizkreise */
     this._circuitUpdate(1, col, animate);
     if (this._config.hk_count === 2) this._circuitUpdate(2, col, animate);
@@ -1399,6 +1428,9 @@ class LutarymHeatpumpCard extends HTMLElement {
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums; transition: fill 600ms ease;
       }
+      /* Nicht aktivierte Kreise werden abgeblendet, nicht ausgeblendet.
+         So bleibt erkennbar, dass es sie gibt. */
+      .is-inaktiv { opacity: 0.28; transition: opacity 600ms ease; }
       .cap { fill: #98A6BA; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
       .cap-s { fill: #7E8CA0; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
       .value-l {

@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.0.3**
+**Version 1.1.0**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -191,8 +191,10 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `three_way_valve` | TOP20 | Dreiwegeventil |
 | `water_pressure` | TOP115 | Wasserdruck |
 | `buffer_temp` | TOP46 | Puffertemperatur |
+| `buffer_installed` | TOP99 | Puffer vorhanden |
 | `buffer_target` | TOP7 | Puffer Zieltemperatur |
 | `room_heater` | TOP59 | Heizstab Heizung |
+| `zones_state` | TOP94 | Aktivierte Zonen |
 | `hk1_water` | TOP36 | HK1 Wassertemperatur |
 | `hk1_water_target` | TOP42 | HK1 Wasser Sollwert |
 | `hk1_room` | TOP56 | HK1 Raumtemperatur |
@@ -203,12 +205,27 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `hk2_room` | TOP57 | HK2 Raumtemperatur |
 | `hk2_pump` | TOP123 | HK2 Pumpe läuft |
 | `hk2_setpoint` | TOP34 | HK2 Sollwert einstellbar |
+| `dhw_installed` | TOP100 | Warmwasser vorhanden |
 | `dhw_temp` | TOP10 | Warmwasser Isttemperatur |
 | `dhw_setpoint` | TOP9 | Warmwasser Sollwert |
 | `dhw_heater` | TOP58 | Heizstab Warmwasser |
 | `circulation_pump` | eigene Entität | Zirkulationspumpe läuft |
 | `mode_select` | SetOperationMode | Betriebsart umschalten |
 | `heating_switch` | eigene Entität | Heizung ein und aus |
+
+## Aktivierte Kreise
+
+Die Karte unterscheidet zwischen "läuft gerade" und "ist überhaupt vorhanden". Was in der Anlage nicht aktiviert ist, wird abgeblendet dargestellt statt ausgeblendet. So bleibt erkennbar, dass es den Kreis gibt.
+
+| Topic | Steuert |
+|---|---|
+| TOP94 Zones_State | ob Zone 1, Zone 2 oder beide aktiv sind |
+| TOP99 Buffer_Installed | ob ein Pufferspeicher vorhanden ist |
+| TOP100 DHW_Installed | ob ein Warmwasserspeicher vorhanden ist |
+
+TOP94 kennt drei Zustände: nur Zone 1, nur Zone 2, beide Zonen. Daraus leitet die Karte für jeden Heizkreis einzeln ab, ob er dargestellt oder abgeblendet wird.
+
+Sind diese Entitäten nicht zugeordnet, blendet die Karte nichts ab.
 
 ## Animation
 
