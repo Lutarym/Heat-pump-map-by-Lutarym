@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.6.1**
+**Version 1.6.2**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -207,11 +207,13 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `hk1_room` | TOP56 | HK1 Raumtemperatur |
 | `hk1_pump` | TOP124 | HK1 Pumpe läuft |
 | `hk1_setpoint` | TOP27 | HK1 Sollwert einstellbar |
+| `hk1_switch` | eigene Entität | HK1 ein und aus |
 | `hk2_water` | TOP37 | HK2 Wassertemperatur |
 | `hk2_water_target` | TOP43 | HK2 Wasser Sollwert |
 | `hk2_room` | TOP57 | HK2 Raumtemperatur |
 | `hk2_pump` | TOP123 | HK2 Pumpe läuft |
 | `hk2_setpoint` | TOP34 | HK2 Sollwert einstellbar |
+| `hk2_switch` | eigene Entität | HK2 ein und aus |
 | `dhw_installed` | TOP100 | Warmwasser vorhanden |
 | `dhw_temp` | TOP10 | Warmwasser Isttemperatur |
 | `dhw_setpoint` | TOP9 | Warmwasser Sollwert |
@@ -220,6 +222,18 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `circulation_pump` | eigene Entität | Zirkulationspumpe läuft |
 | `mode_select` | SetOperationMode | Betriebsart umschalten |
 | `heating_switch` | eigene Entität | Heizung ein und aus |
+
+## Heizkreise schalten
+
+Die Firmware kennt das Kommando `SetZones` mit drei Werten, passend zu TOP94:
+
+| Wert | Wirkung |
+|---|---|
+| 0 | nur Zone 1 aktiv |
+| 1 | nur Zone 2 aktiv |
+| 2 | beide Zonen aktiv |
+
+Beide Kreise gleichzeitig aus ist damit nicht vorgesehen. Die Integration legt für `SetZones` bisher keine Entität an, die Karte kann also nicht direkt darauf schreiben. Die Felder `hk1_switch` und `hk2_switch` sind deshalb für eine eigene Entität gedacht, etwa einen Schalter, der eine Automation auslöst.
 
 ## Aktivierte Kreise
 
@@ -320,6 +334,10 @@ Das Fenster zeigt denselben Wert wie der Schieberegler unter dem Schaubild. Bei 
 Das Fenster schließt über das Kreuz oben rechts oder über einen Klick auf den Hintergrund. Solange es offen ist, folgt es Änderungen, die von anderer Seite kommen, außer während du selbst schiebst.
 
 Im Fenster des Warmwasserspeichers steht zusätzlich ein Knopf für das **einmalige Aufheizen**. Er schaltet `SetForceDHW` und heißt "Einmalig aufheizen". Läuft es bereits, ist er hervorgehoben und heißt "Aufheizen läuft, abbrechen". Gemeint ist eine einmalige Ladung außerhalb des Zeitplans, kein Dauerbetrieb. Der Knopf erscheint nur, wenn die Entität dafür eingetragen ist, und nur beim Warmwasserspeicher.
+
+In den Fenstern der beiden Heizkreise erscheint ein Knopf zum Ein- und Ausschalten, sobald unter `hk1_switch` beziehungsweise `hk2_switch` eine Entität eingetragen ist. Dafür kommt ein eigener Schalter oder ein Helfer infrage, siehe den Abschnitt weiter unten.
+
+Ein verstellter Wert wird auch dann gesendet, wenn du das Fenster sofort danach schließt. Er geht spätestens beim Schließen raus, andernfalls nach kurzem Nachlauf.
 
 Anklickbar sind nur Baugruppen, für die eine stellbare Entität eingetragen ist. Fehlt sie, bleibt die Baugruppe wie bisher.
 

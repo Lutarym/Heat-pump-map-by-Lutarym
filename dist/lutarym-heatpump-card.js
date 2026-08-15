@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.6.1";
+const CARD_VERSION = "1.6.2";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -235,6 +235,8 @@ const FIELD_DOMAIN = {
   heating_switch: ["switch", "input_boolean"],
   mode_select: ["select", "input_select"],
   dhw_force: ["switch", "input_boolean"],
+  hk1_switch: ["switch", "input_boolean"],
+  hk2_switch: ["switch", "input_boolean"],
   circulation_pump: ["switch", "input_boolean", "binary_sensor", "sensor"],
   sg_k1: ["switch", "input_boolean", "binary_sensor", "sensor"],
   sg_k2: ["switch", "input_boolean", "binary_sensor", "sensor"],
@@ -345,12 +347,14 @@ const ENTITY_FIELDS = [
   { key: "hk1_room", label: "HK1 Raumtemperatur", group: "Heizkreis 1", hint: "TOP56" },
   { key: "hk1_pump", label: "HK1 Pumpe läuft", group: "Heizkreis 1", hint: "TOP124" },
   { key: "hk1_setpoint", label: "HK1 Sollwert einstellbar", group: "Heizkreis 1", hint: "TOP27, number" },
+  { key: "hk1_switch", label: "HK1 ein und aus", group: "Heizkreis 1", hint: "eigener Schalter, optional" },
 
   { key: "hk2_water", label: "HK2 Wassertemperatur", group: "Heizkreis 2", hint: "TOP37" },
   { key: "hk2_water_target", label: "HK2 Wasser Sollwert", group: "Heizkreis 2", hint: "TOP43" },
   { key: "hk2_room", label: "HK2 Raumtemperatur", group: "Heizkreis 2", hint: "TOP57" },
   { key: "hk2_pump", label: "HK2 Pumpe läuft", group: "Heizkreis 2", hint: "TOP123" },
   { key: "hk2_setpoint", label: "HK2 Sollwert einstellbar", group: "Heizkreis 2", hint: "TOP34, number" },
+  { key: "hk2_switch", label: "HK2 ein und aus", group: "Heizkreis 2", hint: "eigener Schalter, optional" },
 
   { key: "dhw_installed", label: "Warmwasser vorhanden", group: "Warmwasser", hint: "TOP100" },
   { key: "dhw_temp", label: "Warmwasser Isttemperatur", group: "Warmwasser", hint: "TOP10" },
@@ -588,15 +592,23 @@ class LutarymHeatpumpCard extends HTMLElement {
     const range = sr.getElementById("dlg-range");
     const out = sr.getElementById("dlg-value");
 
-    const schreiben = (wert) => {
-      const id = this._e(this._dialogKey);
+    // Die Entitaet wird beim Aufruf festgehalten. Sonst geht der Wert
+    // verloren, wenn das Fenster vor dem Absenden geschlossen wird.
+    const schreiben = (wert, entitaet) => {
+      const id = entitaet || this._e(this._dialogKey);
       if (!id) return;
+      this._offen = null;
+      if (this._offenTimer) {
+        clearTimeout(this._offenTimer);
+        this._offenTimer = null;
+      }
       this._halte("dialog", wert);
       this._hass.callService(id.split(".")[0], "set_value", {
         entity_id: id,
         value: wert,
       });
     };
+    this._schreibeDialog = schreiben;
     const schritt = (richtung) => {
       const neu =
         Math.round(
@@ -611,15 +623,24 @@ class LutarymHeatpumpCard extends HTMLElement {
     range.addEventListener("input", () => {
       this._dialogZieht = true;
       out.textContent = `${range.value} °C`;
+      // Offener Wert, damit er auch ohne Aenderungsereignis ankommt.
+      this._offen = {
+        wert: parseFloat(range.value),
+        entitaet: this._e(this._dialogKey),
+      };
+      if (this._offenTimer) clearTimeout(this._offenTimer);
+      this._offenTimer = setTimeout(() => {
+        if (this._offen) schreiben(this._offen.wert, this._offen.entitaet);
+      }, 600);
     });
     range.addEventListener("change", () => {
       this._dialogZieht = false;
-      schreiben(parseFloat(range.value));
+      schreiben(parseFloat(range.value), this._e(this._dialogKey));
     });
     sr.getElementById("dlg-minus").addEventListener("click", () => schritt(-1));
     sr.getElementById("dlg-plus").addEventListener("click", () => schritt(1));
     sr.getElementById("dlg-force").addEventListener("click", () => {
-      const id = this._e("dhw_force");
+      const id = this._e(this._dialogSchalter || "dhw_force");
       if (!id) return;
       const an = isOn(this._hass, id) === true;
       this._hass.callService("homeassistant", an ? "turn_off" : "turn_on", {
@@ -663,6 +684,15 @@ class LutarymHeatpumpCard extends HTMLElement {
   }
 
   _schliesseDialog() {
+    // Noch nicht abgesendeten Wert vor dem Schliessen nachreichen.
+    if (this._offen && this._schreibeDialog) {
+      this._schreibeDialog(this._offen.wert, this._offen.entitaet);
+    }
+    this._offen = null;
+    if (this._offenTimer) {
+      clearTimeout(this._offenTimer);
+      this._offenTimer = null;
+    }
     this._dialogKey = null;
     this._dialogAnzeige = null;
     this._dialogZieht = false;
@@ -702,15 +732,25 @@ class LutarymHeatpumpCard extends HTMLElement {
     // Zwangsladung nur beim Warmwasserspeicher und nur wenn eingetragen.
     const force = sr.getElementById("dlg-force");
     if (force) {
-      const forceId = this._e("dhw_force");
-      const zeigen = this._dialogKey === "dhw_setpoint" && Boolean(forceId);
-      force.hidden = !zeigen;
-      if (zeigen) {
-        const laeuft = isOn(this._hass, forceId) === true;
-        force.textContent = laeuft
-          ? "Aufheizen läuft, abbrechen"
-          : "Einmalig aufheizen";
-        force.classList.toggle("is-on", laeuft);
+      const schalterFeld =
+        this._dialogKey === "dhw_setpoint"
+          ? "dhw_force"
+          : this._dialogKey === "hk1_setpoint"
+          ? "hk1_switch"
+          : this._dialogKey === "hk2_setpoint"
+          ? "hk2_switch"
+          : null;
+      this._dialogSchalter = schalterFeld;
+      const schalterId = schalterFeld ? this._e(schalterFeld) : "";
+      force.hidden = !schalterId;
+      if (schalterId) {
+        const an = isOn(this._hass, schalterId) === true;
+        if (schalterFeld === "dhw_force") {
+          force.textContent = an ? "Aufheizen läuft, abbrechen" : "Einmalig aufheizen";
+        } else {
+          force.textContent = an ? "Heizkreis ist an, ausschalten" : "Heizkreis einschalten";
+        }
+        force.classList.toggle("is-on", an);
       }
     }
 
