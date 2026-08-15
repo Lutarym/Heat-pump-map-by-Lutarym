@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.6.0";
+const CARD_VERSION = "1.6.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -103,6 +103,9 @@ const NEUTRAL = "#46536A";
 // Pumpen drehen bewusst langsam und immer gleich schnell. Sie sollen
 // nur zeigen, dass sie foerdern, nicht wie schnell.
 const PUMP_SECONDS = 3;
+
+// Wie lange ein selbst gesetzter Wert stehen bleibt, bis die Anlage nachzieht.
+const HOLD_MS = 12000;
 
 // Vorrat an Blasen je Speicher. Sichtbar ist ein Anteil davon.
 const BUBBLE_COUNT = 14;
@@ -487,6 +490,27 @@ class LutarymHeatpumpCard extends HTMLElement {
     }
   }
 
+  /**
+   * Merkt einen gerade gesetzten Wert kurz vor.
+   * Ohne das ueberschreibt die naechste Aktualisierung die Eingabe,
+   * bevor die Waermepumpe nachgezogen hat, und der Regler springt zurueck.
+   */
+  _halte(id, wert) {
+    if (!this._gehalten) this._gehalten = {};
+    this._gehalten[id] = { wert, bis: Date.now() + HOLD_MS };
+  }
+
+  /** Liefert den vorgemerkten Wert, solange er gilt. */
+  _gehaltenerWert(id, istWert) {
+    const eintrag = this._gehalten && this._gehalten[id];
+    if (!eintrag) return null;
+    if (Date.now() > eintrag.bis || istWert === eintrag.wert) {
+      delete this._gehalten[id];
+      return null;
+    }
+    return eintrag.wert;
+  }
+
   _sgMode() {
     const k1 = this._e("sg_k1");
     const k2 = this._e("sg_k2");
@@ -542,7 +566,7 @@ class LutarymHeatpumpCard extends HTMLElement {
               <span id="dlg-min">--</span><span id="dlg-max">--</span>
             </div>
             <button type="button" class="lhc-dialog-action" id="dlg-force" hidden>
-              Jetzt laden
+              Einmalig aufheizen
             </button>
           </div>
         </div>
@@ -567,6 +591,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     const schreiben = (wert) => {
       const id = this._e(this._dialogKey);
       if (!id) return;
+      this._halte("dialog", wert);
       this._hass.callService(id.split(".")[0], "set_value", {
         entity_id: id,
         value: wert,
@@ -630,6 +655,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (!id || !this._hass.states[id]) return;
     this._dialogKey = feld;
     this._dialogAnzeige = anzeige || null;
+    if (this._gehalten) delete this._gehalten["dialog"];
     const sr = this.shadowRoot;
     sr.getElementById("dlg-title").textContent = titel || "Temperatur";
     sr.getElementById("dialog").hidden = false;
@@ -681,14 +707,20 @@ class LutarymHeatpumpCard extends HTMLElement {
       force.hidden = !zeigen;
       if (zeigen) {
         const laeuft = isOn(this._hass, forceId) === true;
-        force.textContent = laeuft ? "Ladung läuft, beenden" : "Jetzt laden";
+        force.textContent = laeuft
+          ? "Aufheizen läuft, abbrechen"
+          : "Einmalig aufheizen";
         force.classList.toggle("is-on", laeuft);
       }
     }
 
     if (this._dialogZieht) return;
-    range.value = wert;
-    sr.getElementById("dlg-value").textContent = `${wert} °C`;
+    const gehalten = this._gehaltenerWert("dialog", wert);
+    const zeigen = gehalten !== null ? gehalten : wert;
+    if (zeigen < Number(range.min)) range.min = Math.floor(zeigen);
+    if (zeigen > Number(range.max)) range.max = Math.ceil(zeigen);
+    range.value = zeigen;
+    sr.getElementById("dlg-value").textContent = `${zeigen} °C`;
   }
 
   _buildSwitches() {
@@ -790,9 +822,11 @@ class LutarymHeatpumpCard extends HTMLElement {
       range.addEventListener("change", () => {
         this._dragging = null;
         const entityId = this._e(r.key);
+        const wert = parseFloat(range.value);
+        this._halte(r.id, wert);
         this._hass.callService(entityId.split(".")[0], "set_value", {
           entity_id: entityId,
-          value: parseFloat(range.value),
+          value: wert,
         });
       });
     });
@@ -1592,8 +1626,12 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (maxEl) maxEl.textContent = `${hi} °C`;
 
     if (this._dragging === id) return;
-    range.value = wert;
-    if (out) out.textContent = `${wert} °C`;
+    const gehalten = this._gehaltenerWert(id, wert);
+    const zeigen = gehalten !== null ? gehalten : wert;
+    if (zeigen < lo) range.min = Math.floor(zeigen);
+    if (zeigen > hi) range.max = Math.ceil(zeigen);
+    range.value = zeigen;
+    if (out) out.textContent = `${zeigen} °C`;
     range.style.setProperty(
       "--thumb",
       thermalColor(wert, Number(this._config.scale_min), Number(this._config.scale_max))
