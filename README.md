@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.0.2**
+**Version 1.0.3**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -305,7 +305,7 @@ Ob die Wärmepumpe auf den Sollwert TOP27 reagiert, hängt davon ab, ob sie auf 
 
 **Im Editor springen die Eingabefelder zurück, sobald ich tippe.** Behoben in 0.5.2. Ältere Fassungen glichen die Felder bei jeder Zustandsänderung in Home Assistant ab und überschrieben dabei die Eingabe. Prüfe die Version in der Browser-Konsole und leere den Cache.
 
-**Ein Update wirkt nicht, die Karte sieht unverändert aus.** Unten rechts in der Grafik steht die geladene Version. Stimmt sie nicht mit der erwarteten überein, liefert der Browser oder Home Assistant noch die alte Datei. Der sichere Weg ist ein neuer Dateiname: speichere die Datei unter einem anderen Namen, trage sie als neue Ressource ein und lösche die alte Ressource. Eine URL, die es vorher nicht gab, kann kein Cache liefern.
+**Ein Update wirkt nicht, die Karte sieht unverändert aus.** Unten rechts in der Grafik steht die geladene Version. Bei einer Installation über HACS genügt es, die Seite neu zu laden. Steht dort weiterhin die alte Nummer, liegt vermutlich noch eine zweite, von Hand eingetragene Ressource auf dieselbe Karte. Unter Einstellungen, Dashboards, Ressourcen darf nur ein Eintrag für diese Karte stehen.
 
 **Die Karte erscheint nicht in der Auswahl.** Ressource geprüft, Browser-Cache geleert? Die Karte meldet sich beim Laden in der Browser-Konsole mit ihrer Version.
 

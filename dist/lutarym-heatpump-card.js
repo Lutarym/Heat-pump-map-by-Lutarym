@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.0.2";
+const CARD_VERSION = "1.0.3";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1846,15 +1846,8 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
   }
 }
 
-// Schutz, falls versehentlich zwei Fassungen als Ressource eingetragen sind.
-// Ohne diesen Schutz wirft der zweite Aufruf einen Fehler und die Karte
-// bleibt leer, was wie ein nicht wirksames Update aussieht.
-if (!customElements.get("lutarym-heatpump-card")) {
-  customElements.define("lutarym-heatpump-card", LutarymHeatpumpCard);
-}
-if (!customElements.get("lutarym-heatpump-card-editor")) {
-  customElements.define("lutarym-heatpump-card-editor", LutarymHeatpumpCardEditor);
-}
+customElements.define("lutarym-heatpump-card", LutarymHeatpumpCard);
+customElements.define("lutarym-heatpump-card-editor", LutarymHeatpumpCardEditor);
 
 window.customCards = window.customCards || [];
 window.customCards.push({
