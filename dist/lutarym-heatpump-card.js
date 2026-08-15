@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.2.2";
+const CARD_VERSION = "1.3.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -105,7 +105,7 @@ const NEUTRAL = "#46536A";
 const PUMP_SECONDS = 3;
 
 // Vorrat an Blasen je Speicher. Sichtbar ist ein Anteil davon.
-const BUBBLE_COUNT = 20;
+const BUBBLE_COUNT = 14;
 
 function clamp(v, lo, hi) {
   return Math.min(hi, Math.max(lo, v));
@@ -372,6 +372,7 @@ const DEFAULT_CONFIG = {
   label_dhw: "Warmwasser",
   label_energy: "Energie",
   label_buffer: "Puffer",
+  energy_daily: true,
   animate: true,
   entities: {},
 };
@@ -410,6 +411,9 @@ class LutarymHeatpumpCard extends HTMLElement {
     this._config.hk_count = this._config.hk_count === 1 ? 1 : 2;
     this._built = false;
     this._auto = null;
+    this._tagStart = undefined;
+    this._tagStartTag = undefined;
+    this._tagVersuch = 0;
     if (this.shadowRoot) this.shadowRoot.innerHTML = "";
     if (this._hass) this._render();
   }
@@ -432,6 +436,52 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (configured) return configured;
     if (!this._auto) this._auto = detectIntegration(this._hass).entities;
     return this._auto[key] || "";
+  }
+
+  /**
+   * Holt den Zaehlerstand von heute null Uhr und merkt ihn.
+   * Damit laesst sich der Tagesverbrauch aus dem Gesamtzaehler rechnen,
+   * ohne dass ein eigener Zaehler-Helfer noetig ist.
+   * Schlaegt die Abfrage fehl, bleibt der Gesamtstand stehen.
+   */
+  async _ladeTagesstart() {
+    const id = this._e("energy_today");
+    if (!id || !this._hass || !this._hass.callWS) return;
+
+    const jetzt = new Date();
+    const mitternacht = new Date(
+      jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate()
+    ).getTime();
+
+    // Einmal je Tag, danach hoechstens alle fuenf Minuten erneut versuchen.
+    if (this._tagStartTag === mitternacht && this._tagStart !== undefined) return;
+    if (this._tagVersuch && jetzt.getTime() - this._tagVersuch < 300000) return;
+    this._tagVersuch = jetzt.getTime();
+
+    try {
+      const antwort = await this._hass.callWS({
+        type: "history/history_during_period",
+        start_time: new Date(mitternacht).toISOString(),
+        end_time: new Date(mitternacht + 120000).toISOString(),
+        entity_ids: [id],
+        include_start_time_state: true,
+        significant_changes_only: false,
+        minimal_response: true,
+        no_attributes: true,
+      });
+      const reihe = antwort && antwort[id];
+      if (!reihe || !reihe.length) return;
+      // Je nach Fassung heisst das Feld "s" oder "state".
+      const roh = reihe[0].s !== undefined ? reihe[0].s : reihe[0].state;
+      const wert = parseFloat(roh);
+      if (!Number.isNaN(wert)) {
+        this._tagStart = wert;
+        this._tagStartTag = mitternacht;
+        this._render();
+      }
+    } catch (err) {
+      // Keine Historie verfuegbar, es bleibt beim Gesamtstand.
+    }
   }
 
   _sgMode() {
@@ -769,8 +819,6 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Dreiwegeventil -->
       <g>
-        <text class="unit-label" x="1525" y="196" text-anchor="middle">Ventil stellt auf</text>
-        <text class="unit-value" id="valve-v" x="1525" y="224" text-anchor="middle">--</text>
         <rect x="1507" y="248" width="36" height="36" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="2"
               transform="rotate(45 1525 266)"/>
@@ -888,7 +936,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     let kreise = "";
     for (let i = 0; i < n; i++) {
       const cx = Math.round(x + 10 + naechste() * (w - 20));
-      const r = (2.2 + naechste() * 3.2).toFixed(1);
+      const r = (1.6 + naechste() * 2.4).toFixed(1);
       const dauer = (4 + naechste() * 4).toFixed(1);
       const start = (naechste() * 7).toFixed(1);
       kreise +=
@@ -1054,7 +1102,18 @@ class LutarymHeatpumpCard extends HTMLElement {
     const energie = numState(hass, this._e("energy_today"));
     zeige("verbrauch-group", leistung !== null || energie !== null);
     set("power-now-v", leistung === null ? "--" : `${fmt(leistung, 0)} W`);
-    set("energy-today-v", energie === null ? "--" : `${fmt(energie, 1)} kWh`);
+    // Tagesverbrauch, sofern der Stand von Mitternacht bekannt ist.
+    let energieAnzeige = energie;
+    if (this._config.energy_daily !== false && energie !== null) {
+      this._ladeTagesstart();
+      if (this._tagStart !== undefined && energie >= this._tagStart) {
+        energieAnzeige = energie - this._tagStart;
+      }
+    }
+    set(
+      "energy-today-v",
+      energieAnzeige === null ? "--" : `${fmt(energieAnzeige, 1)} kWh`
+    );
 
     /* Zirkulationspumpe */
     const zirkId = this._e("circulation_pump");
@@ -1185,13 +1244,11 @@ class LutarymHeatpumpCard extends HTMLElement {
         wert === null ? 0 : clamp((wert - min) / ((max - min) || 1), 0, 1);
       const sichtbar = animate ? Math.round(anteil * BUBBLE_COUNT) : 0;
       Array.from(g.children).forEach((el, i) => {
-        if (i < sichtbar) {
-          el.style.opacity = "";
-          el.style.animationPlayState = "running";
-        } else {
-          el.style.opacity = "0";
-          el.style.animationPlayState = "paused";
-        }
+        // Eine pausierte Animation setzt ihre Deckkraft weiter und
+        // ueberschreibt dabei jeden Inline-Stil. Ausgeblendete Blasen
+        // bekommen deshalb gar keine Animation, sonst blieben sie
+        // sichtbar in der Luft stehen.
+        el.style.animationName = i < sichtbar ? "" : "none";
       });
     };
     blasen("buf-bubbles", buf);
@@ -1476,14 +1533,14 @@ class LutarymHeatpumpCard extends HTMLElement {
       /* Aufsteigende Blasen. Je waermer der Speicher, desto mehr
          davon werden sichtbar geschaltet. */
       .bubble {
-        fill: #FFFFFF; stroke: rgba(255,255,255,0.35); stroke-width: 1; opacity: 0;
+        fill: #FFFFFF; opacity: 0;
         animation-name: lhc-bubble; animation-timing-function: linear;
-        animation-iteration-count: infinite; animation-play-state: paused;
+        animation-iteration-count: infinite;
       }
       @keyframes lhc-bubble {
         0% { transform: translateY(0); opacity: 0; }
-        12% { opacity: 0.75; }
-        88% { opacity: 0.7; }
+        15% { opacity: 0.38; }
+        85% { opacity: 0.34; }
         100% { transform: translateY(-330px); opacity: 0; }
       }
       .tag-l { fill: #8494AA; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
@@ -1740,6 +1797,10 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
             <span>Beschriftung Energie<em>je nach Sensor, etwa Heute oder Gesamt</em></span>
             <input type="text" id="opt-lenergy">
           </label>
+          <label class="ed-row ed-check">
+            <input type="checkbox" id="opt-eday">
+            <span>Tagesverbrauch aus dem Zählerstand rechnen</span>
+          </label>
           <label class="ed-row ed-check"><input type="checkbox" id="opt-animate"><span>Bewegung anzeigen</span></label>
           <label class="ed-row ed-check"><input type="checkbox" id="opt-switches"><span>Betriebsart und Schalter anzeigen</span></label>
           <label class="ed-row ed-check"><input type="checkbox" id="opt-controls"><span>Sollwertregler anzeigen</span></label>
@@ -1794,6 +1855,7 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     bind("opt-lbuf", (el) => put({ label_buffer: el.value }));
     bind("opt-ldhw", (el) => put({ label_dhw: el.value }));
     bind("opt-lenergy", (el) => put({ label_energy: el.value }));
+    bind("opt-eday", (el) => put({ energy_daily: el.checked }));
     bind("opt-animate", (el) => put({ animate: el.checked }));
     bind("opt-switches", (el) => put({ show_switches: el.checked }));
     bind("opt-controls", (el) => put({ show_controls: el.checked }));
@@ -1851,6 +1913,7 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     put("opt-lbuf", this._config.label_buffer);
     put("opt-ldhw", this._config.label_dhw);
     put("opt-lenergy", this._config.label_energy);
+    check("opt-eday", this._config.energy_daily);
     check("opt-animate", this._config.animate);
     check("opt-switches", this._config.show_switches);
     check("opt-controls", this._config.show_controls);

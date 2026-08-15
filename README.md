@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.2.2**
+**Version 1.3.1**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -24,15 +24,17 @@ Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 
 **Wasserdruck** als Manometer. Es erscheint nur, wenn ein Wert vorliegt, sonst bleibt die Stelle leer.
 
-**Dreiwegeventil** am Abzweig zum Warmwasserspeicher, mit der Beschriftung "Ventil stellt auf" und der Stellung darunter, in Klartext als Heizung oder Warmwasser.
+**Dreiwegeventil** am Abzweig zum Warmwasserspeicher. Seine Stellung erkennst du an der Farbe des Punktes, die zur jeweils bedienten Seite passt.
 
 **Warmwasserspeicher** mit Ist- und Zieltemperatur und einem Hinweis, wenn der Heizstab läuft. Im Wasser steigen Blasen auf, umso mehr je wärmer der Speicher ist.
 
 **Hinweis** als gelber Balken, wenn gar keine Entität zugeordnet ist. Sonst zeigt die Karte nur Striche und man sucht an der falschen Stelle.
 
-**Stromverbrauch** zwischen Außengerät und Puffer, mit der aktuellen Leistungsaufnahme in Watt und einem Energiezähler in Kilowattstunden. Die Beschriftung des Zählers ist im Editor frei wählbar, denn ob dein Sensor den heutigen Tag, den Monat oder alles seit Inbetriebnahme zählt, weiß nur du. Standard ist deshalb das neutrale "Energie".
+**Stromverbrauch** zwischen Außengerät und Puffer, mit der aktuellen Leistungsaufnahme in Watt und dem Verbrauch in Kilowattstunden.
 
-Willst du wirklich den heutigen Verbrauch, brauchst du in Home Assistant einen Zähler-Helfer vom Typ `utility_meter` mit Zyklus täglich, der auf deinen Shelly-Zähler zeigt. Diesen Helfer trägst du dann hier ein. Beide Werte kommen aus einem eigenen Messgerät, etwa einem Shelly PM. Der Block erscheint nur, wenn mindestens einer der beiden Werte vorliegt.
+Die Karte rechnet den **Tagesverbrauch** selbst aus. Sie holt einmal je Tag den Zählerstand von null Uhr aus der Historie von Home Assistant und zieht ihn vom aktuellen Stand ab. Ein eigener Zähler-Helfer ist dafür nicht nötig.
+
+Die Berechnung lässt sich im Editor abschalten, dann steht dort der Zählerstand, wie ihn der Sensor liefert. Steht keine Historie zur Verfügung, etwa weil der Recorder den Sensor nicht aufzeichnet, fällt die Karte von selbst auf den Zählerstand zurück. Wird der Zähler zwischendurch zurückgesetzt, zeigt sie den aktuellen Stand statt einer negativen Zahl. Beide Werte kommen aus einem eigenen Messgerät, etwa einem Shelly PM. Der Block erscheint nur, wenn mindestens einer der beiden Werte vorliegt.
 
 **Zirkulationspumpe** als Schleife rechts am Warmwasserspeicher, mit eigener Pumpe. Sie erscheint nur, wenn eine Entität dafür eingetragen ist, etwa ein Shelly. Läuft die Pumpe, dreht der Rotor und die Schleife wird durchströmt.
 
@@ -162,6 +164,7 @@ entities:
 | `label_hk2` | Heizkreis 2 | Beschriftung des zweiten Reglers |
 | `label_dhw` | Warmwasser | Beschriftung des Warmwasserreglers |
 | `label_buffer` | Puffer | Beschriftung des Pufferspeichers |
+| `energy_daily` | true | Tagesverbrauch aus dem Zählerstand rechnen |
 | `label_energy` | Energie | Beschriftung des Energiezählers |
 | `scale_min` | 20 | Untere Grenze der Heizungsfarbskala in Grad |
 | `scale_max` | 60 | Obere Grenze der Heizungsfarbskala in Grad |
@@ -238,10 +241,10 @@ In beiden Speichern steigen Blasen auf. Ihre Anzahl richtet sich nach der Temper
 | Temperatur bei Skala 20 bis 60 | Blasen |
 |---|---|
 | 20 °C und darunter | keine |
-| 30 °C | 5 |
-| 40 °C | 10 |
-| 50 °C | 15 |
-| 60 °C und darüber | 20 |
+| 30 °C | 4 |
+| 40 °C | 7 |
+| 50 °C | 11 |
+| 60 °C und darüber | 14 |
 
 Jede Blase hat ihre eigene Steiggeschwindigkeit und Startverzögerung, damit kein Muster entsteht. Die Verteilung ist fest vorberechnet, sodass das Bild bei jedem Neuaufbau der Karte gleich aussieht.
 
