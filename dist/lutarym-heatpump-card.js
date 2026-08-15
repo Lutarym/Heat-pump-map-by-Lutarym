@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.0.1";
+const CARD_VERSION = "1.0.2";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -24,7 +24,7 @@ const L = {
   UNIT_TOP: 60,
   UNIT_BOTTOM: 760,
   CAP_Y: 768,
-  SG_Y: 690,
+  SG_Y: 104,
 }
 
 /* ------------------------------------------------------------------ *
@@ -648,11 +648,11 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Außengerät -->
       <g class="unit">
-        <rect x="40" y="${L.UNIT_TOP}" width="300" height="700" rx="16"
+        <rect x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16"
               fill="url(#casing)" stroke="#33415A" stroke-width="2"/>
-        <rect id="unit-glow" x="40" y="${L.UNIT_TOP}" width="300" height="700" rx="16"
+        <rect id="unit-glow" x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16"
               fill="none" stroke="#E0762E" stroke-width="2" opacity="0"/>
-        <rect x="40" y="${L.UNIT_TOP}" width="300" height="700" rx="16" fill="url(#glass)"/>
+        <rect x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16" fill="url(#glass)"/>
 
         <circle cx="66" cy="96" r="9" id="power-led" fill="#2C3646"/>
         <text class="unit-label" x="86" y="101">Betrieb</text>
@@ -670,17 +670,19 @@ class LutarymHeatpumpCard extends HTMLElement {
 
         ${fans}
 
-        <g id="sg-group" opacity="0">
-          <text class="sg-label" x="190" y="${SG}" text-anchor="middle">SG Ready</text>
-          <g transform="translate(190 ${SG + 10})">
-            <rect x="-60" y="0" width="26" height="12" rx="6" id="sg-seg-1" fill="#586A88"/>
-            <rect x="-30" y="0" width="26" height="12" rx="6" id="sg-seg-2" fill="#586A88"/>
-            <rect x="4" y="0" width="26" height="12" rx="6" id="sg-seg-3" fill="#586A88"/>
-            <rect x="34" y="0" width="26" height="12" rx="6" id="sg-seg-4" fill="#586A88"/>
-          </g>
-          <text class="sg-value" id="sg-text" x="190" y="${SG + 46}"
-                text-anchor="middle">--</text>
+      </g>
+
+      <!-- SG Ready, neben der Wärmepumpe, ohne Rahmen -->
+      <g id="sg-group" opacity="0">
+        <text class="sg-label" x="480" y="${SG}" text-anchor="middle">SG Ready</text>
+        <g transform="translate(480 ${SG + 12})">
+          <rect x="-60" y="0" width="26" height="12" rx="6" id="sg-seg-1" fill="#586A88"/>
+          <rect x="-30" y="0" width="26" height="12" rx="6" id="sg-seg-2" fill="#586A88"/>
+          <rect x="4" y="0" width="26" height="12" rx="6" id="sg-seg-3" fill="#586A88"/>
+          <rect x="34" y="0" width="26" height="12" rx="6" id="sg-seg-4" fill="#586A88"/>
         </g>
+        <text class="sg-value" id="sg-text" x="480" y="${SG + 58}"
+              text-anchor="middle">--</text>
       </g>
 
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->

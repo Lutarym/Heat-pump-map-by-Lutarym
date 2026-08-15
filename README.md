@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.0.1**
+**Version 1.0.2**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -12,7 +12,7 @@ Das Schema ist im Breitformat angelegt, alle Baugruppen stehen in einer Reihe. V
 
 Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 
-**Außengerät** mit grüner Betriebs-LED, Außentemperatur und Verdichterdrehzahl, ein oder zwei übereinander stehenden Lüftern, SG-Ready-Anzeige und dem Hinweis bei laufender Abtauung. Alle Werte stehen ohne Rahmen direkt im Gehäuse.
+**Außengerät** mit grüner Betriebs-LED, Außentemperatur und Verdichterdrehzahl, ein oder zwei übereinander stehenden Lüftern und dem Hinweis bei laufender Abtauung. Alle Werte stehen ohne Rahmen direkt im Gehäuse.
 
 **Vorlauf und Rücklauf** als Werte auf den Leitungen, direkt am Ausgang und am Eingang der Wärmepumpe, ohne Beschriftung. Welcher Wert welcher ist, sagt die Lage: oben der Vorlauf, unten der Rücklauf. Beide sind thermisch eingefärbt, in derselben Farbe wie ihre Leitung.
 
@@ -259,7 +259,7 @@ Erlaubt sind die Domänen `switch`, `input_boolean`, `binary_sensor` und `sensor
 
 Fehlt einer der beiden Kontakte, blendet sich die Anzeige aus. Ist einer nicht erreichbar, zeigt die Karte "unbekannt", statt einen Zustand zu raten. Ein ausgefallener Shelly darf nicht als offener Kontakt gelten, sonst stünde dort Normalbetrieb, obwohl niemand weiß, was tatsächlich anliegt.
 
-Die Anzeige sitzt im Gehäuse des Außengeräts, ohne eigenen Rahmen. Nichts blinkt. Der Zustandstext steht groß in der Farbe seines Zustands und leuchtet leicht in derselben Farbe, damit er sich vom dunklen Gehäuse abhebt. Ist kein Kontakt eingetragen, blendet sich die Anzeige vollständig aus.
+Die Anzeige sitzt oben rechts neben dem Außengerät, ohne eigenen Rahmen. Nichts blinkt. Der Zustandstext steht groß in der Farbe seines Zustands und leuchtet leicht in derselben Farbe, damit er sich vom dunklen Gehäuse abhebt. Ist kein Kontakt eingetragen, blendet sich die Anzeige vollständig aus.
 
 Die Karte zeigt SG Ready nur an, sie schaltet nicht. Wer umschalten will, steuert die Relais über eine Automation.
 
