@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.3.1";
+const CARD_VERSION = "1.3.2";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -747,14 +747,10 @@ class LutarymHeatpumpCard extends HTMLElement {
       </g>
 
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
-      <g transform="translate(410 ${F})">
-        <rect x="-56" y="-22" width="112" height="44" rx="10" fill="#0B1017" opacity="0.92"/>
-        <text class="tag-v" id="unit-flow-v" x="0" y="7" text-anchor="middle">--</text>
-      </g>
-      <g transform="translate(410 ${R})">
-        <rect x="-56" y="-22" width="112" height="44" rx="10" fill="#0B1017" opacity="0.92"/>
-        <text class="tag-v" id="unit-ret-v" x="0" y="7" text-anchor="middle">--</text>
-      </g>
+      <text class="vl-value" id="unit-flow-v" x="410" y="${F - 20}"
+            text-anchor="middle">--</text>
+      <text class="rl-value" id="unit-ret-v" x="410" y="${R - 20}"
+            text-anchor="middle">--</text>
 
       <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
       <g id="verbrauch-group" opacity="0">
@@ -1138,10 +1134,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     // Beide Temperaturen zusaetzlich als Zahl im Gehaeuse, thermisch gefaerbt.
     set("unit-flow-v", flow === null ? "--" : `${fmt(flow)} °C`);
     set("unit-ret-v", ret === null ? "--" : `${fmt(ret)} °C`);
-    const flowEl = sr.getElementById("unit-flow-v");
-    if (flowEl) flowEl.setAttribute("fill", col(flow));
-    const retEl = sr.getElementById("unit-ret-v");
-    if (retEl) retEl.setAttribute("fill", col(ret));
+    // Die Farbe steht fest im Stil, rot fuer Vorlauf und blau fuer Ruecklauf.
 
     paint("bg-top", col(buf));
     paint("bg-bottom", col(buf === null ? null : buf - 4));
@@ -1544,6 +1537,14 @@ class LutarymHeatpumpCard extends HTMLElement {
         100% { transform: translateY(-330px); opacity: 0; }
       }
       .tag-l { fill: #8494AA; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+      /* Vorlauf rot, Ruecklauf blau, unabhaengig von der Temperatur. */
+      .vl-value, .rl-value {
+        font-size: 22px; font-weight: 700;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-variant-numeric: tabular-nums;
+      }
+      .vl-value { fill: #FF5F52; }
+      .rl-value { fill: #4D9BFF; }
       .tag-v {
         fill: #FFFFFF; font-size: 19px; font-weight: 600;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
