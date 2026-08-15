@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "0.9.7";
+const CARD_VERSION = "0.9.8";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1084,8 +1084,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     /* Bedienung */
     this._syncToggle("sw-heat", "heating_switch");
     this._syncModeSelect();
-    this._syncSlider("ctl-hk1", "hk1_setpoint");
-    this._syncSlider("ctl-hk2", "hk2_setpoint");
+    this._syncSlider("ctl-hk1", "hk1_setpoint", "hk1_water_target");
+    this._syncSlider("ctl-hk2", "hk2_setpoint", "hk2_water_target");
     this._syncSlider("ctl-dhw", "dhw_setpoint");
   }
 
@@ -1200,7 +1200,15 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (sel.value !== st.state) sel.value = st.state;
   }
 
-  _syncSlider(id, key) {
+  /**
+   * Aktualisiert einen Sollwertregler.
+   * key      ist die stellbare Entitaet, auf die geschrieben wird.
+   * anzeige  ist optional die Entitaet, deren Wert angezeigt wird.
+   *          Damit steht am Regler der tatsaechliche Sollwert des
+   *          Kreises, auch wenn die stellbare Entitaet etwas
+   *          anderes fuehrt.
+   */
+  _syncSlider(id, key, anzeige) {
     const range = this.shadowRoot.getElementById(`${id}-range`);
     if (!range) return;
     const out = this.shadowRoot.getElementById(`${id}-out`);
@@ -1208,6 +1216,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     const maxEl = this.shadowRoot.getElementById(`${id}-max`);
     const entityId = this._e(key);
     const st = this._hass.states[entityId];
+    const anzeigeId = anzeige ? this._e(anzeige) : "";
+    const stAnzeige = anzeigeId ? this._hass.states[anzeigeId] : null;
 
     const sperren = (text) => {
       range.disabled = true;
@@ -1222,7 +1232,9 @@ class LutarymHeatpumpCard extends HTMLElement {
     }
 
     // Zuerst den tatsaechlichen Wert lesen, erst danach den Bereich setzen.
-    const wert = parseFloat(st.state);
+    // Ist eine Anzeigequelle eingetragen, hat deren Wert Vorrang.
+    const quelle = stAnzeige && !Number.isNaN(parseFloat(stAnzeige.state)) ? stAnzeige : st;
+    const wert = parseFloat(quelle.state);
     if (Number.isNaN(wert)) {
       sperren("nicht verfügbar");
       return;
@@ -1230,6 +1242,11 @@ class LutarymHeatpumpCard extends HTMLElement {
 
     let lo = Number(st.attributes.min !== undefined ? st.attributes.min : 15);
     let hi = Number(st.attributes.max !== undefined ? st.attributes.max : 65);
+    // Zeigt der Regler eine andere Quelle, muss der Bereich dazu passen.
+    if (quelle !== st) {
+      lo = Math.min(lo, Math.floor(wert) - 10);
+      hi = Math.max(hi, Math.ceil(wert) + 10);
+    }
     // Liegt der Sollwert ausserhalb, wird der Bereich erweitert.
     // Sonst klemmt der Browser den Regler an den Rand und zeigt etwas
     // anderes an, als die Waermepumpe tatsaechlich eingestellt hat.

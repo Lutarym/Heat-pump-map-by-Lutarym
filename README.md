@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 0.9.7**
+**Version 0.9.8**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -257,6 +257,14 @@ Fehlt einer der beiden Kontakte, blendet sich die Anzeige aus. Ist einer nicht e
 Die Anzeige sitzt im Gehäuse des Außengeräts, ohne eigenen Rahmen. Zustand 1 und Zustand 4 sind Ausnahmezustände und blinken, damit sie auffallen. Zustand 2 und 3 stehen ruhig. Ist kein Kontakt eingetragen, blendet sich die Anzeige vollständig aus.
 
 Die Karte zeigt SG Ready nur an, sie schaltet nicht. Wer umschalten will, steuert die Relais über eine Automation.
+
+## Was der Regler anzeigt
+
+Der Regler für einen Heizkreis zeigt den tatsächlichen Sollwert des Kreises aus `hk1_water_target` beziehungsweise `hk2_water_target`, also TOP42 und TOP43. Das ist die Temperatur, auf die der Kreis gerade geregelt wird.
+
+Verstellst du den Regler, schreibt die Karte auf `hk1_setpoint` beziehungsweise `hk2_setpoint`, also TOP27 und TOP34. Das sind die stellbaren Entitäten, denn TOP42 und TOP43 sind reine Messwerte ohne Schreibzugriff.
+
+Ist keine Anzeigequelle eingetragen, zeigt der Regler den Wert der stellbaren Entität, wie zuvor.
 
 ## Beschriftung der Regler
 
