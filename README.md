@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.1.0**
+**Version 1.2.2**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -18,19 +18,21 @@ Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 
 **Primärpumpe** mit Drehzahl und Durchflussmenge, hinter dem Puffer auf der Rücklaufleitung.
 
-**Heizungspuffer** als großer Speicher, eingefärbt nach seiner Temperatur, darunter die Zieltemperatur. Auch hier bewegt sich das Wasser, solange der Puffer beladen wird.
+**Heizungspuffer** als großer Speicher, eingefärbt nach seiner Temperatur, darunter die Zieltemperatur. Im Wasser steigen Blasen auf, und zwar umso mehr, je wärmer der Speicher ist.
 
 **Heizkreis 1 und 2**, jeder mit eigener Pumpe mittig auf seiner Stichleitung und eigenem Heizkörper. Auf dem Heizkörper liegt eine Tafel mit Wassertemperatur samt Sollwert und der Raumtemperatur.
 
 **Wasserdruck** als Manometer. Es erscheint nur, wenn ein Wert vorliegt, sonst bleibt die Stelle leer.
 
-**Dreiwegeventil** am Abzweig zum Warmwasserspeicher, in Klartext als Heizung oder Warmwasser.
+**Dreiwegeventil** am Abzweig zum Warmwasserspeicher, mit der Beschriftung "Ventil stellt auf" und der Stellung darunter, in Klartext als Heizung oder Warmwasser.
 
-**Warmwasserspeicher** mit Ist- und Zieltemperatur und einem Hinweis, wenn der Heizstab läuft. Das Wasser im Speicher bewegt sich, solange geladen wird.
+**Warmwasserspeicher** mit Ist- und Zieltemperatur und einem Hinweis, wenn der Heizstab läuft. Im Wasser steigen Blasen auf, umso mehr je wärmer der Speicher ist.
 
 **Hinweis** als gelber Balken, wenn gar keine Entität zugeordnet ist. Sonst zeigt die Karte nur Striche und man sucht an der falschen Stelle.
 
-**Stromverbrauch** zwischen Außengerät und Puffer, mit der aktuellen Leistungsaufnahme in Watt und dem Verbrauch heute in Kilowattstunden. Beide Werte kommen aus einem eigenen Messgerät, etwa einem Shelly PM. Der Block erscheint nur, wenn mindestens einer der beiden Werte vorliegt.
+**Stromverbrauch** zwischen Außengerät und Puffer, mit der aktuellen Leistungsaufnahme in Watt und einem Energiezähler in Kilowattstunden. Die Beschriftung des Zählers ist im Editor frei wählbar, denn ob dein Sensor den heutigen Tag, den Monat oder alles seit Inbetriebnahme zählt, weiß nur du. Standard ist deshalb das neutrale "Energie".
+
+Willst du wirklich den heutigen Verbrauch, brauchst du in Home Assistant einen Zähler-Helfer vom Typ `utility_meter` mit Zyklus täglich, der auf deinen Shelly-Zähler zeigt. Diesen Helfer trägst du dann hier ein. Beide Werte kommen aus einem eigenen Messgerät, etwa einem Shelly PM. Der Block erscheint nur, wenn mindestens einer der beiden Werte vorliegt.
 
 **Zirkulationspumpe** als Schleife rechts am Warmwasserspeicher, mit eigener Pumpe. Sie erscheint nur, wenn eine Entität dafür eingetragen ist, etwa ein Shelly. Läuft die Pumpe, dreht der Rotor und die Schleife wird durchströmt.
 
@@ -159,6 +161,8 @@ entities:
 | `label_hk1` | Heizkreis 1 | Beschriftung des ersten Reglers |
 | `label_hk2` | Heizkreis 2 | Beschriftung des zweiten Reglers |
 | `label_dhw` | Warmwasser | Beschriftung des Warmwasserreglers |
+| `label_buffer` | Puffer | Beschriftung des Pufferspeichers |
+| `label_energy` | Energie | Beschriftung des Energiezählers |
 | `scale_min` | 20 | Untere Grenze der Heizungsfarbskala in Grad |
 | `scale_max` | 60 | Obere Grenze der Heizungsfarbskala in Grad |
 | `outdoor_min` | -15 | Untere Grenze der Außenskala in Grad |
@@ -227,6 +231,20 @@ TOP94 kennt drei Zustände: nur Zone 1, nur Zone 2, beide Zonen. Daraus leitet d
 
 Sind diese Entitäten nicht zugeordnet, blendet die Karte nichts ab.
 
+## Blasen in den Speichern
+
+In beiden Speichern steigen Blasen auf. Ihre Anzahl richtet sich nach der Temperatur, gemessen an derselben Skala, die auch die Färbung steuert.
+
+| Temperatur bei Skala 20 bis 60 | Blasen |
+|---|---|
+| 20 °C und darunter | keine |
+| 30 °C | 5 |
+| 40 °C | 10 |
+| 50 °C | 15 |
+| 60 °C und darüber | 20 |
+
+Jede Blase hat ihre eigene Steiggeschwindigkeit und Startverzögerung, damit kein Muster entsteht. Die Verteilung ist fest vorberechnet, sodass das Bild bei jedem Neuaufbau der Karte gleich aussieht.
+
 ## Animation
 
 Bewegung zeigt an, dass etwas tatsächlich arbeitet. Steht ein Bauteil still, steht auch seine Darstellung.
@@ -242,8 +260,7 @@ Bewegung zeigt an, dass etwas tatsächlich arbeitet. Steht ein Bauteil still, st
 | Stichleitung zum Speicher | zusätzlich Dreiwegeventil auf Warmwasser |
 | Leitungen eines Heizkreises | nur dessen eigene Kreispumpe |
 | Zirkulationsschleife | die Zirkulationspumpe läuft |
-| Wasser im Puffer | Dreiwegeventil auf Heizen und Umwälzung läuft |
-| Wasser im Warmwasserspeicher | Dreiwegeventil auf Warmwasser oder Heizstab läuft |
+| Blasen in Puffer und Speicher | dauerhaft, Menge nach Temperatur |
 | Hinweise Heizstab und Abtauung | solange sie aktiv sind |
 | Störungsbalken | solange ein Fehlercode anliegt |
 
@@ -288,11 +305,17 @@ Verstellst du den Regler, schreibt die Karte auf `hk1_setpoint` beziehungsweise 
 
 Ist keine Anzeigequelle eingetragen, zeigt der Regler den Wert der stellbaren Entität, wie zuvor.
 
-## Beschriftung der Regler
+## Eigene Beschriftungen
 
-Die drei Regler heißen standardmäßig "Heizkreis 1", "Heizkreis 2" und "Warmwasser". Im Editor unter Darstellung kannst du jede Beschriftung frei ändern, etwa in "Fußboden EG" oder "Brauchwasser".
+Im Editor unter Darstellung lassen sich vier Beschriftungen frei setzen. Die beiden für die Heizkreise gelten an zwei Stellen gleichzeitig: unter dem Heizkörper im Schaubild und über dem zugehörigen Schieberegler.
 
-Die Karte fügt bewusst nichts hinzu und deutet den Wert nicht. Sie zeigt, was die Entität liefert, im Bereich, den die Entität meldet. Was TOP27 und TOP34 in deiner Anlage bedeuten, hängt von deren Konfiguration ab. Der HeishaMon-Quellcode schreibt den Wert nur roh in die Anfrage an die Wärmepumpe und legt keine Bedeutung fest.
+| Einstellung | Wirkt auf |
+|---|---|
+| `label_hk1` | Schaubild und Regler von Heizkreis 1 |
+| `label_hk2` | Schaubild und Regler von Heizkreis 2 |
+| `label_buffer` | Beschriftung des Pufferspeichers im Schaubild |
+| `label_dhw` | Schaubild und Regler des Warmwasserspeichers |
+| `label_energy` | Beschriftung des Energiezählers |
 
 ## Heizung und Warmwasser schalten
 

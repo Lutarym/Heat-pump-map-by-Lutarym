@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.2.2";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -103,6 +103,9 @@ const NEUTRAL = "#46536A";
 // Pumpen drehen bewusst langsam und immer gleich schnell. Sie sollen
 // nur zeigen, dass sie foerdern, nicht wie schnell.
 const PUMP_SECONDS = 3;
+
+// Vorrat an Blasen je Speicher. Sichtbar ist ein Anteil davon.
+const BUBBLE_COUNT = 20;
 
 function clamp(v, lo, hi) {
   return Math.min(hi, Math.max(lo, v));
@@ -314,7 +317,7 @@ const ENTITY_FIELDS = [
   { key: "defrost", label: "Abtauung läuft", group: "Außengerät", hint: "TOP26" },
   { key: "error", label: "Fehlercode", group: "Außengerät", hint: "TOP44" },
   { key: "power_now", label: "Aktuelle Leistungsaufnahme", group: "Außengerät", hint: "Shelly PM, Watt" },
-  { key: "energy_today", label: "Verbrauch heute", group: "Außengerät", hint: "Shelly PM, kWh" },
+  { key: "energy_today", label: "Energiezähler", group: "Außengerät", hint: "Shelly PM, kWh" },
 
   { key: "sg_k1", label: "Kontakt K1 Sperre", group: "SG Ready", hint: "Shelly, Relais oder Eingang" },
   { key: "sg_k2", label: "Kontakt K2 Anlauf", group: "SG Ready", hint: "Shelly, Relais oder Eingang" },
@@ -367,6 +370,8 @@ const DEFAULT_CONFIG = {
   label_hk1: "Heizkreis 1",
   label_hk2: "Heizkreis 2",
   label_dhw: "Warmwasser",
+  label_energy: "Energie",
+  label_buffer: "Puffer",
   animate: true,
   entities: {},
 };
@@ -706,7 +711,9 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="unit-label" x="410" y="404" text-anchor="middle">Leistung</text>
         <text class="verbrauch-v" id="power-now-v" x="410" y="440"
               text-anchor="middle">--</text>
-        <text class="unit-label" x="410" y="492" text-anchor="middle">Heute</text>
+        <text class="unit-label" x="410" y="492" text-anchor="middle">${escapeHtml(
+          this._config.label_energy
+        )}</text>
         <text class="unit-value" id="energy-today-v" x="410" y="524"
               text-anchor="middle">--</text>
       </g>
@@ -730,7 +737,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <rect x="540" y="${T}" width="190" height="350" rx="26"
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
         <rect x="548" y="298" width="174" height="334" rx="20" fill="url(#bufferFill)"/>
-        <g clip-path="url(#bufClip)">${this._waves("buf-waves", 548, 298, 174, 334, 6)}</g>
+        <g clip-path="url(#bufClip)">${this._bubbles("buf-bubbles", 548, 298, 174, 334)}</g>
         <rect x="548" y="298" width="174" height="334" rx="20" fill="url(#glass)"/>
         <text class="value-l" id="buf-v" x="635" y="460" text-anchor="middle">--</text>
         <text class="value-sp" id="buf-sp" x="635" y="488" text-anchor="middle"></text>
@@ -739,7 +746,9 @@ class LutarymHeatpumpCard extends HTMLElement {
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
-        <text class="cap" x="635" y="${C}" text-anchor="middle">Puffer</text>
+        <text class="cap" x="635" y="${C}" text-anchor="middle">${escapeHtml(
+          this._config.label_buffer
+        )}</text>
       </g>
 
       <!-- Wasserdruck -->
@@ -760,7 +769,8 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Dreiwegeventil -->
       <g>
-        <text class="value-s" id="valve-v" x="1525" y="216" text-anchor="middle">--</text>
+        <text class="unit-label" x="1525" y="196" text-anchor="middle">Ventil stellt auf</text>
+        <text class="unit-value" id="valve-v" x="1525" y="224" text-anchor="middle">--</text>
         <rect x="1507" y="248" width="36" height="36" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="2"
               transform="rotate(45 1525 266)"/>
@@ -772,7 +782,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <rect x="1440" y="${T}" width="170" height="350" rx="34"
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
         <rect x="1448" y="298" width="154" height="334" rx="28" fill="url(#dhwFill)"/>
-        <g clip-path="url(#dhwClip)">${this._waves("dhw-waves", 1448, 298, 154, 334, 6)}</g>
+        <g clip-path="url(#dhwClip)">${this._bubbles("dhw-bubbles", 1448, 298, 154, 334)}</g>
         <rect x="1448" y="298" width="154" height="334" rx="28" fill="url(#glass)"/>
         <text class="value-l" id="dhw-v" x="1525" y="440" text-anchor="middle">--</text>
         <text class="value-sp" id="dhw-sp" x="1525" y="468" text-anchor="middle"></text>
@@ -781,23 +791,25 @@ class LutarymHeatpumpCard extends HTMLElement {
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
-        <text class="cap" x="1525" y="${C}" text-anchor="middle">Warmwasser</text>
+        <text class="cap" x="1525" y="${C}" text-anchor="middle">${escapeHtml(
+          this._config.label_dhw
+        )}</text>
       </g>
 
       <!-- Zirkulationskreis am Warmwasserspeicher -->
       <g id="zirkulation-group" opacity="0">
-        <path class="pipe-shell" fill="none" d="M1610 420 H 1672 V 560 H 1610"/>
-        <path class="pipe" id="pipe-zirk" fill="none" d="M1610 420 H 1672 V 560 H 1610"/>
-        <path class="flowdots" id="dots-zirk" fill="none" d="M1610 420 H 1672 V 560 H 1610"/>
-        <g transform="translate(1672 490)">
+        <path class="pipe-shell" fill="none" d="M1610 420 H 1680 V 560 H 1610"/>
+        <path class="pipe" id="pipe-zirk" fill="none" d="M1610 420 H 1680 V 560 H 1610"/>
+        <path class="flowdots" id="dots-zirk" fill="none" d="M1610 420 H 1680 V 560 H 1610"/>
+        <g transform="translate(1680 490)">
           <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <g class="rotor" id="zirk-rotor">
             <path d="M0 -13 L4 -3 L14 0 L4 3 L0 13 L-4 3 L-14 0 L-4 -3 Z" fill="#55637A"/>
             <circle r="4" fill="#0D1219"/>
           </g>
         </g>
-        <text class="value-s" id="zirk-v" x="1672" y="452" text-anchor="middle">--</text>
-        <text class="cap-s" x="1672" y="${C}" text-anchor="middle">Zirkulation</text>
+        <text class="cap-s" x="1680" y="606" text-anchor="middle">Zirkulation</text>
+        <text class="value-s" id="zirk-v" x="1680" y="630" text-anchor="middle">--</text>
       </g>
 
       <text class="version" x="${L.W - 10}" y="${L.H - 8}"
@@ -854,30 +866,36 @@ class LutarymHeatpumpCard extends HTMLElement {
           <text class="tag-v" id="hk${n}-room-v" x="86" y="26" text-anchor="end">--</text>
         </g>
 
-        <text class="cap" x="${mid}" y="${L.CAP_Y}" text-anchor="middle">Heizkreis ${n}</text>
+        <text class="cap" x="${mid}" y="${L.CAP_Y}" text-anchor="middle">${escapeHtml(
+          this._config[`label_hk${n}`] || `Heizkreis ${n}`
+        )}</text>
       </g>`;
   }
 
   /**
-   * Wasserbewegung in einem Speicher.
-   * Die Wellen laufen waagerecht durch. Die Periode entspricht genau
-   * dem Verschiebeweg, dadurch ist der Uebergang nahtlos.
-   * Die aeussere Gruppe traegt die Lage, die innere die Bewegung,
-   * sonst wuerde die Animation das Lage-Attribut ueberschreiben.
+   * Aufsteigende Blasen in einem Speicher.
+   * Die Lage jeder Blase ist fest vorberechnet, damit das Bild bei
+   * jedem Neuaufbau gleich aussieht. Wie viele davon sichtbar sind,
+   * entscheidet spaeter die Temperatur.
    */
-  _waves(id, x, y, w, h, reihen) {
-    const p = 44; // Wellenlaenge und zugleich Verschiebeweg
-    const anzahl = reihen || 5;
-    let pfade = "";
-    for (let i = 1; i <= anzahl; i++) {
-      const yy = y + (h / (anzahl + 1)) * i;
-      let d = `M${x - p} ${yy}`;
-      for (let xx = x - p; xx < x + w + p; xx += p) {
-        d += ` q ${p / 4} -7, ${p / 2} 0 q ${p / 4} 7, ${p / 2} 0`;
-      }
-      pfade += `<path d="${d}"/>`;
+  _bubbles(id, x, y, w, h, anzahl) {
+    const n = anzahl || BUBBLE_COUNT;
+    let zufall = 1; // einfacher, wiederholbarer Zahlengenerator
+    const naechste = () => {
+      zufall = (zufall * 1103515245 + 12345) % 2147483648;
+      return zufall / 2147483648;
+    };
+    let kreise = "";
+    for (let i = 0; i < n; i++) {
+      const cx = Math.round(x + 10 + naechste() * (w - 20));
+      const r = (2.2 + naechste() * 3.2).toFixed(1);
+      const dauer = (4 + naechste() * 4).toFixed(1);
+      const start = (naechste() * 7).toFixed(1);
+      kreise +=
+        `<circle class="bubble" cx="${cx}" cy="${y + h - 4}" r="${r}"` +
+        ` style="animation-duration:${dauer}s;animation-delay:-${start}s"/>`;
     }
-    return `<g class="waves" id="${id}">${pfade}</g>`;
+    return `<g id="${id}">${kreise}</g>`;
   }
 
   _fan(id, cx, cy, r) {
@@ -1159,15 +1177,25 @@ class LutarymHeatpumpCard extends HTMLElement {
     stroemt(["dots-zirk"], zirkAn, col(dhw));
     stroke("pipe-zirk", col(dhw));
 
-    // Wasser bewegt sich im Speicher, der gerade beladen wird.
-    const bufLaeuft = primaer && !zuWarmwasser;
-    const dhwLaeuft = (primaer && zuWarmwasser) || dhwHeizt;
-    const wellen = (id, an) => {
-      const el = sr.getElementById(id);
-      if (el) el.classList.toggle("is-on", animate && an);
+    // Blasen: je waermer der Speicher, desto mehr steigen auf.
+    const blasen = (id, wert) => {
+      const g = sr.getElementById(id);
+      if (!g || !g.children) return;
+      const anteil =
+        wert === null ? 0 : clamp((wert - min) / ((max - min) || 1), 0, 1);
+      const sichtbar = animate ? Math.round(anteil * BUBBLE_COUNT) : 0;
+      Array.from(g.children).forEach((el, i) => {
+        if (i < sichtbar) {
+          el.style.opacity = "";
+          el.style.animationPlayState = "running";
+        } else {
+          el.style.opacity = "0";
+          el.style.animationPlayState = "paused";
+        }
+      });
     };
-    wellen("buf-waves", bufLaeuft);
-    wellen("dhw-waves", dhwLaeuft);
+    blasen("buf-bubbles", buf);
+    blasen("dhw-bubbles", dhw);
 
     /* Bedienung */
     this._syncToggle("sw-heat", "heating_switch");
@@ -1445,16 +1473,19 @@ class LutarymHeatpumpCard extends HTMLElement {
         font-variant-numeric: tabular-nums;
       }
       .value-sp { fill: rgba(255,255,255,0.85); font-size: 17px; }
-      /* Wasserbewegung in den Speichern. Laeuft nur, wenn beladen wird. */
-      .waves path {
-        fill: none; stroke: #FFFFFF; stroke-width: 4; stroke-linecap: round;
+      /* Aufsteigende Blasen. Je waermer der Speicher, desto mehr
+         davon werden sichtbar geschaltet. */
+      .bubble {
+        fill: #FFFFFF; stroke: rgba(255,255,255,0.35); stroke-width: 1; opacity: 0;
+        animation-name: lhc-bubble; animation-timing-function: linear;
+        animation-iteration-count: infinite; animation-play-state: paused;
       }
-      .waves {
-        opacity: 0; animation: lhc-wave 3s linear infinite;
-        animation-play-state: paused; transition: opacity 600ms ease;
+      @keyframes lhc-bubble {
+        0% { transform: translateY(0); opacity: 0; }
+        12% { opacity: 0.75; }
+        88% { opacity: 0.7; }
+        100% { transform: translateY(-330px); opacity: 0; }
       }
-      .waves.is-on { opacity: 0.45; animation-play-state: running; }
-      @keyframes lhc-wave { to { transform: translateX(-44px); } }
       .tag-l { fill: #8494AA; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
       .tag-v {
         fill: #FFFFFF; font-size: 19px; font-weight: 600;
@@ -1579,7 +1610,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       .lhc-empty { color: var(--muted); font-size: 13px; margin: 0; }
 
       @media (prefers-reduced-motion: reduce) {
-        .rotor, .waves, .flowdots, .badge, .lhc-alert, #unit-glow, #sg-group {
+        .rotor, .bubble, .flowdots, .badge, .lhc-alert, #unit-glow, #sg-group {
           animation: none !important;
         }
       }
@@ -1690,16 +1721,24 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
           </label>
           <label class="ed-row"><span>Außenskala warm<em>Grad</em></span><input type="number" id="opt-omax"></label>
           <label class="ed-row">
-            <span>Beschriftung Regler 1<em>frei wählbar</em></span>
+            <span>Beschriftung Heizkreis 1<em>gilt für Schaubild und Regler</em></span>
             <input type="text" id="opt-lhk1">
           </label>
           <label class="ed-row">
-            <span>Beschriftung Regler 2<em>frei wählbar</em></span>
+            <span>Beschriftung Heizkreis 2<em>gilt für Schaubild und Regler</em></span>
             <input type="text" id="opt-lhk2">
+          </label>
+          <label class="ed-row">
+            <span>Beschriftung Puffer<em>frei wählbar</em></span>
+            <input type="text" id="opt-lbuf">
           </label>
           <label class="ed-row">
             <span>Beschriftung Warmwasser<em>frei wählbar</em></span>
             <input type="text" id="opt-ldhw">
+          </label>
+          <label class="ed-row">
+            <span>Beschriftung Energie<em>je nach Sensor, etwa Heute oder Gesamt</em></span>
+            <input type="text" id="opt-lenergy">
           </label>
           <label class="ed-row ed-check"><input type="checkbox" id="opt-animate"><span>Bewegung anzeigen</span></label>
           <label class="ed-row ed-check"><input type="checkbox" id="opt-switches"><span>Betriebsart und Schalter anzeigen</span></label>
@@ -1752,7 +1791,9 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     bind("opt-omax", (el) => put({ outdoor_max: parseFloat(el.value) }));
     bind("opt-lhk1", (el) => put({ label_hk1: el.value }));
     bind("opt-lhk2", (el) => put({ label_hk2: el.value }));
+    bind("opt-lbuf", (el) => put({ label_buffer: el.value }));
     bind("opt-ldhw", (el) => put({ label_dhw: el.value }));
+    bind("opt-lenergy", (el) => put({ label_energy: el.value }));
     bind("opt-animate", (el) => put({ animate: el.checked }));
     bind("opt-switches", (el) => put({ show_switches: el.checked }));
     bind("opt-controls", (el) => put({ show_controls: el.checked }));
@@ -1807,7 +1848,9 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     put("opt-omax", this._config.outdoor_max);
     put("opt-lhk1", this._config.label_hk1);
     put("opt-lhk2", this._config.label_hk2);
+    put("opt-lbuf", this._config.label_buffer);
     put("opt-ldhw", this._config.label_dhw);
+    put("opt-lenergy", this._config.label_energy);
     check("opt-animate", this._config.animate);
     check("opt-switches", this._config.show_switches);
     check("opt-controls", this._config.show_controls);
