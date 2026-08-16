@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.7.0";
+const CARD_VERSION = "1.8.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -403,12 +403,11 @@ const DEFAULT_CONFIG = {
   scale_max: 60,
   outdoor_min: -15,
   outdoor_max: 35,
-  show_controls: true,
   show_switches: true,
   label_hk1: "Heizkreis 1",
   label_hk2: "Heizkreis 2",
   label_dhw: "Warmwasser",
-  label_energy: "Energie",
+  label_energy: "",
   label_buffer: "Puffer",
   energy_daily: true,
   animate: true,
@@ -578,7 +577,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         <div class="lhc-hint" id="hinweis" hidden></div>
         <div class="lhc-scene">${this._svg()}</div>
         <section class="lhc-switches" id="switches"></section>
-        <section class="lhc-controls" id="controls"></section>
 
         <div class="lhc-dialog" id="dialog" hidden>
           <div class="lhc-dialog-box" role="dialog" aria-modal="true">
@@ -608,7 +606,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     this._buildDialog();
     this._buildKlicks();
     this._buildSwitches();
-    this._buildControls();
   }
 
   /** Verdrahtet das Einstellfenster. */
@@ -924,60 +921,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     }
   }
 
-  _buildControls() {
-    const host = this.shadowRoot.getElementById("controls");
-    if (this._config.show_controls === false) {
-      host.hidden = true;
-      return;
-    }
-    const rows = [
-      { key: "hk1_setpoint", id: "ctl-hk1", label: this._config.label_hk1 },
-      { key: "hk2_setpoint", id: "ctl-hk2", label: this._config.label_hk2 },
-      { key: "dhw_setpoint", id: "ctl-dhw", label: this._config.label_dhw },
-    ].filter((r) => this._e(r.key) && (r.id !== "ctl-hk2" || this._config.hk_count === 2));
-
-    if (!rows.length) {
-      host.innerHTML = `<p class="lhc-empty">Keine Sollwert-Entität gefunden. Die Integration legt diese nur an, wenn "Nur lesen" bei der Einrichtung deaktiviert ist.</p>`;
-      return;
-    }
-
-    host.innerHTML = rows
-      .map(
-        (r) => `
-        <div class="lhc-ctl">
-          <div class="lhc-ctl-head">
-            <span class="lhc-field-label" id="${r.id}-label">${r.label}</span>
-            <output class="lhc-ctl-out" id="${r.id}-out">--</output>
-          </div>
-          <input class="lhc-slider" type="range" id="${r.id}-range"
-                 min="0" max="100" step="1" value="0" aria-label="${r.label}">
-          <div class="lhc-ctl-scale">
-            <span id="${r.id}-min">--</span><span id="${r.id}-max">--</span>
-          </div>
-        </div>`
-      )
-      .join("");
-
-    rows.forEach((r) => {
-      const range = this.shadowRoot.getElementById(`${r.id}-range`);
-      const out = this.shadowRoot.getElementById(`${r.id}-out`);
-      range.addEventListener("input", () => {
-        this._dragging = r.id;
-        out.textContent = `${range.value} °C`;
-      });
-      range.addEventListener("change", () => {
-        this._dragging = null;
-        const entityId = this._e(r.key);
-        const wert = parseFloat(range.value);
-        this._halte(r.id, wert);
-        this._hass.callService(entityId.split(".")[0], "set_value", {
-          entity_id: entityId,
-          value: wert,
-        });
-      });
-    });
-  }
-
   /* -------------------- Szene -------------------- */
 
   _svg() {
@@ -1093,7 +1036,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
       <text class="vl-value" id="unit-flow-v" x="410" y="${F - 20}"
             text-anchor="middle">--</text>
-      <text class="rl-value" id="unit-ret-v" x="410" y="${R - 20}"
+      <text class="rl-value" id="unit-ret-v" x="370" y="${R - 20}"
             text-anchor="middle">--</text>
 
       <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
@@ -1101,25 +1044,24 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="unit-label" x="410" y="404" text-anchor="middle">Leistung</text>
         <text class="verbrauch-v" id="power-now-v" x="410" y="440"
               text-anchor="middle">--</text>
-        <text class="unit-label" x="410" y="492" text-anchor="middle">${escapeHtml(
-          this._config.label_energy
-        )}</text>
+        <text class="unit-label" id="energy-label" x="410" y="492"
+              text-anchor="middle">--</text>
         <text class="unit-value" id="energy-today-v" x="410" y="524"
               text-anchor="middle">--</text>
       </g>
 
       <!-- Primärpumpe -->
       <g>
-        <text class="value-s" id="pump-v" x="780" y="640" text-anchor="middle">--</text>
-        <text class="unit-value" id="flow-v" x="780" y="664" text-anchor="middle">--</text>
-        <g transform="translate(780 ${R})">
+        <text class="value-s" id="pump-v" x="460" y="600" text-anchor="middle">--</text>
+        <text class="unit-value" id="flow-v" x="460" y="624" text-anchor="middle">--</text>
+        <g transform="translate(460 ${R})">
           <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <g class="rotor" id="pump-rotor">
             <path d="M0 -15 L5 -4 L16 0 L5 4 L0 15 L-5 4 L-16 0 L-5 -4 Z" fill="#55637A"/>
             <circle r="4" fill="#0D1219"/>
           </g>
         </g>
-        <text class="cap-s" x="780" y="${C}" text-anchor="middle">Pumpe</text>
+        <text class="cap-s" x="460" y="${C}" text-anchor="middle">Pumpe</text>
       </g>
 
       <!-- Heizungspuffer -->
@@ -1454,6 +1396,17 @@ class LutarymHeatpumpCard extends HTMLElement {
       "energy-today-v",
       energieAnzeige === null ? "--" : `${fmt(energieAnzeige, 1)} kWh`
     );
+    // Die Beschriftung sagt, was der Wert wirklich ist. Eigene Angabe
+    // hat Vorrang, sonst entscheidet der tatsaechliche Rechenweg.
+    const tagesWert = energieAnzeige !== null && energieAnzeige !== energie;
+    set(
+      "energy-label",
+      this._config.label_energy
+        ? this._config.label_energy
+        : tagesWert
+        ? "Verbrauch heute"
+        : "Zählerstand gesamt"
+    );
 
     /* Zirkulationspumpe */
     const zirkId = this._e("circulation_pump");
@@ -1604,9 +1557,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     /* Bedienung */
     this._syncToggle("sw-heat", "heating_switch");
     this._syncModeSelect();
-    this._syncSlider("ctl-hk1", "hk1_setpoint", "hk1_water_target");
-    this._syncSlider("ctl-hk2", "hk2_setpoint", "hk2_water_target");
-    this._syncSlider("ctl-dhw", "dhw_setpoint");
     this._syncDialog();
   }
 
@@ -1729,71 +1679,6 @@ class LutarymHeatpumpCard extends HTMLElement {
    *          Kreises, auch wenn die stellbare Entitaet etwas
    *          anderes fuehrt.
    */
-  _syncSlider(id, key, anzeige) {
-    const range = this.shadowRoot.getElementById(`${id}-range`);
-    if (!range) return;
-    const out = this.shadowRoot.getElementById(`${id}-out`);
-    const minEl = this.shadowRoot.getElementById(`${id}-min`);
-    const maxEl = this.shadowRoot.getElementById(`${id}-max`);
-    const entityId = this._e(key);
-    const st = this._hass.states[entityId];
-    const anzeigeId = anzeige ? this._e(anzeige) : "";
-    const stAnzeige = anzeigeId ? this._hass.states[anzeigeId] : null;
-
-    const sperren = (text) => {
-      range.disabled = true;
-      if (out) out.textContent = text;
-      if (minEl) minEl.textContent = "";
-      if (maxEl) maxEl.textContent = "";
-    };
-
-    if (!st) {
-      sperren("nicht gefunden");
-      return;
-    }
-
-    // Zuerst den tatsaechlichen Wert lesen, erst danach den Bereich setzen.
-    // Ist eine Anzeigequelle eingetragen, hat deren Wert Vorrang.
-    const quelle = stAnzeige && !Number.isNaN(parseFloat(stAnzeige.state)) ? stAnzeige : st;
-    const wert = parseFloat(quelle.state);
-    if (Number.isNaN(wert)) {
-      sperren("nicht verfügbar");
-      return;
-    }
-
-    let lo = Number(st.attributes.min !== undefined ? st.attributes.min : 15);
-    let hi = Number(st.attributes.max !== undefined ? st.attributes.max : 65);
-    // Zeigt der Regler eine andere Quelle, muss der Bereich dazu passen.
-    if (quelle !== st) {
-      lo = Math.min(lo, Math.floor(wert) - 10);
-      hi = Math.max(hi, Math.ceil(wert) + 10);
-    }
-    // Liegt der Sollwert ausserhalb, wird der Bereich erweitert.
-    // Sonst klemmt der Browser den Regler an den Rand und zeigt etwas
-    // anderes an, als die Waermepumpe tatsaechlich eingestellt hat.
-    if (wert < lo) lo = Math.floor(wert);
-    if (wert > hi) hi = Math.ceil(wert);
-
-    range.disabled = false;
-    range.min = lo;
-    range.max = hi;
-    range.step = Number(st.attributes.step !== undefined ? st.attributes.step : 1);
-    if (minEl) minEl.textContent = `${lo} °C`;
-    if (maxEl) maxEl.textContent = `${hi} °C`;
-
-    if (this._dragging === id) return;
-    const gehalten = this._gehaltenerWert(id, wert);
-    const zeigen = gehalten !== null ? gehalten : wert;
-    if (zeigen < lo) range.min = Math.floor(zeigen);
-    if (zeigen > hi) range.max = Math.ceil(zeigen);
-    range.value = zeigen;
-    if (out) out.textContent = `${zeigen} °C`;
-    range.style.setProperty(
-      "--thumb",
-      thermalColor(wert, Number(this._config.scale_min), Number(this._config.scale_max))
-    );
-  }
-
   /* -------------------- Styles -------------------- */
 
   _css() {
@@ -1989,22 +1874,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; width: 100%;
       }
 
-      .lhc-controls {
-        display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 16px; margin-top: 14px; padding-top: 18px; border-top: 1px solid var(--line);
-      }
-      .lhc-controls[hidden] { display: none; }
-      .lhc-ctl {
-        background: var(--panel); border: 1px solid var(--line);
-        border-radius: 12px; padding: 14px 16px 12px;
-      }
-      .lhc-ctl-head {
-        display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;
-      }
-      .lhc-ctl-out {
-        font-family: ui-monospace, "SF Mono", Menlo, monospace;
-        font-size: 20px; font-variant-numeric: tabular-nums;
-      }
       .lhc-ctl-scale {
         display: flex; justify-content: space-between; margin-top: 6px;
         font-size: 11px; color: var(--muted);
@@ -2215,7 +2084,7 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
             <input type="text" id="opt-ldhw">
           </label>
           <label class="ed-row">
-            <span>Beschriftung Energie<em>je nach Sensor, etwa Heute oder Gesamt</em></span>
+            <span>Beschriftung Energie<em>leer lassen, dann wählt die Karte selbst</em></span>
             <input type="text" id="opt-lenergy">
           </label>
           <label class="ed-row ed-check">
@@ -2224,7 +2093,6 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
           </label>
           <label class="ed-row ed-check"><input type="checkbox" id="opt-animate"><span>Bewegung anzeigen</span></label>
           <label class="ed-row ed-check"><input type="checkbox" id="opt-switches"><span>Betriebsart und Schalter anzeigen</span></label>
-          <label class="ed-row ed-check"><input type="checkbox" id="opt-controls"><span>Sollwertregler anzeigen</span></label>
         </div>
 
         ${groups
@@ -2279,7 +2147,6 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     bind("opt-eday", (el) => put({ energy_daily: el.checked }));
     bind("opt-animate", (el) => put({ animate: el.checked }));
     bind("opt-switches", (el) => put({ show_switches: el.checked }));
-    bind("opt-controls", (el) => put({ show_controls: el.checked }));
 
     const applyMap = (map, merge) => {
       const entities = merge ? { ...this._config.entities, ...map } : { ...map };
@@ -2337,7 +2204,6 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     check("opt-eday", this._config.energy_daily);
     check("opt-animate", this._config.animate);
     check("opt-switches", this._config.show_switches);
-    check("opt-controls", this._config.show_controls);
 
     const imFokus = sr.activeElement;
     sr.querySelectorAll("[data-entity]").forEach((input) => {

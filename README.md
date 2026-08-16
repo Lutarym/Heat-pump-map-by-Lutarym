@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.7.0**
+**Version 1.8.1**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -16,7 +16,9 @@ Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 
 **Vorlauf und Rücklauf** als Werte über den Leitungen, direkt am Ausgang und am Eingang der Wärmepumpe. Der Vorlauf steht rot über der oberen Leitung, der Rücklauf blau über der unteren. Die Farben sind fest und wechseln nicht mit der Temperatur, damit die Zuordnung immer eindeutig bleibt.
 
-**Primärpumpe** mit Drehzahl und Durchflussmenge, hinter dem Puffer auf der Rücklaufleitung.
+**Primärpumpe** mit Drehzahl und Durchflussmenge, auf der Rücklaufleitung zwischen Puffer und Wärmepumpe.
+
+In Fließrichtung liegen auf dem Rücklauf nacheinander: Warmwasserspeicher, Heizkreis 2, Heizkreis 1, Puffer, dann die Pumpe und zuletzt die Wärmepumpe. Das Wasser aller Kreise läuft also zusammen, geht durch die Pumpe und von dort zurück in die Wärmepumpe. Der Puffer wird über dieselbe Pumpe geladen, sobald das Dreiwegeventil auf Heizen steht.
 
 **Heizungspuffer** als großer Speicher, eingefärbt nach seiner Temperatur, darunter die Zieltemperatur. Im Wasser steigen Blasen auf, und zwar umso mehr, je wärmer der Speicher ist.
 
@@ -34,13 +36,17 @@ Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 
 Die Karte rechnet den **Tagesverbrauch** selbst aus. Sie holt einmal je Tag den Zählerstand von null Uhr aus der Historie von Home Assistant und zieht ihn vom aktuellen Stand ab. Ein eigener Zähler-Helfer ist dafür nicht nötig.
 
+Die Beschriftung sagt selbst, was der Wert ist. Wird der Tageswert gerechnet, steht dort **Verbrauch heute**. Steht keine Historie zur Verfügung oder ist die Berechnung abgeschaltet, steht dort **Zählerstand gesamt**. Damit ist nie unklar, worauf sich die Zahl bezieht.
+
+Im Editor lässt sich die Beschriftung überschreiben. Bleibt das Feld leer, entscheidet die Karte.
+
 Die Berechnung lässt sich im Editor abschalten, dann steht dort der Zählerstand, wie ihn der Sensor liefert. Steht keine Historie zur Verfügung, etwa weil der Recorder den Sensor nicht aufzeichnet, fällt die Karte von selbst auf den Zählerstand zurück. Wird der Zähler zwischendurch zurückgesetzt, zeigt sie den aktuellen Stand statt einer negativen Zahl. Beide Werte kommen aus einem eigenen Messgerät, etwa einem Shelly PM. Der Block erscheint nur, wenn mindestens einer der beiden Werte vorliegt.
 
 **Zirkulationspumpe** als Schleife rechts am Warmwasserspeicher, mit eigener Pumpe. Sie erscheint nur, wenn eine Entität dafür eingetragen ist, etwa ein Shelly. Läuft die Pumpe, dreht der Rotor und die Schleife wird durchströmt.
 
 **Störungsmeldung** als roter Balken über dem Schema, sobald ein Fehlercode anliegt.
 
-Unter der Zeichnung stehen die **Betriebsart** als Auswahlliste in Klartext und die **Sollwertregler** für Heizkreis 1, Heizkreis 2 und Warmwasser.
+Unter der Zeichnung steht die **Betriebsart** als Auswahlliste in Klartext. Temperaturen werden über die Fenster im Schaubild eingestellt, nicht mehr über eine eigene Reglerzeile.
 
 ## Betriebsart im Klartext
 
@@ -165,13 +171,12 @@ entities:
 | `label_dhw` | Warmwasser | Beschriftung des Warmwasserreglers |
 | `label_buffer` | Puffer | Beschriftung des Pufferspeichers |
 | `energy_daily` | true | Tagesverbrauch aus dem Zählerstand rechnen |
-| `label_energy` | Energie | Beschriftung des Energiezählers |
+| `label_energy` | leer | Beschriftung des Energiewerts, leer bedeutet automatisch |
 | `scale_min` | 20 | Untere Grenze der Heizungsfarbskala in Grad |
 | `scale_max` | 60 | Obere Grenze der Heizungsfarbskala in Grad |
 | `outdoor_min` | -15 | Untere Grenze der Außenskala in Grad |
 | `outdoor_max` | 35 | Obere Grenze der Außenskala in Grad |
 | `show_switches` | true | Schalter und Betriebsart anzeigen |
-| `show_controls` | true | Sollwertregler anzeigen |
 | `entities` | leer | Zuordnung der Entitäten, siehe unten |
 
 ### Entitäten
