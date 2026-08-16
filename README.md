@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.9.3**
+**Version 1.9.5**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -357,7 +357,7 @@ Die beiden Heizstäbe sind bewusst nicht im Fenster der Wärmepumpe, sondern dor
 
 Jeder Schaltknopf liest seinen Zustand aus einem eigenen Rückmeldetopic, nicht aus dem Schaltbefehl selbst. Ein Befehl wie `SetForceDHW` meldet nämlich nicht zuverlässig zurück, ob er gerade wirkt. Zuständig sind TOP0 für den Betrieb, TOP2 für das Aufheizen, TOP26 für die Abtauung, TOP58 und TOP59 für die Heizstäbe, TOP69 für den Legionellenschutz und TOP99 für den Puffer.
 
-Die drei Startbefehle, also Abtauen, Aufheizen und Legionellenschutz, haben zwei getrennte Knöpfe: starten und beenden. Beide sind immer bedienbar, der zutreffende wird nur hervorgehoben. Damit lässt sich ein laufender Vorgang auch dann beenden, wenn die Rückmeldung der Wärmepumpe fehlt oder verzögert kommt.
+Jeder Zustand wird ausgelesen, nichts wird angenommen. Zuerst gilt das Rückmeldetopic, danach die Schaltentität. Liefert keines davon einen Wert, steht das ausdrücklich am Knopf.
 
 Ist ein Rückmeldetopic unbekannt, steht das bei den übrigen Schaltern ausdrücklich am Knopf, statt fälschlich "aus" anzuzeigen.
 
