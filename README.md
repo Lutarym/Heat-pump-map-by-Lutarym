@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.6.2**
+**Version 1.7.0**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -187,6 +187,10 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `fan2_rpm` | TOP63 | Lüfter 2 Drehzahl |
 | `defrost` | TOP26 | Abtauung läuft |
 | `error` | TOP44 | Fehlercode |
+| `force_defrost` | SetForceDefrost | Abtauen erzwingen |
+| `room_heater_switch` | SetRoomHeaterState | Heizstab Heizung schalten |
+| `powerful_mode` | SetPowerfulMode | Turbomodus |
+| `quiet_mode` | SetQuietMode | Leisemodus |
 | `power_now` | eigene Entität | Aktuelle Leistungsaufnahme |
 | `energy_today` | eigene Entität | Energiezähler |
 | `sg_k1` | eigene Entität | Kontakt K1 Sperre |
@@ -218,7 +222,9 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `dhw_temp` | TOP10 | Warmwasser Isttemperatur |
 | `dhw_setpoint` | TOP9 | Warmwasser Sollwert |
 | `dhw_heater` | TOP58 | Heizstab Warmwasser |
-| `dhw_force` | SetForceDHW | Warmwasser sofort laden |
+| `dhw_force` | SetForceDHW | Einmalig aufheizen |
+| `force_sterilization` | SetForceSterilization | Legionellenschutz starten |
+| `dhw_heater_switch` | SetDHWHeaterState | Heizstab Warmwasser schalten |
 | `circulation_pump` | eigene Entität | Zirkulationspumpe läuft |
 | `mode_select` | SetOperationMode | Betriebsart umschalten |
 | `heating_switch` | eigene Entität | Heizung ein und aus |
@@ -276,6 +282,8 @@ Bewegung zeigt an, dass etwas tatsächlich arbeitet. Steht ein Bauteil still, st
 | Vorlauf und Rücklauf | Primärpumpe oder Durchfluss melden Förderung |
 | Stichleitung zum Puffer | zusätzlich Dreiwegeventil auf Heizen |
 | Stichleitung zum Speicher | zusätzlich Dreiwegeventil auf Warmwasser |
+
+Steht kein Dreiwegeventil zur Verfügung, entscheidet die Betriebsart: Wert 3 bedeutet "Nur Warmwasser", alles andere gilt als Heizen. Ohne beides läuft nur die Stichleitung zum Puffer, damit nicht beide gleichzeitig strömen.
 | Leitungen eines Heizkreises | nur dessen eigene Kreispumpe |
 | Zirkulationsschleife | die Zirkulationspumpe läuft |
 | Blasen in Puffer und Speicher | dauerhaft, Menge nach Temperatur |
@@ -322,6 +330,20 @@ Der Regler für einen Heizkreis zeigt den tatsächlichen Sollwert des Kreises au
 Verstellst du den Regler, schreibt die Karte auf `hk1_setpoint` beziehungsweise `hk2_setpoint`, also TOP27 und TOP34. Das sind die stellbaren Entitäten, denn TOP42 und TOP43 sind reine Messwerte ohne Schreibzugriff.
 
 Ist keine Anzeigequelle eingetragen, zeigt der Regler den Wert der stellbaren Entität, wie zuvor.
+
+## Fenster im Schaubild
+
+Ein Klick auf eine Baugruppe öffnet ein Fenster mit den passenden Bedienelementen.
+
+| Klick auf | Fenster enthält |
+|---|---|
+| Wärmepumpe | Ein und aus, Abtauen erzwingen, beide Heizstäbe, Turbomodus, Leisemodus |
+| Warmwasserspeicher | Temperatur, einmalig aufheizen, Legionellenschutz starten |
+| Heizkreis 1 und 2 | Temperatur, sowie ein Schalter, falls eingetragen |
+
+Jedes Bedienelement erscheint nur, wenn die zugehörige Entität eingetragen ist. Sind für eine Baugruppe weder Temperatur noch Bedienelement vorhanden, bleibt sie wie bisher unklickbar.
+
+Turbomodus und Leisemodus stehen als Auswahlliste in Klartext, also Aus, 30, 60 und 90 Minuten beim Turbomodus und Aus bis Stufe 3 beim Leisemodus.
 
 ## Temperatur im Schaubild einstellen
 

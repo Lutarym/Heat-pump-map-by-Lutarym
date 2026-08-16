@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.6.2";
+const CARD_VERSION = "1.7.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -63,6 +63,16 @@ const MODE_LABELS = {
   6: "Automatik Heizen und Warmwasser",
   7: "Automatik Kühlen",
   8: "Automatik Kühlen und Warmwasser",
+};
+
+const QUIET_LABELS = {
+  mode_0: "Aus", mode_1: "Stufe 1", mode_2: "Stufe 2", mode_3: "Stufe 3",
+  0: "Aus", 1: "Stufe 1", 2: "Stufe 2", 3: "Stufe 3",
+};
+
+const POWERFUL_LABELS = {
+  mode_0: "Aus", mode_1: "30 Minuten", mode_2: "60 Minuten", mode_3: "90 Minuten",
+  0: "Aus", 1: "30 Minuten", 2: "60 Minuten", 3: "90 Minuten",
 };
 
 const VALVE_LABELS = { Room: "Heizung", DHW: "Warmwasser", 0: "Heizung", 1: "Warmwasser" };
@@ -225,6 +235,12 @@ const COMMAND_TO_FIELD = {
   setheatpump: "power_state",
   setoperationmode: "mode_select",
   setforcedhw: "dhw_force",
+  setforcesterilization: "force_sterilization",
+  setforcedefrost: "force_defrost",
+  setdhwheaterstate: "dhw_heater_switch",
+  setroomheaterstate: "room_heater_switch",
+  setpowerfulmode: "powerful_mode",
+  setquietmode: "quiet_mode",
 };
 
 const FIELD_DOMAIN = {
@@ -237,6 +253,12 @@ const FIELD_DOMAIN = {
   dhw_force: ["switch", "input_boolean"],
   hk1_switch: ["switch", "input_boolean"],
   hk2_switch: ["switch", "input_boolean"],
+  force_sterilization: ["switch", "input_boolean"],
+  force_defrost: ["switch", "input_boolean"],
+  dhw_heater_switch: ["switch", "input_boolean"],
+  room_heater_switch: ["switch", "input_boolean"],
+  powerful_mode: ["select", "input_select"],
+  quiet_mode: ["select", "input_select"],
   circulation_pump: ["switch", "input_boolean", "binary_sensor", "sensor"],
   sg_k1: ["switch", "input_boolean", "binary_sensor", "sensor"],
   sg_k2: ["switch", "input_boolean", "binary_sensor", "sensor"],
@@ -323,6 +345,10 @@ const ENTITY_FIELDS = [
   { key: "fan2_rpm", label: "Lüfter 2 Drehzahl", group: "Außengerät", hint: "TOP63" },
   { key: "defrost", label: "Abtauung läuft", group: "Außengerät", hint: "TOP26" },
   { key: "error", label: "Fehlercode", group: "Außengerät", hint: "TOP44" },
+  { key: "force_defrost", label: "Abtauen erzwingen", group: "Außengerät", hint: "SetForceDefrost, switch" },
+  { key: "room_heater_switch", label: "Heizstab Heizung schalten", group: "Außengerät", hint: "SetRoomHeaterState, switch" },
+  { key: "powerful_mode", label: "Turbomodus", group: "Außengerät", hint: "SetPowerfulMode, select" },
+  { key: "quiet_mode", label: "Leisemodus", group: "Außengerät", hint: "SetQuietMode, select" },
   { key: "power_now", label: "Aktuelle Leistungsaufnahme", group: "Außengerät", hint: "Shelly PM, Watt" },
   { key: "energy_today", label: "Energiezähler", group: "Außengerät", hint: "Shelly PM, kWh" },
 
@@ -360,7 +386,9 @@ const ENTITY_FIELDS = [
   { key: "dhw_temp", label: "Warmwasser Isttemperatur", group: "Warmwasser", hint: "TOP10" },
   { key: "dhw_setpoint", label: "Warmwasser Sollwert", group: "Warmwasser", hint: "TOP9, number" },
   { key: "dhw_heater", label: "Heizstab Warmwasser", group: "Warmwasser", hint: "TOP58" },
-  { key: "dhw_force", label: "Warmwasser sofort laden", group: "Warmwasser", hint: "SetForceDHW, switch" },
+  { key: "dhw_force", label: "Einmalig aufheizen", group: "Warmwasser", hint: "SetForceDHW, switch" },
+  { key: "force_sterilization", label: "Legionellenschutz starten", group: "Warmwasser", hint: "SetForceSterilization, switch" },
+  { key: "dhw_heater_switch", label: "Heizstab Warmwasser schalten", group: "Warmwasser", hint: "SetDHWHeaterState, switch" },
   { key: "circulation_pump", label: "Zirkulationspumpe läuft", group: "Warmwasser", hint: "Shelly oder eigener Schalter" },
 
   { key: "mode_select", label: "Betriebsart umschalten", group: "Steuerung", hint: "SetOperationMode, select" },
@@ -559,19 +587,19 @@ class LutarymHeatpumpCard extends HTMLElement {
               <button type="button" class="lhc-dialog-close" id="dlg-close"
                       aria-label="Schließen">&times;</button>
             </div>
-            <output class="lhc-dialog-value" id="dlg-value">--</output>
-            <div class="lhc-dialog-row">
-              <button type="button" class="lhc-step" id="dlg-minus" aria-label="Kleiner">&minus;</button>
-              <input class="lhc-slider" type="range" id="dlg-range"
-                     min="0" max="100" step="1" value="0" aria-label="Temperatur">
-              <button type="button" class="lhc-step" id="dlg-plus" aria-label="Größer">+</button>
+            <div id="dlg-temp">
+              <output class="lhc-dialog-value" id="dlg-value">--</output>
+              <div class="lhc-dialog-row">
+                <button type="button" class="lhc-step" id="dlg-minus" aria-label="Kleiner">&minus;</button>
+                <input class="lhc-slider" type="range" id="dlg-range"
+                       min="0" max="100" step="1" value="0" aria-label="Temperatur">
+                <button type="button" class="lhc-step" id="dlg-plus" aria-label="Größer">+</button>
+              </div>
+              <div class="lhc-ctl-scale">
+                <span id="dlg-min">--</span><span id="dlg-max">--</span>
+              </div>
             </div>
-            <div class="lhc-ctl-scale">
-              <span id="dlg-min">--</span><span id="dlg-max">--</span>
-            </div>
-            <button type="button" class="lhc-dialog-action" id="dlg-force" hidden>
-              Einmalig aufheizen
-            </button>
+            <div id="dlg-actions"></div>
           </div>
         </div>
       </ha-card>
@@ -639,14 +667,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     });
     sr.getElementById("dlg-minus").addEventListener("click", () => schritt(-1));
     sr.getElementById("dlg-plus").addEventListener("click", () => schritt(1));
-    sr.getElementById("dlg-force").addEventListener("click", () => {
-      const id = this._e(this._dialogSchalter || "dhw_force");
-      if (!id) return;
-      const an = isOn(this._hass, id) === true;
-      this._hass.callService("homeassistant", an ? "turn_off" : "turn_on", {
-        entity_id: id,
-      });
-    });
     sr.getElementById("dlg-close").addEventListener("click", () => this._schliesseDialog());
     sr.getElementById("dialog").addEventListener("click", (ev) => {
       // Klick auf den Hintergrund schliesst, Klick im Kasten nicht.
@@ -657,30 +677,138 @@ class LutarymHeatpumpCard extends HTMLElement {
   /** Macht Speicher und Heizkörper anklickbar. */
   _buildKlicks() {
     const sr = this.shadowRoot;
-    [
-      ["dhw-group", "dhw_setpoint", "label_dhw", null],
-      ["hk1-group", "hk1_setpoint", "label_hk1", "hk1_water_target"],
-      ["hk2-group", "hk2_setpoint", "label_hk2", "hk2_water_target"],
-    ].forEach(([gruppe, feld, beschriftung, anzeige]) => {
-      const el = sr.getElementById(gruppe);
-      if (!el || !this._e(feld)) return;
+    const fenster = [
+      {
+        gruppe: "unit-group",
+        titel: "Wärmepumpe",
+        aktionen: [
+          { feld: "power_state", typ: "schalter", an: "Läuft, ausschalten", aus: "Einschalten" },
+          { feld: "force_defrost", typ: "schalter", an: "Abtauen läuft, abbrechen", aus: "Abtauen erzwingen" },
+          { feld: "dhw_heater_switch", typ: "schalter", an: "Heizstab Warmwasser an", aus: "Heizstab Warmwasser einschalten" },
+          { feld: "room_heater_switch", typ: "schalter", an: "Heizstab Heizung an", aus: "Heizstab Heizung einschalten" },
+          { feld: "powerful_mode", typ: "auswahl", titel: "Turbomodus", texte: POWERFUL_LABELS },
+          { feld: "quiet_mode", typ: "auswahl", titel: "Leisemodus", texte: QUIET_LABELS },
+        ],
+      },
+      {
+        gruppe: "dhw-group",
+        feld: "dhw_setpoint",
+        beschriftung: "label_dhw",
+        aktionen: [
+          { feld: "dhw_force", typ: "schalter", an: "Aufheizen läuft, abbrechen", aus: "Einmalig aufheizen" },
+          { feld: "force_sterilization", typ: "schalter", an: "Legionellenschutz läuft, abbrechen", aus: "Legionellenschutz starten" },
+        ],
+      },
+      {
+        gruppe: "hk1-group",
+        feld: "hk1_setpoint",
+        beschriftung: "label_hk1",
+        anzeige: "hk1_water_target",
+        aktionen: [{ feld: "hk1_switch", typ: "schalter", an: "Heizkreis ist an, ausschalten", aus: "Heizkreis einschalten" }],
+      },
+      {
+        gruppe: "hk2-group",
+        feld: "hk2_setpoint",
+        beschriftung: "label_hk2",
+        anzeige: "hk2_water_target",
+        aktionen: [{ feld: "hk2_switch", typ: "schalter", an: "Heizkreis ist an, ausschalten", aus: "Heizkreis einschalten" }],
+      },
+    ];
+
+    fenster.forEach((f) => {
+      const el = sr.getElementById(f.gruppe);
+      if (!el) return;
+      // Anklickbar, sobald es dort etwas zu bedienen gibt.
+      const hatTemperatur = Boolean(f.feld && this._e(f.feld));
+      const hatAktion = (f.aktionen || []).some((a) => this._e(a.feld));
+      if (!hatTemperatur && !hatAktion) return;
       el.classList.add("klickbar");
-      el.addEventListener("click", () =>
-        this._oeffneDialog(feld, this._config[beschriftung], anzeige)
-      );
+      el.addEventListener("click", () => this._oeffneDialog(f));
     });
   }
 
-  _oeffneDialog(feld, titel, anzeige) {
-    const id = this._e(feld);
-    if (!id || !this._hass.states[id]) return;
-    this._dialogKey = feld;
-    this._dialogAnzeige = anzeige || null;
-    if (this._gehalten) delete this._gehalten["dialog"];
+  _oeffneDialog(f) {
     const sr = this.shadowRoot;
-    sr.getElementById("dlg-title").textContent = titel || "Temperatur";
+    const tempId = f.feld ? this._e(f.feld) : "";
+    this._dialogKey = tempId && this._hass.states[tempId] ? f.feld : null;
+    this._dialogAnzeige = f.anzeige || null;
+    this._dialogAktionen = (f.aktionen || []).filter((a) => this._e(a.feld));
+    if (this._gehalten) delete this._gehalten["dialog"];
+
+    sr.getElementById("dlg-title").textContent =
+      f.titel || this._config[f.beschriftung] || "Einstellen";
+    sr.getElementById("dlg-temp").hidden = !this._dialogKey;
+    this._baueAktionen();
     sr.getElementById("dialog").hidden = false;
     this._syncDialog();
+  }
+
+  /** Baut die Bedienelemente des offenen Fensters auf. */
+  _baueAktionen() {
+    const host = this.shadowRoot.getElementById("dlg-actions");
+    const liste = this._dialogAktionen || [];
+    host.innerHTML = liste
+      .map((a, i) =>
+        a.typ === "auswahl"
+          ? `<label class="lhc-dialog-select">
+               <span class="lhc-field-label">${escapeHtml(a.titel)}</span>
+               <select id="dlg-a${i}"></select>
+             </label>`
+          : `<button type="button" class="lhc-dialog-action" id="dlg-a${i}">--</button>`
+      )
+      .join("");
+
+    liste.forEach((a, i) => {
+      const el = this.shadowRoot.getElementById(`dlg-a${i}`);
+      if (!el) return;
+      if (a.typ === "auswahl") {
+        el.addEventListener("change", () => {
+          const id = this._e(a.feld);
+          this._hass.callService("select", "select_option", {
+            entity_id: id,
+            option: el.value,
+          });
+        });
+      } else {
+        el.addEventListener("click", () => {
+          const id = this._e(a.feld);
+          const an = isOn(this._hass, id) === true;
+          this._hass.callService("homeassistant", an ? "turn_off" : "turn_on", {
+            entity_id: id,
+          });
+        });
+      }
+    });
+  }
+
+  /** Haelt die Bedienelemente auf dem aktuellen Stand. */
+  _syncAktionen() {
+    const liste = this._dialogAktionen || [];
+    liste.forEach((a, i) => {
+      const el = this.shadowRoot.getElementById(`dlg-a${i}`);
+      const st = this._hass.states[this._e(a.feld)];
+      if (!el || !st) return;
+      if (a.typ === "auswahl") {
+        const optionen = st.attributes.options || [];
+        const kennung = optionen.join("|");
+        if (el.dataset.kennung !== kennung) {
+          el.innerHTML = optionen
+            .map(
+              (o) =>
+                `<option value="${escapeHtml(o)}">${escapeHtml(
+                  a.texte[o] !== undefined ? a.texte[o] : o
+                )}</option>`
+            )
+            .join("");
+          el.dataset.kennung = kennung;
+        }
+        if (el.value !== st.state) el.value = st.state;
+      } else {
+        const an = isOn(this._hass, this._e(a.feld)) === true;
+        el.textContent = an ? a.an : a.aus;
+        el.classList.toggle("is-on", an);
+      }
+    });
   }
 
   _schliesseDialog() {
@@ -695,12 +823,15 @@ class LutarymHeatpumpCard extends HTMLElement {
     }
     this._dialogKey = null;
     this._dialogAnzeige = null;
+    this._dialogAktionen = null;
     this._dialogZieht = false;
     this.shadowRoot.getElementById("dialog").hidden = true;
   }
 
   /** Haelt das offene Fenster auf dem aktuellen Stand. */
   _syncDialog() {
+    if (this.shadowRoot.getElementById("dialog").hidden) return;
+    this._syncAktionen();
     if (!this._dialogKey) return;
     const sr = this.shadowRoot;
     const st = this._hass.states[this._e(this._dialogKey)];
@@ -729,31 +860,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     range.step = Number(st.attributes.step !== undefined ? st.attributes.step : 1);
     sr.getElementById("dlg-min").textContent = `${lo} °C`;
     sr.getElementById("dlg-max").textContent = `${hi} °C`;
-    // Zwangsladung nur beim Warmwasserspeicher und nur wenn eingetragen.
-    const force = sr.getElementById("dlg-force");
-    if (force) {
-      const schalterFeld =
-        this._dialogKey === "dhw_setpoint"
-          ? "dhw_force"
-          : this._dialogKey === "hk1_setpoint"
-          ? "hk1_switch"
-          : this._dialogKey === "hk2_setpoint"
-          ? "hk2_switch"
-          : null;
-      this._dialogSchalter = schalterFeld;
-      const schalterId = schalterFeld ? this._e(schalterFeld) : "";
-      force.hidden = !schalterId;
-      if (schalterId) {
-        const an = isOn(this._hass, schalterId) === true;
-        if (schalterFeld === "dhw_force") {
-          force.textContent = an ? "Aufheizen läuft, abbrechen" : "Einmalig aufheizen";
-        } else {
-          force.textContent = an ? "Heizkreis ist an, ausschalten" : "Heizkreis einschalten";
-        }
-        force.classList.toggle("is-on", an);
-      }
-    }
-
     if (this._dialogZieht) return;
     const gehalten = this._gehaltenerWert("dialog", wert);
     const zeigen = gehalten !== null ? gehalten : wert;
@@ -946,7 +1052,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       <path class="flowdots rev" id="dots-dhw2" d="M1525 ${B} V ${R}"/>
 
       <!-- Außengerät -->
-      <g class="unit">
+      <g class="unit" id="unit-group">
         <rect x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16"
               fill="url(#casing)" stroke="#33415A" stroke-width="2"/>
         <rect id="unit-glow" x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16"
@@ -1411,7 +1517,17 @@ class LutarymHeatpumpCard extends HTMLElement {
     const valveEntity = this._e("three_way_valve");
     const valveRoh = attr(hass, valveEntity, "beschreibung", null);
     const valveNum = numState(hass, valveEntity);
-    const zuWarmwasser = valveNum !== null && valveNum > 0;
+    // Wohin gerade geladen wird. Das Dreiwegeventil ist die verlaessliche
+    // Quelle. Fehlt es, hilft die Betriebsart weiter: Wert 3 heisst
+    // "Nur Warmwasser". Ohne beides gilt Heizen, sonst laufen beide
+    // Stichleitungen gleichzeitig.
+    let zuWarmwasser;
+    if (valveNum !== null) {
+      zuWarmwasser = valveNum > 0;
+    } else {
+      const betriebsart = numState(hass, this._e("operating_mode"));
+      zuWarmwasser = betriebsart === 3;
+    }
     let valveText = "--";
     if (valveRoh !== null && VALVE_LABELS[valveRoh] !== undefined) {
       valveText = VALVE_LABELS[valveRoh];
@@ -1961,6 +2077,15 @@ class LutarymHeatpumpCard extends HTMLElement {
         background: #3A1B08; border-color: #E0762E; color: #FFD9B0;
       }
       .lhc-dialog-action:focus-visible { outline: 2px solid #E0762E; outline-offset: 2px; }
+      #dlg-temp[hidden] { display: none; }
+      #dlg-actions { display: flex; flex-direction: column; }
+      .lhc-dialog-select {
+        display: flex; flex-direction: column; gap: 6px; margin-top: 18px;
+      }
+      .lhc-dialog-select select {
+        background: #0D131B; color: var(--ink); font: inherit; font-size: 15px;
+        border: 1px solid var(--line); border-radius: 12px; padding: 12px 10px; width: 100%;
+      }
 
       @media (prefers-reduced-motion: reduce) {
         .rotor, .bubble, .flowdots, .badge, .lhc-alert, #unit-glow, #sg-group {
