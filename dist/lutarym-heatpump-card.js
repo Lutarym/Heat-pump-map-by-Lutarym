@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.9.1";
+const CARD_VERSION = "1.9.2";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -197,6 +197,9 @@ function escapeHtml(text) {
 const INTEGRATION_DOMAIN = "heishamon_lutarym";
 
 const TOPIC_TO_FIELD = {
+  top0: "heatpump_state",
+  top2: "dhw_force_state",
+  top69: "sterilization_state",
   top14: "outside_temp",
   top4: "operating_mode",
   top8: "compressor",
@@ -347,6 +350,7 @@ const ENTITY_FIELDS = [
   { key: "fan2_rpm", label: "Lüfter 2 Drehzahl", group: "Außengerät", hint: "TOP63" },
   { key: "defrost", label: "Abtauung läuft", group: "Außengerät", hint: "TOP26" },
   { key: "error", label: "Fehlercode", group: "Außengerät", hint: "TOP44" },
+  { key: "heatpump_state", label: "Betriebszustand", group: "Außengerät", hint: "TOP0" },
   { key: "force_defrost", label: "Abtauen erzwingen", group: "Außengerät", hint: "SetForceDefrost, switch" },
   { key: "powerful_mode", label: "Turbomodus", group: "Außengerät", hint: "SetPowerfulMode, select" },
   { key: "quiet_mode", label: "Leisemodus", group: "Außengerät", hint: "SetQuietMode, select" },
@@ -390,7 +394,9 @@ const ENTITY_FIELDS = [
   { key: "dhw_setpoint", label: "Warmwasser Sollwert", group: "Warmwasser", hint: "TOP9, number" },
   { key: "dhw_heater", label: "Heizstab Warmwasser", group: "Warmwasser", hint: "TOP58" },
   { key: "dhw_force", label: "Einmalig aufheizen", group: "Warmwasser", hint: "SetForceDHW, switch" },
+  { key: "dhw_force_state", label: "Aufheizen läuft", group: "Warmwasser", hint: "TOP2" },
   { key: "force_sterilization", label: "Legionellenschutz starten", group: "Warmwasser", hint: "SetForceSterilization, switch" },
+  { key: "sterilization_state", label: "Legionellenschutz läuft", group: "Warmwasser", hint: "TOP69" },
   { key: "dhw_heater_switch", label: "Heizstab Warmwasser schalten", group: "Warmwasser", hint: "SetDHWHeaterState, switch" },
   { key: "circulation_pump", label: "Zirkulationspumpe läuft", group: "Warmwasser", hint: "Shelly oder eigener Schalter" },
 
@@ -682,8 +688,8 @@ class LutarymHeatpumpCard extends HTMLElement {
         gruppe: "unit-group",
         titel: "Wärmepumpe",
         aktionen: [
-          { feld: "power_state", typ: "schalter", an: "Läuft, ausschalten", aus: "Einschalten" },
-          { feld: "force_defrost", typ: "schalter", an: "Abtauen läuft, abbrechen", aus: "Abtauen erzwingen" },
+          { feld: "power_state", status: "heatpump_state", typ: "schalter", an: "Läuft, ausschalten", aus: "Einschalten" },
+          { feld: "force_defrost", status: "defrost", typ: "schalter", an: "Abtauen läuft, abbrechen", aus: "Abtauen erzwingen" },
           { feld: "powerful_mode", typ: "auswahl", titel: "Turbomodus", texte: POWERFUL_LABELS },
           { feld: "quiet_mode", typ: "auswahl", titel: "Leisemodus", texte: QUIET_LABELS },
         ],
@@ -692,8 +698,8 @@ class LutarymHeatpumpCard extends HTMLElement {
         gruppe: "buffer-group",
         beschriftung: "label_buffer",
         aktionen: [
-          { feld: "buffer_switch", typ: "schalter", an: "Pufferbetrieb ist an, ausschalten", aus: "Pufferbetrieb einschalten" },
-          { feld: "room_heater_switch", typ: "schalter", an: "Heizstab Heizung an, ausschalten", aus: "Heizstab Heizung einschalten" },
+          { feld: "buffer_switch", status: "buffer_installed", typ: "schalter", an: "Pufferbetrieb ist an, ausschalten", aus: "Pufferbetrieb einschalten" },
+          { feld: "room_heater_switch", status: "room_heater", typ: "schalter", an: "Heizstab Heizung an, ausschalten", aus: "Heizstab Heizung einschalten" },
         ],
       },
       {
@@ -701,9 +707,9 @@ class LutarymHeatpumpCard extends HTMLElement {
         feld: "dhw_setpoint",
         beschriftung: "label_dhw",
         aktionen: [
-          { feld: "dhw_force", typ: "schalter", an: "Aufheizen läuft, abbrechen", aus: "Einmalig aufheizen" },
-          { feld: "force_sterilization", typ: "schalter", an: "Legionellenschutz läuft, abbrechen", aus: "Legionellenschutz starten" },
-          { feld: "dhw_heater_switch", typ: "schalter", an: "Heizstab ist an, ausschalten", aus: "Heizstab einschalten" },
+          { feld: "dhw_force", status: "dhw_force_state", typ: "schalter", an: "Aufheizen läuft, abbrechen", aus: "Einmalig aufheizen" },
+          { feld: "force_sterilization", status: "sterilization_state", typ: "schalter", an: "Legionellenschutz läuft, abbrechen", aus: "Legionellenschutz starten" },
+          { feld: "dhw_heater_switch", status: "dhw_heater", typ: "schalter", an: "Heizstab ist an, ausschalten", aus: "Heizstab einschalten" },
         ],
       },
       {
@@ -750,6 +756,25 @@ class LutarymHeatpumpCard extends HTMLElement {
     this._syncDialog();
   }
 
+  /**
+   * Ermittelt den Zustand eines Bedienelements.
+   * Die Statusquelle hat Vorrang, denn ein Schaltbefehl meldet seinen
+   * Zustand nicht immer zurueck. Liefert sie nichts, gilt der Schalter.
+   * Rueckgabe null, wenn beides unbekannt ist.
+   */
+  _zustand(a) {
+    const pruefe = (feld) => {
+      if (!feld) return null;
+      const id = this._e(feld);
+      if (!id) return null;
+      const roh = rawState(this._hass, id);
+      if (roh === null || roh === "unknown" || roh === "unavailable") return null;
+      return isOn(this._hass, id);
+    };
+    const ausStatus = pruefe(a.status);
+    return ausStatus !== null ? ausStatus : pruefe(a.feld);
+  }
+
   /** Baut die Bedienelemente des offenen Fensters auf. */
   _baueAktionen() {
     const host = this.shadowRoot.getElementById("dlg-actions");
@@ -779,8 +804,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       } else {
         el.addEventListener("click", () => {
           const id = this._e(a.feld);
-          const an = isOn(this._hass, id) === true;
-          this._hass.callService("homeassistant", an ? "turn_off" : "turn_on", {
+          const an = this._zustand(a);
+          // Bei unbekanntem Zustand wird eingeschaltet, nicht geraten.
+          this._hass.callService("homeassistant", an === true ? "turn_off" : "turn_on", {
             entity_id: id,
           });
         });
@@ -811,9 +837,9 @@ class LutarymHeatpumpCard extends HTMLElement {
         }
         if (el.value !== st.state) el.value = st.state;
       } else {
-        const an = isOn(this._hass, this._e(a.feld)) === true;
-        el.textContent = an ? a.an : a.aus;
-        el.classList.toggle("is-on", an);
+        const an = this._zustand(a);
+        el.textContent = an === null ? `${a.aus} (Zustand unbekannt)` : an ? a.an : a.aus;
+        el.classList.toggle("is-on", an === true);
       }
     });
   }

@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.9.1**
+**Version 1.9.2**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -192,6 +192,7 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `fan2_rpm` | TOP63 | Lüfter 2 Drehzahl |
 | `defrost` | TOP26 | Abtauung läuft |
 | `error` | TOP44 | Fehlercode |
+| `heatpump_state` | TOP0 | Betriebszustand |
 | `force_defrost` | SetForceDefrost | Abtauen erzwingen |
 | `powerful_mode` | SetPowerfulMode | Turbomodus |
 | `quiet_mode` | SetQuietMode | Leisemodus |
@@ -229,7 +230,9 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `dhw_setpoint` | TOP9 | Warmwasser Sollwert |
 | `dhw_heater` | TOP58 | Heizstab Warmwasser |
 | `dhw_force` | SetForceDHW | Einmalig aufheizen |
+| `dhw_force_state` | TOP2 | Aufheizen läuft |
 | `force_sterilization` | SetForceSterilization | Legionellenschutz starten |
+| `sterilization_state` | TOP69 | Legionellenschutz läuft |
 | `dhw_heater_switch` | SetDHWHeaterState | Heizstab Warmwasser schalten |
 | `circulation_pump` | eigene Entität | Zirkulationspumpe läuft |
 | `mode_select` | SetOperationMode | Betriebsart umschalten |
@@ -351,6 +354,10 @@ Ein Klick auf eine Baugruppe öffnet ein Fenster mit den passenden Bedienelement
 Der Puffer hat bewusst keinen Temperaturregler. HeishaMon kennt keinen einstellbaren Puffer-Sollwert. Der angezeigte Zielwert stammt aus TOP7, der Soll-Vorlauftemperatur, und ist ein reiner Messwert ohne Schreibzugriff. Einstellbar sind dort nur `SetBuffer` und der Heizstab der Heizung.
 
 Die beiden Heizstäbe sind bewusst nicht im Fenster der Wärmepumpe, sondern dort, wo sie wirken: der Heizstab Heizung am Puffer, der Heizstab Warmwasser am Speicher.
+
+Jeder Schaltknopf liest seinen Zustand aus einem eigenen Rückmeldetopic, nicht aus dem Schaltbefehl selbst. Ein Befehl wie `SetForceDHW` meldet nämlich nicht zuverlässig zurück, ob er gerade wirkt. Zuständig sind TOP0 für den Betrieb, TOP2 für das Aufheizen, TOP26 für die Abtauung, TOP58 und TOP59 für die Heizstäbe, TOP69 für den Legionellenschutz und TOP99 für den Puffer.
+
+Ist auch das Rückmeldetopic unbekannt, steht das ausdrücklich am Knopf, statt fälschlich "aus" anzuzeigen.
 
 Jedes Bedienelement erscheint nur, wenn die zugehörige Entität eingetragen ist. Sind für eine Baugruppe weder Temperatur noch Bedienelement vorhanden, bleibt sie wie bisher unklickbar.
 
