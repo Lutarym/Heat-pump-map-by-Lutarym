@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.9.2";
+const CARD_VERSION = "1.9.3";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -689,7 +689,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         titel: "Wärmepumpe",
         aktionen: [
           { feld: "power_state", status: "heatpump_state", typ: "schalter", an: "Läuft, ausschalten", aus: "Einschalten" },
-          { feld: "force_defrost", status: "defrost", typ: "schalter", an: "Abtauen läuft, abbrechen", aus: "Abtauen erzwingen" },
+          { feld: "force_defrost", status: "defrost", typ: "paar", ein: "Abtauen starten", aus: "Abtauen beenden" },
           { feld: "powerful_mode", typ: "auswahl", titel: "Turbomodus", texte: POWERFUL_LABELS },
           { feld: "quiet_mode", typ: "auswahl", titel: "Leisemodus", texte: QUIET_LABELS },
         ],
@@ -707,8 +707,8 @@ class LutarymHeatpumpCard extends HTMLElement {
         feld: "dhw_setpoint",
         beschriftung: "label_dhw",
         aktionen: [
-          { feld: "dhw_force", status: "dhw_force_state", typ: "schalter", an: "Aufheizen läuft, abbrechen", aus: "Einmalig aufheizen" },
-          { feld: "force_sterilization", status: "sterilization_state", typ: "schalter", an: "Legionellenschutz läuft, abbrechen", aus: "Legionellenschutz starten" },
+          { feld: "dhw_force", status: "dhw_force_state", typ: "paar", ein: "Aufheizen starten", aus: "Aufheizen beenden" },
+          { feld: "force_sterilization", status: "sterilization_state", typ: "paar", ein: "Legionellenschutz starten", aus: "Legionellenschutz beenden" },
           { feld: "dhw_heater_switch", status: "dhw_heater", typ: "schalter", an: "Heizstab ist an, ausschalten", aus: "Heizstab einschalten" },
         ],
       },
@@ -786,11 +786,34 @@ class LutarymHeatpumpCard extends HTMLElement {
                <span class="lhc-field-label">${escapeHtml(a.titel)}</span>
                <select id="dlg-a${i}"></select>
              </label>`
+          : a.typ === "paar"
+          ? `<div class="lhc-dialog-pair">
+               <button type="button" class="lhc-dialog-action" id="dlg-a${i}-ein">${escapeHtml(
+                 a.ein
+               )}</button>
+               <button type="button" class="lhc-dialog-action" id="dlg-a${i}-aus">${escapeHtml(
+                 a.aus
+               )}</button>
+             </div>`
           : `<button type="button" class="lhc-dialog-action" id="dlg-a${i}">--</button>`
       )
       .join("");
 
     liste.forEach((a, i) => {
+      if (a.typ === "paar") {
+        // Zwei getrennte Knoepfe. Damit laesst sich immer abschalten,
+        // auch wenn der gemeldete Zustand nicht stimmt.
+        [["ein", "turn_on"], ["aus", "turn_off"]].forEach(([teil, dienst]) => {
+          const k = this.shadowRoot.getElementById(`dlg-a${i}-${teil}`);
+          if (!k) return;
+          k.addEventListener("click", () =>
+            this._hass.callService("homeassistant", dienst, {
+              entity_id: this._e(a.feld),
+            })
+          );
+        });
+        return;
+      }
       const el = this.shadowRoot.getElementById(`dlg-a${i}`);
       if (!el) return;
       if (a.typ === "auswahl") {
@@ -818,6 +841,15 @@ class LutarymHeatpumpCard extends HTMLElement {
   _syncAktionen() {
     const liste = this._dialogAktionen || [];
     liste.forEach((a, i) => {
+      if (a.typ === "paar") {
+        const an = this._zustand(a);
+        const ein = this.shadowRoot.getElementById(`dlg-a${i}-ein`);
+        const aus = this.shadowRoot.getElementById(`dlg-a${i}-aus`);
+        // Der zutreffende Knopf wird hervorgehoben, beide bleiben bedienbar.
+        if (ein) ein.classList.toggle("is-on", an === true);
+        if (aus) aus.classList.toggle("is-on", an === false);
+        return;
+      }
       const el = this.shadowRoot.getElementById(`dlg-a${i}`);
       const st = this._hass.states[this._e(a.feld)];
       if (!el || !st) return;
@@ -1984,6 +2016,8 @@ class LutarymHeatpumpCard extends HTMLElement {
       .lhc-dialog-action:focus-visible { outline: 2px solid #E0762E; outline-offset: 2px; }
       #dlg-temp[hidden] { display: none; }
       #dlg-actions { display: flex; flex-direction: column; }
+      .lhc-dialog-pair { display: flex; gap: 10px; }
+      .lhc-dialog-pair .lhc-dialog-action { flex: 1 1 0; min-width: 0; font-size: 14px; }
       .lhc-dialog-select {
         display: flex; flex-direction: column; gap: 6px; margin-top: 18px;
       }
