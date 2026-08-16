@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.9.0**
+**Version 1.9.1**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -16,7 +16,7 @@ Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 
 **Vorlauf und Rücklauf** als Werte über den Leitungen, direkt am Ausgang und am Eingang der Wärmepumpe. Der Vorlauf steht rot über der oberen Leitung, der Rücklauf blau über der unteren. Die Farben sind fest und wechseln nicht mit der Temperatur, damit die Zuordnung immer eindeutig bleibt.
 
-**Primärpumpe** mit Drehzahl und Durchflussmenge, auf der Rücklaufleitung zwischen Puffer und Wärmepumpe.
+**Primärpumpe** auf der Rücklaufleitung zwischen Puffer und Wärmepumpe. Drehzahl und Durchflussmenge stehen rechts daneben über der Leitung.
 
 In Fließrichtung liegen auf dem Rücklauf nacheinander: Warmwasserspeicher, Heizkreis 2, Heizkreis 1, Puffer, dann die Pumpe und zuletzt die Wärmepumpe. Das Wasser aller Kreise läuft also zusammen, geht durch die Pumpe und von dort zurück in die Wärmepumpe. Der Puffer wird über dieselbe Pumpe geladen, sobald das Dreiwegeventil auf Heizen steht.
 
@@ -193,7 +193,6 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `defrost` | TOP26 | Abtauung läuft |
 | `error` | TOP44 | Fehlercode |
 | `force_defrost` | SetForceDefrost | Abtauen erzwingen |
-| `room_heater_switch` | SetRoomHeaterState | Heizstab Heizung schalten |
 | `powerful_mode` | SetPowerfulMode | Turbomodus |
 | `quiet_mode` | SetQuietMode | Leisemodus |
 | `power_now` | eigene Entität | Aktuelle Leistungsaufnahme |
@@ -211,6 +210,7 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `buffer_switch` | SetBuffer | Pufferbetrieb ein und aus |
 | `buffer_target` | TOP7 | Puffer Zieltemperatur |
 | `room_heater` | TOP59 | Heizstab Heizung |
+| `room_heater_switch` | SetRoomHeaterState | Heizstab Heizung schalten |
 | `zones_state` | TOP94 | Aktivierte Zonen |
 | `hk1_water` | TOP36 | HK1 Wassertemperatur |
 | `hk1_water_target` | TOP42 | HK1 Wasser Sollwert |
@@ -343,12 +343,14 @@ Ein Klick auf eine Baugruppe öffnet ein Fenster mit den passenden Bedienelement
 
 | Klick auf | Fenster enthält |
 |---|---|
-| Wärmepumpe | Ein und aus, Abtauen erzwingen, beide Heizstäbe, Turbomodus, Leisemodus |
-| Warmwasserspeicher | Temperatur, einmalig aufheizen, Legionellenschutz starten |
+| Wärmepumpe | Ein und aus, Abtauen erzwingen, Turbomodus, Leisemodus |
+| Warmwasserspeicher | Temperatur, einmalig aufheizen, Legionellenschutz, Heizstab |
 | Heizungspuffer | Pufferbetrieb ein und aus, Heizstab Heizung |
 | Heizkreis 1 und 2 | Temperatur, sowie ein Schalter, falls eingetragen |
 
 Der Puffer hat bewusst keinen Temperaturregler. HeishaMon kennt keinen einstellbaren Puffer-Sollwert. Der angezeigte Zielwert stammt aus TOP7, der Soll-Vorlauftemperatur, und ist ein reiner Messwert ohne Schreibzugriff. Einstellbar sind dort nur `SetBuffer` und der Heizstab der Heizung.
+
+Die beiden Heizstäbe sind bewusst nicht im Fenster der Wärmepumpe, sondern dort, wo sie wirken: der Heizstab Heizung am Puffer, der Heizstab Warmwasser am Speicher.
 
 Jedes Bedienelement erscheint nur, wenn die zugehörige Entität eingetragen ist. Sind für eine Baugruppe weder Temperatur noch Bedienelement vorhanden, bleibt sie wie bisher unklickbar.
 

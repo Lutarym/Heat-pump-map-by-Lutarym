@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.9.0";
+const CARD_VERSION = "1.9.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -348,7 +348,6 @@ const ENTITY_FIELDS = [
   { key: "defrost", label: "Abtauung läuft", group: "Außengerät", hint: "TOP26" },
   { key: "error", label: "Fehlercode", group: "Außengerät", hint: "TOP44" },
   { key: "force_defrost", label: "Abtauen erzwingen", group: "Außengerät", hint: "SetForceDefrost, switch" },
-  { key: "room_heater_switch", label: "Heizstab Heizung schalten", group: "Außengerät", hint: "SetRoomHeaterState, switch" },
   { key: "powerful_mode", label: "Turbomodus", group: "Außengerät", hint: "SetPowerfulMode, select" },
   { key: "quiet_mode", label: "Leisemodus", group: "Außengerät", hint: "SetQuietMode, select" },
   { key: "power_now", label: "Aktuelle Leistungsaufnahme", group: "Außengerät", hint: "Shelly PM, Watt" },
@@ -369,6 +368,7 @@ const ENTITY_FIELDS = [
   { key: "buffer_switch", label: "Pufferbetrieb ein und aus", group: "Heizungspuffer", hint: "SetBuffer, switch" },
   { key: "buffer_target", label: "Puffer Zieltemperatur", group: "Heizungspuffer", hint: "TOP7, Soll Vorlauf" },
   { key: "room_heater", label: "Heizstab Heizung", group: "Heizungspuffer", hint: "TOP59" },
+  { key: "room_heater_switch", label: "Heizstab Heizung schalten", group: "Heizungspuffer", hint: "SetRoomHeaterState, switch" },
 
   { key: "zones_state", label: "Aktivierte Zonen", group: "Heizkreis 1", hint: "TOP94, gilt für beide" },
   { key: "hk1_water", label: "HK1 Wassertemperatur", group: "Heizkreis 1", hint: "TOP36" },
@@ -684,8 +684,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         aktionen: [
           { feld: "power_state", typ: "schalter", an: "Läuft, ausschalten", aus: "Einschalten" },
           { feld: "force_defrost", typ: "schalter", an: "Abtauen läuft, abbrechen", aus: "Abtauen erzwingen" },
-          { feld: "dhw_heater_switch", typ: "schalter", an: "Heizstab Warmwasser an", aus: "Heizstab Warmwasser einschalten" },
-          { feld: "room_heater_switch", typ: "schalter", an: "Heizstab Heizung an", aus: "Heizstab Heizung einschalten" },
           { feld: "powerful_mode", typ: "auswahl", titel: "Turbomodus", texte: POWERFUL_LABELS },
           { feld: "quiet_mode", typ: "auswahl", titel: "Leisemodus", texte: QUIET_LABELS },
         ],
@@ -705,6 +703,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         aktionen: [
           { feld: "dhw_force", typ: "schalter", an: "Aufheizen läuft, abbrechen", aus: "Einmalig aufheizen" },
           { feld: "force_sterilization", typ: "schalter", an: "Legionellenschutz läuft, abbrechen", aus: "Legionellenschutz starten" },
+          { feld: "dhw_heater_switch", typ: "schalter", an: "Heizstab ist an, ausschalten", aus: "Heizstab einschalten" },
         ],
       },
       {
@@ -1063,8 +1062,8 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Primärpumpe -->
       <g>
-        <text class="value-s" id="pump-v" x="460" y="600" text-anchor="middle">--</text>
-        <text class="unit-value" id="flow-v" x="460" y="624" text-anchor="middle">--</text>
+        <text class="value-s" id="pump-v" x="496" y="662" text-anchor="start">--</text>
+        <text class="value-s" id="flow-v" x="496" y="684" text-anchor="start">--</text>
         <g transform="translate(460 ${R})">
           <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <g class="rotor" id="pump-rotor">
