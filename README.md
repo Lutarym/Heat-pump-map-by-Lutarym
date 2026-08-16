@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.8.1**
+**Version 1.9.0**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -208,6 +208,7 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `water_pressure` | TOP115 | Wasserdruck |
 | `buffer_temp` | TOP46 | Puffertemperatur |
 | `buffer_installed` | TOP99 | Puffer vorhanden |
+| `buffer_switch` | SetBuffer | Pufferbetrieb ein und aus |
 | `buffer_target` | TOP7 | Puffer Zieltemperatur |
 | `room_heater` | TOP59 | Heizstab Heizung |
 | `zones_state` | TOP94 | Aktivierte Zonen |
@@ -344,7 +345,10 @@ Ein Klick auf eine Baugruppe öffnet ein Fenster mit den passenden Bedienelement
 |---|---|
 | Wärmepumpe | Ein und aus, Abtauen erzwingen, beide Heizstäbe, Turbomodus, Leisemodus |
 | Warmwasserspeicher | Temperatur, einmalig aufheizen, Legionellenschutz starten |
+| Heizungspuffer | Pufferbetrieb ein und aus, Heizstab Heizung |
 | Heizkreis 1 und 2 | Temperatur, sowie ein Schalter, falls eingetragen |
+
+Der Puffer hat bewusst keinen Temperaturregler. HeishaMon kennt keinen einstellbaren Puffer-Sollwert. Der angezeigte Zielwert stammt aus TOP7, der Soll-Vorlauftemperatur, und ist ein reiner Messwert ohne Schreibzugriff. Einstellbar sind dort nur `SetBuffer` und der Heizstab der Heizung.
 
 Jedes Bedienelement erscheint nur, wenn die zugehörige Entität eingetragen ist. Sind für eine Baugruppe weder Temperatur noch Bedienelement vorhanden, bleibt sie wie bisher unklickbar.
 

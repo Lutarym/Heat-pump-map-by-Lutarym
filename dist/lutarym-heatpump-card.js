@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.8.1";
+const CARD_VERSION = "1.9.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -241,6 +241,7 @@ const COMMAND_TO_FIELD = {
   setroomheaterstate: "room_heater_switch",
   setpowerfulmode: "powerful_mode",
   setquietmode: "quiet_mode",
+  setbuffer: "buffer_switch",
 };
 
 const FIELD_DOMAIN = {
@@ -259,6 +260,7 @@ const FIELD_DOMAIN = {
   room_heater_switch: ["switch", "input_boolean"],
   powerful_mode: ["select", "input_select"],
   quiet_mode: ["select", "input_select"],
+  buffer_switch: ["switch", "input_boolean"],
   circulation_pump: ["switch", "input_boolean", "binary_sensor", "sensor"],
   sg_k1: ["switch", "input_boolean", "binary_sensor", "sensor"],
   sg_k2: ["switch", "input_boolean", "binary_sensor", "sensor"],
@@ -364,6 +366,7 @@ const ENTITY_FIELDS = [
 
   { key: "buffer_temp", label: "Puffertemperatur", group: "Heizungspuffer", hint: "TOP46" },
   { key: "buffer_installed", label: "Puffer vorhanden", group: "Heizungspuffer", hint: "TOP99" },
+  { key: "buffer_switch", label: "Pufferbetrieb ein und aus", group: "Heizungspuffer", hint: "SetBuffer, switch" },
   { key: "buffer_target", label: "Puffer Zieltemperatur", group: "Heizungspuffer", hint: "TOP7, Soll Vorlauf" },
   { key: "room_heater", label: "Heizstab Heizung", group: "Heizungspuffer", hint: "TOP59" },
 
@@ -685,6 +688,14 @@ class LutarymHeatpumpCard extends HTMLElement {
           { feld: "room_heater_switch", typ: "schalter", an: "Heizstab Heizung an", aus: "Heizstab Heizung einschalten" },
           { feld: "powerful_mode", typ: "auswahl", titel: "Turbomodus", texte: POWERFUL_LABELS },
           { feld: "quiet_mode", typ: "auswahl", titel: "Leisemodus", texte: QUIET_LABELS },
+        ],
+      },
+      {
+        gruppe: "buffer-group",
+        beschriftung: "label_buffer",
+        aktionen: [
+          { feld: "buffer_switch", typ: "schalter", an: "Pufferbetrieb ist an, ausschalten", aus: "Pufferbetrieb einschalten" },
+          { feld: "room_heater_switch", typ: "schalter", an: "Heizstab Heizung an, ausschalten", aus: "Heizstab Heizung einschalten" },
         ],
       },
       {
@@ -1036,17 +1047,17 @@ class LutarymHeatpumpCard extends HTMLElement {
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
       <text class="vl-value" id="unit-flow-v" x="410" y="${F - 20}"
             text-anchor="middle">--</text>
-      <text class="rl-value" id="unit-ret-v" x="370" y="${R - 20}"
+      <text class="rl-value" id="unit-ret-v" x="410" y="${R - 40}"
             text-anchor="middle">--</text>
 
       <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
       <g id="verbrauch-group" opacity="0">
-        <text class="unit-label" x="410" y="404" text-anchor="middle">Leistung</text>
-        <text class="verbrauch-v" id="power-now-v" x="410" y="440"
+        <text class="unit-label" x="445" y="404" text-anchor="middle">Leistung</text>
+        <text class="verbrauch-v" id="power-now-v" x="445" y="440"
               text-anchor="middle">--</text>
-        <text class="unit-label" id="energy-label" x="410" y="492"
+        <text class="unit-label" id="energy-label" x="445" y="492"
               text-anchor="middle">--</text>
-        <text class="unit-value" id="energy-today-v" x="410" y="524"
+        <text class="unit-value" id="energy-today-v" x="445" y="524"
               text-anchor="middle">--</text>
       </g>
 
