@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 2.3.0**
+**Version 2.4.0**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -334,6 +334,8 @@ Die Laufrichtung folgt dem tatsächlichen Weg des Wassers. Auf dem Vorlauf nach 
 | Hinweise Heizstab und Abtauung | solange sie aktiv sind |
 | Störungsbalken | solange ein Fehlercode anliegt |
 
+Meldet die Wärmepumpe, dass sie aus ist, steht alles still: Leitungen, Lüfter, sämtliche Pumpen, die Blasen in den Speichern und das Leuchten des Gehäuses. Maßgeblich ist TOP0, ersatzweise die Schaltentität. Ist der Zustand unbekannt, wird nichts gesperrt, sonst wäre die Karte tot, nur weil ein Topic fehlt.
+
 Jede Leitung ist in Abschnitte geteilt, die einzeln geschaltet werden. Der Vorlauf hinter dem Dreiwegeventil führt nur zum Warmwasserspeicher, er bewegt sich also nur bei einer Warmwasserladung. Beim Sekundärkreis endet die Bewegung am letzten laufenden Heizkreis: läuft nur Heizkreis 1, steht der Abschnitt dahinter still. Läuft nur Heizkreis 1, bewegt sich auch nur dessen Leitung. Fehlen die Entitäten für Pumpendrehzahl und Durchfluss, bewegt sich nichts. Die Karte nimmt nichts an, was sie nicht messen kann.
 
 Alle Pumpen drehen mit derselben ruhigen Geschwindigkeit, drei Sekunden pro Umdrehung. Sie sollen nur zeigen, dass gefördert wird, nicht wie schnell. Die tatsächliche Drehzahl der Primärpumpe steht als Zahl daneben. Nur die Lüfter drehen nach echter Drehzahl, dort ist der Unterschied zwischen leisem und vollem Betrieb gut sichtbar.
@@ -401,6 +403,8 @@ Ein Klick auf eine Baugruppe öffnet ein Fenster mit den passenden Bedienelement
 Der Puffer hat bewusst keinen Temperaturregler. HeishaMon kennt keinen einstellbaren Puffer-Sollwert. Der angezeigte Zielwert stammt aus TOP7, der Soll-Vorlauftemperatur, und ist ein reiner Messwert ohne Schreibzugriff. Einstellbar sind dort nur `SetBuffer` und der Heizstab der Heizung.
 
 Die beiden Heizstäbe sind bewusst nicht im Fenster der Wärmepumpe, sondern dort, wo sie wirken: der Heizstab Heizung am Puffer, der Heizstab Warmwasser am Speicher.
+
+Die Knöpfe sind nach ihrem Zustand eingefärbt: grün für eingeschaltet, rot für ausgeschaltet, grau für unbekannt oder gesperrt. Sie werden bei jeder Aktualisierung neu gelesen, ein offenes Fenster zeigt also immer den aktuellen Stand.
 
 Jeder Schaltknopf liest seinen Zustand aus einem eigenen Rückmeldetopic, nicht aus dem Schaltbefehl selbst. Ein Befehl wie `SetForceDHW` meldet nämlich nicht zuverlässig zurück, ob er gerade wirkt. Zuständig sind TOP0 für den Betrieb, TOP2 für das Aufheizen, TOP26 für die Abtauung, TOP58 und TOP59 für die Heizstäbe, TOP69 für den Legionellenschutz und TOP99 für den Puffer.
 

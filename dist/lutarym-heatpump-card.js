@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.3.0";
+const CARD_VERSION = "2.4.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1085,6 +1085,11 @@ class LutarymHeatpumpCard extends HTMLElement {
   /** Haelt die Bedienelemente auf dem aktuellen Stand. */
   _syncAktionen() {
     const liste = this._dialogAktionen || [];
+    // Gruen bedeutet eingeschaltet, rot ausgeschaltet, grau unbekannt.
+    const farbeSetzen = (el, zustand) => {
+      el.classList.toggle("is-an", zustand === true);
+      el.classList.toggle("is-aus", zustand === false);
+    };
     liste.forEach((a, i) => {
       const el = this.shadowRoot.getElementById(`dlg-a${i}`);
       const st = this._quelle.states[this._e(a.feld)];
@@ -1114,14 +1119,14 @@ class LutarymHeatpumpCard extends HTMLElement {
             : aktiv
             ? "Heizkreis abschalten"
             : "Heizkreis zuschalten";
-        el.classList.toggle("is-on", aktiv === true);
         // Der letzte verbleibende Kreis laesst sich nicht abschalten.
         el.disabled = aktiv === true && andere !== true;
         if (el.disabled) el.textContent = "Einziger aktiver Heizkreis";
+        farbeSetzen(el, el.disabled ? null : aktiv);
       } else {
         const an = this._zustand(a);
         el.textContent = an === null ? `${a.aus} (Zustand unbekannt)` : an ? a.an : a.aus;
-        el.classList.toggle("is-on", an === true);
+        farbeSetzen(el, an);
       }
     });
   }
@@ -1652,7 +1657,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       ids.forEach((id) => {
         const el = sr.getElementById(id);
         if (!el) return;
-        el.classList.toggle("is-on", animate && an === true);
+        el.classList.toggle("is-on", animate && laeuft && an === true);
         if (farbe) el.style.stroke = farbe;
       });
     };
@@ -1699,20 +1704,36 @@ class LutarymHeatpumpCard extends HTMLElement {
     const comp = numState(hass, this._e("compressor"));
     set("comp-v", comp === null ? "--" : `${fmt(comp, 0)} Hz`);
 
-    const anAus = isOn(hass, this._e("power_state"));
+    // Meldet die Waermepumpe ausdruecklich aus, steht alles still.
+    // Bei unbekanntem Zustand wird nichts gesperrt, sonst waere die
+    // Karte tot, nur weil ein Topic fehlt.
+    const anAus = (() => {
+      const ausStatus = (feld) => {
+        const id = this._e(feld);
+        if (!id) return null;
+        const roh = rawState(hass, id);
+        if (roh === null || roh === "unknown" || roh === "unavailable") return null;
+        return isOn(hass, id);
+      };
+      const ausTopic = ausStatus("heatpump_state");
+      return ausTopic !== null ? ausTopic : ausStatus("power_state");
+    })();
+    const laeuft = anAus !== false;
     const led = sr.getElementById("power-led");
     if (led) {
       led.setAttribute("fill", anAus === true ? "#46C07A" : "#2C3646");
       led.classList.toggle("is-on", anAus === true);
     }
 
-    this._spin("fan1", numState(hass, this._e("fan1_rpm")), "fan1-rpm", "U/min");
+    this._spin("fan1", numState(hass, this._e("fan1_rpm")), "fan1-rpm", "U/min", 0, laeuft);
     if (this._config.fan_count === 2) {
-      this._spin("fan2", numState(hass, this._e("fan2_rpm")), "fan2-rpm", "U/min");
+      this._spin("fan2", numState(hass, this._e("fan2_rpm")), "fan2-rpm", "U/min", 0, laeuft);
     }
     abzeichen("defrost-badge", isOn(hass, this._e("defrost")) === true);
     const glow = sr.getElementById("unit-glow");
-    if (glow) glow.classList.toggle("is-on", animate && comp !== null && comp > 0);
+    if (glow) {
+      glow.classList.toggle("is-on", animate && laeuft && comp !== null && comp > 0);
+    }
 
     /* SG Ready */
     const sgGroup = sr.getElementById("sg-group");
@@ -1783,7 +1804,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (zirkRotor) {
       zirkRotor.classList.toggle("is-still", !zirkAn);
       zirkRotor.style.animationDuration = `${PUMP_SECONDS}s`;
-      zirkRotor.style.animationPlayState = zirkAn && animate ? "running" : "paused";
+      zirkRotor.style.animationPlayState =
+        zirkAn && animate && laeuft ? "running" : "paused";
     }
 
     /* Leistung der Photovoltaik */
@@ -1827,7 +1849,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     /* Primärpumpe und Durchfluss */
     const pumpRpm = numState(hass, this._e("pump_speed"));
     const flowRate = numState(hass, this._e("pump_flow"));
-    this._spin("pump-rotor", pumpRpm, "pump-v", "U/min", PUMP_SECONDS);
+    this._spin("pump-rotor", pumpRpm, "pump-v", "U/min", PUMP_SECONDS, laeuft);
     set("flow-v", flowRate === null ? "--" : `${fmt(flowRate)} l/min`);
 
     /* Wasserdruck, nur bei vorhandenem Wert */
@@ -1905,9 +1927,11 @@ class LutarymHeatpumpCard extends HTMLElement {
     // Der gesamte Sekundaerkreis fuehrt Pufferwasser. Damit die Farbe
     // an den Verbindungsstellen nicht springt, tragen Fallrohr,
     // Steigrohr und die waagerechten Leitungen denselben Wert.
-    const hk1Laeuft = this._circuitUpdate(1, col, animate, buf);
+    const hk1Laeuft = this._circuitUpdate(1, col, animate, buf, laeuft);
     const hk2Laeuft =
-      this._config.hk_count === 2 ? this._circuitUpdate(2, col, animate, buf) : false;
+      this._config.hk_count === 2
+        ? this._circuitUpdate(2, col, animate, buf, laeuft)
+        : false;
 
     // Der Sekundaerkreis wird bewegt, sobald eine Kreispumpe foerdert.
     // Seine Waerme kommt aus dem Puffer, nicht aus der Waermepumpe.
@@ -1941,7 +1965,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       if (!g || !g.children) return;
       const anteil =
         wert === null ? 0 : clamp((wert - min) / ((max - min) || 1), 0, 1);
-      const sichtbar = animate ? Math.round(anteil * BUBBLE_COUNT) : 0;
+      const sichtbar = animate && laeuft ? Math.round(anteil * BUBBLE_COUNT) : 0;
       Array.from(g.children).forEach((el, i) => {
         // Eine pausierte Animation setzt ihre Deckkraft weiter und
         // ueberschreibt dabei jeden Inline-Stil. Ausgeblendete Blasen
@@ -1959,7 +1983,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     this._syncDialog();
   }
 
-  _circuitUpdate(n, col, animate, buf) {
+  _circuitUpdate(n, col, animate, buf, laeuft) {
     const hass = this._quelle;
     const sr = this.shadowRoot;
     const water = numState(hass, this._e(`hk${n}_water`));
@@ -1990,7 +2014,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (rotor) {
       rotor.classList.toggle("is-still", !pumpOn);
       rotor.style.animationDuration = `${PUMP_SECONDS}s`;
-      rotor.style.animationPlayState = pumpOn && animate ? "running" : "paused";
+      rotor.style.animationPlayState =
+        pumpOn && animate && laeuft ? "running" : "paused";
     }
     set(`hk${n}-pump-v`, pumpOn ? "läuft" : "aus");
 
@@ -1998,7 +2023,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     [`dots-hk${n}`, `dots-hk${n}b`].forEach((id, i) => {
       const el = sr.getElementById(id);
       if (!el) return;
-      el.classList.toggle("is-on", animate && pumpOn);
+      el.classList.toggle("is-on", animate && laeuft && pumpOn);
       // Beide Richtungen tragen die Puffertemperatur, wie die
       // waagerechten Leitungen, an die sie anschliessen.
       el.style.stroke = col(buf);
@@ -2014,13 +2039,13 @@ class LutarymHeatpumpCard extends HTMLElement {
    * passt zu den Lueftern. Pumpen bekommen eine feste, ruhige Dauer,
    * denn dort soll nur erkennbar sein, dass sie ueberhaupt foerdern.
    */
-  _spin(rotorId, rpm, labelId, unit, festeDauer) {
+  _spin(rotorId, rpm, labelId, unit, festeDauer, erlaubt) {
     const label = this.shadowRoot.getElementById(labelId);
     if (label) label.textContent = rpm === null ? "--" : `${fmt(rpm, 0)} ${unit}`;
     const el = this.shadowRoot.getElementById(rotorId);
     if (!el) return;
     const animate = this._config.animate !== false;
-    if (rpm === null || rpm <= 0 || !animate) {
+    if (rpm === null || rpm <= 0 || !animate || erlaubt === false) {
       el.style.animationPlayState = "paused";
       el.classList.toggle("is-still", rpm === null || rpm <= 0);
       return;
@@ -2384,8 +2409,15 @@ class LutarymHeatpumpCard extends HTMLElement {
       }
       .lhc-dialog-action[hidden] { display: none; }
       .lhc-dialog-action:hover { border-color: #3E4C61; }
-      .lhc-dialog-action.is-on {
-        background: #3A1B08; border-color: #E0762E; color: #FFD9B0;
+      .lhc-dialog-action.is-an {
+        background: #0E2E1C; border-color: #46C07A; color: #BFEFD2;
+      }
+      .lhc-dialog-action.is-aus {
+        background: #2E1112; border-color: #D6534A; color: #F3C6C3;
+      }
+      .lhc-dialog-action:disabled {
+        opacity: 0.45; cursor: not-allowed;
+        background: #1B2431; border-color: var(--line); color: var(--muted);
       }
       .lhc-dialog-action:focus-visible { outline: 2px solid #E0762E; outline-offset: 2px; }
       #dlg-temp[hidden] { display: none; }
