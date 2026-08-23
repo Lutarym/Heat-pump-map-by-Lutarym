@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.1.5";
+const CARD_VERSION = "2.2.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -359,6 +359,7 @@ const ENTITY_FIELDS = [
   { key: "power_now", label: "Aktuelle Leistungsaufnahme", group: "Außengerät", hint: "Shelly PM, Watt" },
   { key: "energy_today", label: "Energiezähler", group: "Außengerät", hint: "Shelly PM, kWh" },
 
+  { key: "pv_power", label: "PV Leistung aktuell", group: "SG Ready", hint: "eigene Entität, Watt" },
   { key: "sg_k1", label: "Kontakt K1 Sperre", group: "SG Ready", hint: "Shelly, Relais oder Eingang" },
   { key: "sg_k2", label: "Kontakt K2 Anlauf", group: "SG Ready", hint: "Shelly, Relais oder Eingang" },
 
@@ -501,7 +502,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       hk1_setpoint: 36, hk2_water: 30.1, hk2_water_target: 32, hk2_room: 20.8,
       hk2_pump: 0, hk2_setpoint: 32, zones_state: 2,
       dhw_temp: 48.3, dhw_setpoint: 50, dhw_heater: 0, dhw_installed: 1,
-      dhw_force_state: 0, sterilization_state: 0, circulation_pump: 0,
+      dhw_force_state: 0, sterilization_state: 0, circulation_pump: 0, pv_power: 3400,
       sg_k1: "off", sg_k2: "off",
       dhw_force: "off", force_sterilization: "off", force_defrost: "off",
       dhw_heater_switch: "off", room_heater_switch: "off", buffer_switch: "on",
@@ -734,6 +735,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       ["sterilization_state", "Legionellenschutz"],
     ];
     const regler = [
+      ["pv_power", "PV Leistung", 0, 12000],
       ["outside_temp", "Außen", -20, 40],
       ["flow_temp", "Vorlauf", 15, 70],
       ["return_temp", "Rücklauf", 15, 70],
@@ -820,7 +822,7 @@ class LutarymHeatpumpCard extends HTMLElement {
   /** Haelt die Bedienleiste des Demomodus auf Stand. */
   _syncDemo() {
     if (!this._config.demo || !this._demo) return;
-    const felder = ["outside_temp","flow_temp","return_temp","buffer_temp","dhw_temp",
+    const felder = ["pv_power","outside_temp","flow_temp","return_temp","buffer_temp","dhw_temp",
                     "hk1_water","hk2_water","compressor","pump_flow"];
     felder.forEach((feld, i) => {
       const el = this.shadowRoot.getElementById(`demo-r${i}`);
@@ -1309,13 +1311,20 @@ class LutarymHeatpumpCard extends HTMLElement {
       <!-- SG Ready, neben der Wärmepumpe, ohne Rahmen -->
       <g id="sg-group" opacity="0">
         <text class="sg-label" x="480" y="${SG}" text-anchor="middle">SG Ready</text>
-        <g transform="translate(480 ${SG + 12})">
-          <rect x="-60" y="0" width="26" height="12" rx="6" id="sg-seg-1" fill="#586A88"/>
-          <rect x="-30" y="0" width="26" height="12" rx="6" id="sg-seg-2" fill="#586A88"/>
-          <rect x="4" y="0" width="26" height="12" rx="6" id="sg-seg-3" fill="#586A88"/>
-          <rect x="34" y="0" width="26" height="12" rx="6" id="sg-seg-4" fill="#586A88"/>
+        <g transform="translate(480 ${SG + 14})">
+          <rect x="-68" y="0" width="32" height="11" rx="5.5" id="sg-seg-1" fill="#3A4658"/>
+          <rect x="-34" y="0" width="32" height="11" rx="5.5" id="sg-seg-2" fill="#3A4658"/>
+          <rect x="2" y="0" width="32" height="11" rx="5.5" id="sg-seg-3" fill="#3A4658"/>
+          <rect x="36" y="0" width="32" height="11" rx="5.5" id="sg-seg-4" fill="#3A4658"/>
         </g>
         <text class="sg-value" id="sg-text" x="480" y="${SG + 58}"
+              text-anchor="middle">--</text>
+      </g>
+
+      <!-- Aktuelle Leistung der Photovoltaik -->
+      <g id="pv-group" opacity="0">
+        <text class="sg-label" x="800" y="${SG}" text-anchor="middle">PV Leistung</text>
+        <text class="pv-value" id="pv-v" x="800" y="${SG + 44}"
               text-anchor="middle">--</text>
       </g>
 
@@ -1670,7 +1679,11 @@ class LutarymHeatpumpCard extends HTMLElement {
           const seg = sr.getElementById(`sg-seg-${i}`);
           if (!seg) continue;
           const aktiv = sg === i;
-          seg.setAttribute("fill", aktiv ? farbe : "#586A88");
+          // Das zutreffende Segment wird hoeher und leuchtet, die
+          // uebrigen bleiben flach und gedaempft.
+          seg.setAttribute("fill", aktiv ? farbe : "#3A4658");
+          seg.setAttribute("height", aktiv ? "17" : "11");
+          seg.setAttribute("y", aktiv ? "-3" : "0");
           seg.style.color = farbe;
           seg.classList.toggle("is-active", aktiv);
         }
@@ -1717,6 +1730,18 @@ class LutarymHeatpumpCard extends HTMLElement {
       zirkRotor.style.animationDuration = `${PUMP_SECONDS}s`;
       zirkRotor.style.animationPlayState = zirkAn && animate ? "running" : "paused";
     }
+
+    /* Leistung der Photovoltaik */
+    const pv = numState(hass, this._e("pv_power"));
+    zeige("pv-group", pv !== null);
+    set(
+      "pv-v",
+      pv === null
+        ? "--"
+        : Math.abs(pv) >= 1000
+        ? `${fmt(pv / 1000, 2)} kW`
+        : `${fmt(pv, 0)} W`
+    );
 
     /* Temperaturen und Leitungsfarben */
     const flow = numState(hass, this._e("flow_temp"));
@@ -2160,6 +2185,12 @@ class LutarymHeatpumpCard extends HTMLElement {
       .badge.is-on { opacity: 1; }
       .badge.is-on.is-pulsing { animation: lhc-pulse 2.2s ease-in-out infinite; }
 
+      .pv-value {
+        fill: #7BD88F; font-size: 26px; font-weight: 700;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-variant-numeric: tabular-nums;
+      }
+      #pv-group { transition: opacity 300ms ease; }
       .sg-label {
         fill: #C3D0E0; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
       }
@@ -2172,7 +2203,7 @@ class LutarymHeatpumpCard extends HTMLElement {
          damit er sich vom dunklen Gehaeuse abhebt. */
       .sg-value.is-active { filter: drop-shadow(0 0 6px currentColor); }
       #sg-group { transition: opacity 300ms ease; }
-      #sg-group rect { transition: fill 400ms ease; }
+      #sg-group rect { transition: all 400ms ease; }
       /* Der aktive Balken leuchtet, damit er sich klar abhebt. */
       #sg-group rect.is-active { filter: drop-shadow(0 0 5px currentColor); }
       #power-led { transition: fill 400ms ease; }

@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 2.1.5**
+**Version 2.2.0**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -205,6 +205,7 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `quiet_mode` | SetQuietMode | Leisemodus |
 | `power_now` | eigene Entität | Aktuelle Leistungsaufnahme |
 | `energy_today` | eigene Entität | Energiezähler |
+| `pv_power` | eigene Entität | PV Leistung aktuell |
 | `sg_k1` | eigene Entität | Kontakt K1 Sperre |
 | `sg_k2` | eigene Entität | Kontakt K2 Anlauf |
 | `flow_temp` | TOP6 | Vorlauftemperatur |
@@ -355,7 +356,9 @@ Erlaubt sind die Domänen `switch`, `input_boolean`, `binary_sensor` und `sensor
 
 Fehlt einer der beiden Kontakte, blendet sich die Anzeige aus. Ist einer nicht erreichbar, zeigt die Karte "unbekannt", statt einen Zustand zu raten. Ein ausgefallener Shelly darf nicht als offener Kontakt gelten, sonst stünde dort Normalbetrieb, obwohl niemand weiß, was tatsächlich anliegt.
 
-Die Anzeige sitzt oben rechts neben dem Außengerät, ohne eigenen Rahmen. Nichts blinkt. Der Zustandstext steht groß in der Farbe seines Zustands und leuchtet leicht in derselben Farbe, damit er sich vom dunklen Gehäuse abhebt. Ist kein Kontakt eingetragen, blendet sich die Anzeige vollständig aus.
+Die Anzeige sitzt oben rechts neben dem Außengerät, ohne eigenen Rahmen. Der Balken besteht aus vier Segmenten, von denen das zutreffende höher wird und in seiner Farbe leuchtet, während die übrigen flach und gedämpft bleiben. Darunter steht der Zustand im Klartext.
+
+Rechts daneben steht die **aktuelle Leistung der Photovoltaik**, sofern unter `pv_power` eine Entität eingetragen ist. Unter tausend Watt in Watt, darüber in Kilowatt mit zwei Nachkommastellen. Ohne Entität bleibt die Stelle leer. Nichts blinkt. Der Zustandstext steht groß in der Farbe seines Zustands und leuchtet leicht in derselben Farbe, damit er sich vom dunklen Gehäuse abhebt. Ist kein Kontakt eingetragen, blendet sich die Anzeige vollständig aus.
 
 Die Karte zeigt SG Ready nur an, sie schaltet nicht. Wer umschalten will, steuert die Relais über eine Automation.
 
