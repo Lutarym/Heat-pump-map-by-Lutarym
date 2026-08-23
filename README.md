@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 2.1.0**
+**Version 2.1.1**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -295,13 +295,15 @@ Bewegung zeigt an, dass etwas tatsächlich arbeitet. Steht ein Bauteil still, st
 | Primärpumpe | Drehzahl größer null, feste ruhige Geschwindigkeit |
 | Heizkreispumpen | Pumpenstatus an, feste ruhige Geschwindigkeit |
 | Gehäuserahmen außen | Verdichter läuft |
-| Vorlauf und Rücklauf | Primärpumpe oder Durchfluss melden Förderung |
+| Vorlauf und Rücklauf bis zum Ventil | Primärpumpe oder Durchfluss melden Förderung |
+| Vorlauf und Rücklauf hinter dem Ventil | zusätzlich Ventil auf Warmwasser |
+| Sekundärkreis bis Heizkreis 1 | mindestens eine Kreispumpe läuft |
+| Sekundärkreis von Heizkreis 1 zu 2 | nur die Pumpe von Heizkreis 2 |
 | Stichleitung zum Puffer | zusätzlich Dreiwegeventil auf Heizen |
 | Stichleitung zum Speicher | zusätzlich Dreiwegeventil auf Warmwasser |
 
 Steht kein Dreiwegeventil zur Verfügung, entscheidet die Betriebsart: Wert 3 bedeutet "Nur Warmwasser", alles andere gilt als Heizen. Ohne beides läuft nur die Stichleitung zum Puffer, damit nicht beide gleichzeitig strömen.
 | Leitungen eines Heizkreises | nur dessen eigene Kreispumpe |
-| Sekundärkreis vom Puffer | mindestens eine Kreispumpe läuft |
 | Zirkulationsschleife | die Zirkulationspumpe läuft |
 
 Die Laufrichtung folgt dem tatsächlichen Weg des Wassers. Auf dem Vorlauf nach rechts, auf dem Rücklauf nach links, in die Speicher und Heizkörper hinein von oben, heraus nach unten zur Rücklaufleitung.
@@ -309,7 +311,7 @@ Die Laufrichtung folgt dem tatsächlichen Weg des Wassers. Auf dem Vorlauf nach 
 | Hinweise Heizstab und Abtauung | solange sie aktiv sind |
 | Störungsbalken | solange ein Fehlercode anliegt |
 
-Jeder Leitungsabschnitt wird einzeln geschaltet. Läuft nur Heizkreis 1, bewegt sich auch nur dessen Leitung. Fehlen die Entitäten für Pumpendrehzahl und Durchfluss, bewegt sich nichts. Die Karte nimmt nichts an, was sie nicht messen kann.
+Jede Leitung ist in Abschnitte geteilt, die einzeln geschaltet werden. Der Vorlauf hinter dem Dreiwegeventil führt nur zum Warmwasserspeicher, er bewegt sich also nur bei einer Warmwasserladung. Beim Sekundärkreis endet die Bewegung am letzten laufenden Heizkreis: läuft nur Heizkreis 1, steht der Abschnitt dahinter still. Läuft nur Heizkreis 1, bewegt sich auch nur dessen Leitung. Fehlen die Entitäten für Pumpendrehzahl und Durchfluss, bewegt sich nichts. Die Karte nimmt nichts an, was sie nicht messen kann.
 
 Alle Pumpen drehen mit derselben ruhigen Geschwindigkeit, drei Sekunden pro Umdrehung. Sie sollen nur zeigen, dass gefördert wird, nicht wie schnell. Die tatsächliche Drehzahl der Primärpumpe steht als Zahl daneben. Nur die Lüfter drehen nach echter Drehzahl, dort ist der Unterschied zwischen leisem und vollem Betrieb gut sichtbar.
 

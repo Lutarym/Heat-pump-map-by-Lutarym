@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.1.0";
+const CARD_VERSION = "2.1.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1243,8 +1243,12 @@ class LutarymHeatpumpCard extends HTMLElement {
       <path class="pipe" id="pipe-return" d="M340 ${R} H 1525"/>
       <path class="pipe-shell" d="M340 ${F} H 1525"/>
       <path class="pipe" id="pipe-flow" d="M340 ${F} H 1525"/>
-      <path class="flowdots" id="dots-vorlauf" d="M340 ${F} H 1525"/>
-      <path class="flowdots rev" id="dots-ruecklauf" d="M340 ${R} H 1525"/>
+      <!-- Zwei Abschnitte je Leitung: bis zum Ventil und dahinter.
+           Der Teil hinter dem Ventil fuehrt nur zum Warmwasserspeicher. -->
+      <path class="flowdots" id="dots-vl-a" d="M340 ${F} H 630"/>
+      <path class="flowdots" id="dots-vl-b" d="M630 ${F} H 1525"/>
+      <path class="flowdots rev" id="dots-rl-a" d="M340 ${R} H 630"/>
+      <path class="flowdots rev" id="dots-rl-b" d="M630 ${R} H 1525"/>
 
       <path class="pipe-shell" d="M630 ${F} V ${T} M630 ${B} V ${R}"/>
       <path class="pipe" id="pipe-buf-in" d="M630 ${F} V ${T}"/>
@@ -1256,8 +1260,16 @@ class LutarymHeatpumpCard extends HTMLElement {
       <path class="pipe-shell" d="M730 ${SF} H ${SEC_VL_ENDE} M730 ${SR} H ${SEC_RL_ENDE}"/>
       <path class="pipe" id="pipe-sec-flow" d="M730 ${SF} H ${SEC_VL_ENDE}"/>
       <path class="pipe" id="pipe-sec-ret" d="M730 ${SR} H ${SEC_RL_ENDE}"/>
-      <path class="flowdots" id="dots-sec-flow" d="M730 ${SF} H ${SEC_VL_ENDE}"/>
-      <path class="flowdots rev" id="dots-sec-ret" d="M730 ${SR} H ${SEC_RL_ENDE}"/>
+      <!-- Auch hier abschnittsweise: der Weg zum zweiten Heizkreis
+           fuehrt nur Wasser, wenn dessen Pumpe laeuft. -->
+      <path class="flowdots" id="dots-sf-a" d="M730 ${SF} H 870"/>
+      <path class="flowdots rev" id="dots-sr-a" d="M730 ${SR} H 990"/>
+      ${
+        hk2
+          ? `<path class="flowdots" id="dots-sf-b" d="M870 ${SF} H 1160"/>
+             <path class="flowdots rev" id="dots-sr-b" d="M990 ${SR} H 1280"/>`
+          : ""
+      }
 
       <path class="pipe-shell" d="M1525 ${F} V ${T} M1525 ${B} V ${R}"/>
       <path class="pipe" id="pipe-dhw-in" d="M1525 ${F} V ${T}"/>
@@ -1817,8 +1829,11 @@ class LutarymHeatpumpCard extends HTMLElement {
     // Der Sekundaerkreis wird bewegt, sobald eine Kreispumpe foerdert.
     // Seine Waerme kommt aus dem Puffer, nicht aus der Waermepumpe.
     const sekundaer = hk1Laeuft || hk2Laeuft;
-    stroemt(["dots-sec-flow"], sekundaer, col(buf));
-    stroemt(["dots-sec-ret"], sekundaer, col(buf === null ? null : buf - 6));
+    // Der Abschnitt zum zweiten Heizkreis nur, wenn dessen Pumpe laeuft.
+    stroemt(["dots-sf-a"], sekundaer, col(buf));
+    stroemt(["dots-sr-a"], sekundaer, col(buf === null ? null : buf - 6));
+    stroemt(["dots-sf-b"], hk2Laeuft, col(buf));
+    stroemt(["dots-sr-b"], hk2Laeuft, col(buf === null ? null : buf - 6));
     stroke("pipe-sec-flow", col(buf));
     stroke("pipe-sec-ret", col(buf === null ? null : buf - 6));
 
@@ -1828,8 +1843,11 @@ class LutarymHeatpumpCard extends HTMLElement {
     const primaer =
       (pumpRpm !== null && pumpRpm > 0) || (flowRate !== null && flowRate > 0);
     // Jeder Abschnitt einzeln, abhaengig nur vom eigenen Kreis.
-    stroemt(["dots-vorlauf"], primaer, col(flow));
-    stroemt(["dots-ruecklauf"], primaer, col(ret));
+    // Vor dem Ventil fliesst immer, dahinter nur bei Warmwasserladung.
+    stroemt(["dots-vl-a"], primaer, col(flow));
+    stroemt(["dots-vl-b"], primaer && zuWarmwasser, col(flow));
+    stroemt(["dots-rl-a"], primaer, col(ret));
+    stroemt(["dots-rl-b"], primaer && zuWarmwasser, col(ret));
     stroemt(["dots-buf", "dots-buf2"], primaer && !zuWarmwasser, col(buf));
     stroemt(["dots-dhw", "dots-dhw2"], primaer && zuWarmwasser, col(dhw));
     stroemt(["dots-zirk"], zirkAn, col(dhw));
