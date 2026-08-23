@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.1.4";
+const CARD_VERSION = "2.1.5";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1822,9 +1822,12 @@ class LutarymHeatpumpCard extends HTMLElement {
     blende("dhw-group", wasserDa);
 
     /* Heizkreise */
-    const hk1Laeuft = this._circuitUpdate(1, col, animate);
+    // Der gesamte Sekundaerkreis fuehrt Pufferwasser. Damit die Farbe
+    // an den Verbindungsstellen nicht springt, tragen Fallrohr,
+    // Steigrohr und die waagerechten Leitungen denselben Wert.
+    const hk1Laeuft = this._circuitUpdate(1, col, animate, buf);
     const hk2Laeuft =
-      this._config.hk_count === 2 ? this._circuitUpdate(2, col, animate) : false;
+      this._config.hk_count === 2 ? this._circuitUpdate(2, col, animate, buf) : false;
 
     // Der Sekundaerkreis wird bewegt, sobald eine Kreispumpe foerdert.
     // Seine Waerme kommt aus dem Puffer, nicht aus der Waermepumpe.
@@ -1876,7 +1879,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     this._syncDialog();
   }
 
-  _circuitUpdate(n, col, animate) {
+  _circuitUpdate(n, col, animate, buf) {
     const hass = this._quelle;
     const sr = this.shadowRoot;
     const water = numState(hass, this._e(`hk${n}_water`));
@@ -1916,9 +1919,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       const el = sr.getElementById(id);
       if (!el) return;
       el.classList.toggle("is-on", animate && pumpOn);
-      // HeishaMon kennt keine Ruecklauftemperatur je Heizkreis.
-      // Beide Richtungen tragen deshalb den gemessenen Wert des Kreises.
-      el.style.stroke = col(water);
+      // Beide Richtungen tragen die Puffertemperatur, wie die
+      // waagerechten Leitungen, an die sie anschliessen.
+      el.style.stroke = col(buf);
     });
 
 

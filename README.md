@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 2.1.4**
+**Version 2.1.5**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -275,14 +275,15 @@ Sind diese Entitäten nicht zugeordnet, blendet die Karte nichts ab.
 
 Die laufenden Striche tragen die Farbe des Wassers, das dort gerade fließt, auf derselben Skala wie die Speicher. Von Blau bei kaltem bis Rot bei heißem Wasser, einstellbar über `scale_min` und `scale_max`. Die Rohre selbst bleiben neutral, damit sich die Strömung von ihnen abhebt.
 
-HeishaMon misst keine Rücklauftemperatur je Heizkreis. TOP36 und TOP37 sind die Vorlauftemperaturen der Kreise, TOP5 ist der Rücklauf der Wärmepumpe. Zu- und Ablauf eines Heizkreises tragen deshalb dieselbe Farbe. Ein Abschlag wäre geschätzt und nicht gemessen.
+Der gesamte Sekundärkreis führt Pufferwasser und trägt deshalb durchgehend die Puffertemperatur, von der waagerechten Leitung über das Fallrohr bis zum Steigrohr zurück. So springt die Farbe an keiner Verbindungsstelle.
+
+HeishaMon misst keine Rücklauftemperatur je Heizkreis. TOP36 und TOP37 sind die Vorlauftemperaturen der Kreise, TOP5 ist der Rücklauf der Wärmepumpe. Die Temperatur des einzelnen Kreises steht als Zahl am Heizkörper, sie wird nicht in die Leitungsfarbe übersetzt, weil sonst ein geschätzter Abschlag nötig wäre.
 
 | Abschnitt | Farbe nach |
 |---|---|
 | Primärer Vorlauf und Stiche zu Puffer und Speicher | Vorlauftemperatur |
 | Primärer Rücklauf und Abläufe | Rücklauftemperatur |
-| Sekundärkreis, beide Richtungen | Puffertemperatur |
-| Beide Richtungen eines Heizkreises | dessen Wassertemperatur |
+| Sekundärkreis samt Heizkreisen | Puffertemperatur |
 | Zirkulation | Warmwassertemperatur |
 
 ## Blasen in den Speichern
