@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.9.7**
+**Version 2.0.0**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -18,7 +18,13 @@ Die Karte hat bewusst keine Überschrift. Alles steht in der Zeichnung.
 
 **Primärpumpe** auf der Rücklaufleitung zwischen Puffer und Wärmepumpe. Drehzahl und Durchflussmenge stehen rechts daneben über der Leitung.
 
-In Fließrichtung liegen auf dem Rücklauf nacheinander: Warmwasserspeicher, Heizkreis 2, Heizkreis 1, Puffer, dann die Pumpe und zuletzt die Wärmepumpe. Das Wasser aller Kreise läuft also zusammen, geht durch die Pumpe und von dort zurück in die Wärmepumpe. Der Puffer wird über dieselbe Pumpe geladen, sobald das Dreiwegeventil auf Heizen steht.
+Die Anlage hat zwei getrennte Kreise, wie es bei einem Pufferspeicher üblich ist.
+
+Der **Primärkreis** verbindet die Wärmepumpe über das Dreiwegeventil entweder mit dem Puffer oder mit dem Warmwasserspeicher. Er wird von der Primärpumpe umgewälzt.
+
+Der **Sekundärkreis** verbindet den Puffer mit den Heizkreisen. Jeder Heizkreis hat seine eigene Pumpe und nimmt seine Wärme aus dem Puffer, nicht direkt aus der Wärmepumpe. Er bewegt sich, sobald mindestens eine Kreispumpe fördert, und ist in der Temperatur des Puffers eingefärbt.
+
+Dadurch kann die Wärmepumpe Warmwasser laden, während die Heizkreise weiter aus dem Puffer versorgt werden. Genau dafür ist ein Puffer da.
 
 **Heizungspuffer** als großer Speicher, eingefärbt nach seiner Temperatur, darunter die Zieltemperatur. Im Wasser steigen Blasen auf, und zwar umso mehr, je wärmer der Speicher ist.
 
@@ -26,7 +32,7 @@ In Fließrichtung liegen auf dem Rücklauf nacheinander: Warmwasserspeicher, Hei
 
 **Wasserdruck** als Manometer. Es erscheint nur, wenn ein Wert vorliegt, sonst bleibt die Stelle leer.
 
-**Dreiwegeventil** an der Abzweigung im Vorlauf, also dort wo sich der Weg teilt: nach unten in den Puffer oder weiter nach rechts zum Warmwasserspeicher. Seine Stellung erkennst du an der Farbe des Punktes, die zur jeweils bedienten Seite passt.
+**Dreiwegeventil** an der Abzweigung im Vorlauf. Es hat zwei sichtbare Wege, einen nach unten in den Puffer und einen nach rechts zum Warmwasserspeicher. Der gerade bediente Weg leuchtet in der Vorlauftemperatur, der gesperrte bleibt dunkel. Damit ist die Stellung ablesbar, ohne die Farbe deuten zu müssen.
 
 **Warmwasserspeicher** mit Ist- und Zieltemperatur und einem Hinweis, wenn der Heizstab läuft. Im Wasser steigen Blasen auf, umso mehr je wärmer der Speicher ist.
 
@@ -294,6 +300,7 @@ Bewegung zeigt an, dass etwas tatsächlich arbeitet. Steht ein Bauteil still, st
 
 Steht kein Dreiwegeventil zur Verfügung, entscheidet die Betriebsart: Wert 3 bedeutet "Nur Warmwasser", alles andere gilt als Heizen. Ohne beides läuft nur die Stichleitung zum Puffer, damit nicht beide gleichzeitig strömen.
 | Leitungen eines Heizkreises | nur dessen eigene Kreispumpe |
+| Sekundärkreis vom Puffer | mindestens eine Kreispumpe läuft |
 | Zirkulationsschleife | die Zirkulationspumpe läuft |
 
 Die Laufrichtung folgt dem tatsächlichen Weg des Wassers. Auf dem Vorlauf nach rechts, auf dem Rücklauf nach links, in die Speicher und Heizkörper hinein von oben, heraus nach unten zur Rücklaufleitung.

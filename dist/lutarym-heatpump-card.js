@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.9.7";
+const CARD_VERSION = "2.0.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -19,8 +19,10 @@ const L = {
   RET_Y: 700,
   TANK_TOP: 290,
   TANK_BOTTOM: 640,
-  RAD_TOP: 340,
-  RAD_BOTTOM: 540,
+  RAD_TOP: 400,
+  RAD_BOTTOM: 580,
+  SEC_FLOW: 320,
+  SEC_RET: 620,
   UNIT_TOP: 60,
   UNIT_BOTTOM: 760,
   CAP_Y: 768,
@@ -971,6 +973,10 @@ class LutarymHeatpumpCard extends HTMLElement {
 
     const F = L.FLOW_Y;
     const R = L.RET_Y;
+    const SF = L.SEC_FLOW;
+    const SR = L.SEC_RET;
+    // Der Sekundaerkreis endet am letzten vorhandenen Heizkreis.
+    const SEC_ENDE = this._config.hk_count === 2 ? 1280 : 990;
     const T = L.TANK_TOP;
     const B = L.TANK_BOTTOM;
     const C = L.CAP_Y;
@@ -1026,6 +1032,13 @@ class LutarymHeatpumpCard extends HTMLElement {
       <path class="pipe" id="pipe-buf-out" d="M630 ${B} V ${R}"/>
       <path class="flowdots" id="dots-buf" d="M630 ${F} V ${T}"/>
       <path class="flowdots" id="dots-buf2" d="M630 ${B} V ${R}"/>
+
+      <!-- Sekundaerkreis: vom Puffer zu den Heizkreisen und zurueck -->
+      <path class="pipe-shell" d="M730 ${SF} H ${SEC_ENDE} M730 ${SR} H ${SEC_ENDE}"/>
+      <path class="pipe" id="pipe-sec-flow" d="M730 ${SF} H ${SEC_ENDE}"/>
+      <path class="pipe" id="pipe-sec-ret" d="M730 ${SR} H ${SEC_ENDE}"/>
+      <path class="flowdots" id="dots-sec-flow" d="M730 ${SF} H ${SEC_ENDE}"/>
+      <path class="flowdots rev" id="dots-sec-ret" d="M730 ${SR} H ${SEC_ENDE}"/>
 
       <path class="pipe-shell" d="M1525 ${F} V ${T} M1525 ${B} V ${R}"/>
       <path class="pipe" id="pipe-dhw-in" d="M1525 ${F} V ${T}"/>
@@ -1141,10 +1154,12 @@ class LutarymHeatpumpCard extends HTMLElement {
       <!-- Dreiwegeventil an der Abzweigung: hier teilt sich der Vorlauf
            nach unten in den Puffer oder weiter nach rechts zum Speicher. -->
       <g>
+        <path class="valve-arm" id="valve-arm-down" d="M630 ${F} V ${F + 34}"/>
+        <path class="valve-arm" id="valve-arm-right" d="M630 ${F} H 672"/>
         <rect x="612" y="${F - 18}" width="36" height="36" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="2"
               transform="rotate(45 630 ${F})"/>
-        <circle cx="630" cy="${F}" r="9" id="valve-dot" fill="${NEUTRAL}"/>
+        <circle cx="630" cy="${F}" r="7" id="valve-dot" fill="${NEUTRAL}"/>
       </g>
 
       <!-- Warmwasserspeicher -->
@@ -1193,11 +1208,12 @@ class LutarymHeatpumpCard extends HTMLElement {
     const RT = L.RAD_TOP;
     const RB = L.RAD_BOTTOM;
     const mid = (x1 + x2) / 2;
-    const drop = `M${dropX} ${F} V ${RT}`;
+    // Die Heizkreise haengen am Puffer, nicht an der Waermepumpe.
+    const drop = `M${dropX} ${L.SEC_FLOW} V ${RT}`;
     // Die Pumpe sitzt in der Mitte der Stichleitung, rechnerisch aus
     // Vorlauf und Heizkoerper. So verrutscht sie bei Rasteraenderungen nicht.
-    const pumpY = Math.round((F + RT) / 2);
-    const back = `M${backX} ${RB} V ${R}`;
+    const pumpY = Math.round((L.SEC_FLOW + RT) / 2);
+    const back = `M${backX} ${RB} V ${L.SEC_RET}`;
 
     let fins = "";
     for (let x = x1 + 26; x < x2 - 10; x += 30) {
@@ -1529,11 +1545,16 @@ class LutarymHeatpumpCard extends HTMLElement {
     }
     set("valve-v", valveText);
     const dot = sr.getElementById("valve-dot");
-    if (dot) {
-      dot.setAttribute(
-        "fill",
-        valveNum === null ? NEUTRAL : zuWarmwasser ? col(dhw) : col(flow)
-      );
+    if (dot) dot.setAttribute("fill", valveNum === null ? NEUTRAL : col(flow));
+    // Der bediente Weg leuchtet, der gesperrte bleibt dunkel.
+    const armAb = sr.getElementById("valve-arm-down");
+    const armRechts = sr.getElementById("valve-arm-right");
+    const gesperrt = "#2C3646";
+    if (armAb) {
+      armAb.setAttribute("stroke", zuWarmwasser ? gesperrt : col(flow));
+    }
+    if (armRechts) {
+      armRechts.setAttribute("stroke", zuWarmwasser ? col(flow) : gesperrt);
     }
 
     /* Welche Kreise sind ueberhaupt aktiviert?
@@ -1560,8 +1581,17 @@ class LutarymHeatpumpCard extends HTMLElement {
     blende("dhw-group", wasserDa);
 
     /* Heizkreise */
-    this._circuitUpdate(1, col, animate);
-    if (this._config.hk_count === 2) this._circuitUpdate(2, col, animate);
+    const hk1Laeuft = this._circuitUpdate(1, col, animate);
+    const hk2Laeuft =
+      this._config.hk_count === 2 ? this._circuitUpdate(2, col, animate) : false;
+
+    // Der Sekundaerkreis wird bewegt, sobald eine Kreispumpe foerdert.
+    // Seine Waerme kommt aus dem Puffer, nicht aus der Waermepumpe.
+    const sekundaer = hk1Laeuft || hk2Laeuft;
+    stroemt(["dots-sec-flow"], sekundaer, col(buf));
+    stroemt(["dots-sec-ret"], sekundaer, col(buf === null ? null : buf - 6));
+    stroke("pipe-sec-flow", col(buf));
+    stroke("pipe-sec-ret", col(buf === null ? null : buf - 6));
 
     /* Durchflussanimation */
     // Der Primaerkreis foerdert, wenn Pumpe oder Durchfluss das melden.
@@ -1794,6 +1824,12 @@ class LutarymHeatpumpCard extends HTMLElement {
       /* Nicht aktivierte Kreise werden abgeblendet, nicht ausgeblendet.
          So bleibt erkennbar, dass es sie gibt. */
       .is-inaktiv { opacity: 0.28; transition: opacity 600ms ease; }
+      /* Die beiden Wege des Dreiwegeventils. Der bediente Weg leuchtet,
+         der gesperrte bleibt dunkel. */
+      .valve-arm {
+        fill: none; stroke: #2C3646; stroke-width: 9; stroke-linecap: round;
+        transition: stroke 600ms ease;
+      }
       .cap { fill: #98A6BA; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
       .cap-s { fill: #7E8CA0; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
       .value-l {
