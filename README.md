@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.9.5**
+**Version 1.9.6**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -295,6 +295,8 @@ Bewegung zeigt an, dass etwas tatsächlich arbeitet. Steht ein Bauteil still, st
 Steht kein Dreiwegeventil zur Verfügung, entscheidet die Betriebsart: Wert 3 bedeutet "Nur Warmwasser", alles andere gilt als Heizen. Ohne beides läuft nur die Stichleitung zum Puffer, damit nicht beide gleichzeitig strömen.
 | Leitungen eines Heizkreises | nur dessen eigene Kreispumpe |
 | Zirkulationsschleife | die Zirkulationspumpe läuft |
+
+Die Laufrichtung folgt dem tatsächlichen Weg des Wassers. Auf dem Vorlauf nach rechts, auf dem Rücklauf nach links, in die Speicher und Heizkörper hinein von oben, heraus nach unten zur Rücklaufleitung.
 | Blasen in Puffer und Speicher | dauerhaft, Menge nach Temperatur |
 | Hinweise Heizstab und Abtauung | solange sie aktiv sind |
 | Störungsbalken | solange ein Fehlercode anliegt |

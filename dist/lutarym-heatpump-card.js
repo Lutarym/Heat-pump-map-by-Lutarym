@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.9.5";
+const CARD_VERSION = "1.9.6";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1025,13 +1025,13 @@ class LutarymHeatpumpCard extends HTMLElement {
       <path class="pipe" id="pipe-buf-in" d="M630 ${F} V ${T}"/>
       <path class="pipe" id="pipe-buf-out" d="M630 ${B} V ${R}"/>
       <path class="flowdots" id="dots-buf" d="M630 ${F} V ${T}"/>
-      <path class="flowdots rev" id="dots-buf2" d="M630 ${B} V ${R}"/>
+      <path class="flowdots" id="dots-buf2" d="M630 ${B} V ${R}"/>
 
       <path class="pipe-shell" d="M1525 ${F} V ${T} M1525 ${B} V ${R}"/>
       <path class="pipe" id="pipe-dhw-in" d="M1525 ${F} V ${T}"/>
       <path class="pipe" id="pipe-dhw-out" d="M1525 ${B} V ${R}"/>
       <path class="flowdots" id="dots-dhw" d="M1525 ${F} V ${T}"/>
-      <path class="flowdots rev" id="dots-dhw2" d="M1525 ${B} V ${R}"/>
+      <path class="flowdots" id="dots-dhw2" d="M1525 ${B} V ${R}"/>
 
       <!-- Außengerät -->
       <g class="unit" id="unit-group">
@@ -1209,7 +1209,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <path class="pipe" id="pipe-hk${n}-in" d="${drop}"/>
         <path class="pipe" id="pipe-hk${n}-out" d="${back}"/>
         <path class="flowdots" id="dots-hk${n}" d="${drop}"/>
-        <path class="flowdots rev" id="dots-hk${n}b" d="${back}"/>
+        <path class="flowdots" id="dots-hk${n}b" d="${back}"/>
 
         <g transform="translate(${dropX} ${pumpY})">
           <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
