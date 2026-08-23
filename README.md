@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 2.1.1**
+**Version 2.1.3**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -270,6 +270,18 @@ Die Karte unterscheidet zwischen "läuft gerade" und "ist überhaupt vorhanden".
 TOP94 kennt drei Zustände: nur Zone 1, nur Zone 2, beide Zonen. Daraus leitet die Karte für jeden Heizkreis einzeln ab, ob er dargestellt oder abgeblendet wird.
 
 Sind diese Entitäten nicht zugeordnet, blendet die Karte nichts ab.
+
+## Eingefärbte Strömung
+
+Die laufenden Striche tragen die Farbe des Wassers, das dort gerade fließt, auf derselben Skala wie die Speicher. Von Blau bei kaltem bis Rot bei heißem Wasser, einstellbar über `scale_min` und `scale_max`. Die Rohre selbst bleiben neutral, damit sich die Strömung von ihnen abhebt.
+
+| Abschnitt | Farbe nach |
+|---|---|
+| Primärer Vorlauf und Stiche zu Puffer und Speicher | Vorlauftemperatur |
+| Primärer Rücklauf und Abläufe | Rücklauftemperatur |
+| Sekundärer Vorlauf | Puffertemperatur |
+| Zulauf eines Heizkreises | dessen Wassertemperatur |
+| Zirkulation | Warmwassertemperatur |
 
 ## Blasen in den Speichern
 

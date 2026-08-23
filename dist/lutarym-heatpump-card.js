@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.1.1";
+const CARD_VERSION = "2.1.3";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1567,10 +1567,6 @@ class LutarymHeatpumpCard extends HTMLElement {
       const el = sr.getElementById(id);
       if (el) el.setAttribute("stop-color", color);
     };
-    const stroke = (id, color) => {
-      const el = sr.getElementById(id);
-      if (el) el.setAttribute("stroke", color);
-    };
     const zeige = (id, sichtbar) => {
       const el = sr.getElementById(id);
       if (el) el.setAttribute("opacity", sichtbar ? "1" : "0");
@@ -1582,12 +1578,15 @@ class LutarymHeatpumpCard extends HTMLElement {
       el.classList.toggle("is-pulsing", aktiv && animate);
     };
     // Schaltet die Laufstriche eines Leitungsabschnitts.
+    // Die laufenden Striche tragen die Temperatur des Wassers, das
+    // dort gerade fliesst. Die Stilregel .flowdots setzt stroke, und
+    // CSS schlaegt ein Attribut, daher als Inline-Stil.
     const stroemt = (ids, an, farbe) => {
       ids.forEach((id) => {
         const el = sr.getElementById(id);
         if (!el) return;
         el.classList.toggle("is-on", animate && an === true);
-        if (farbe) el.setAttribute("stroke", farbe);
+        if (farbe) el.style.stroke = farbe;
       });
     };
 
@@ -1721,8 +1720,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     const ret = numState(hass, this._e("return_temp"));
     const buf = numState(hass, this._e("buffer_temp"));
     const dhw = numState(hass, this._e("dhw_temp"));
-    ["pipe-flow", "pipe-buf-in", "pipe-dhw-in"].forEach((id) => stroke(id, col(flow)));
-    ["pipe-return", "pipe-buf-out", "pipe-dhw-out"].forEach((id) => stroke(id, col(ret)));
 
     // Beide Temperaturen zusaetzlich als Zahl im Gehaeuse, thermisch gefaerbt.
     set("unit-flow-v", flow === null ? "--" : `${fmt(flow)} °C`);
@@ -1834,8 +1831,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     stroemt(["dots-sr-a"], sekundaer, col(buf === null ? null : buf - 6));
     stroemt(["dots-sf-b"], hk2Laeuft, col(buf));
     stroemt(["dots-sr-b"], hk2Laeuft, col(buf === null ? null : buf - 6));
-    stroke("pipe-sec-flow", col(buf));
-    stroke("pipe-sec-ret", col(buf === null ? null : buf - 6));
 
     /* Durchflussanimation */
     // Der Primaerkreis foerdert, wenn Pumpe oder Durchfluss das melden.
@@ -1848,10 +1843,11 @@ class LutarymHeatpumpCard extends HTMLElement {
     stroemt(["dots-vl-b"], primaer && zuWarmwasser, col(flow));
     stroemt(["dots-rl-a"], primaer, col(ret));
     stroemt(["dots-rl-b"], primaer && zuWarmwasser, col(ret));
-    stroemt(["dots-buf", "dots-buf2"], primaer && !zuWarmwasser, col(buf));
-    stroemt(["dots-dhw", "dots-dhw2"], primaer && zuWarmwasser, col(dhw));
+    stroemt(["dots-buf"], primaer && !zuWarmwasser, col(flow));
+    stroemt(["dots-buf2"], primaer && !zuWarmwasser, col(ret));
+    stroemt(["dots-dhw"], primaer && zuWarmwasser, col(flow));
+    stroemt(["dots-dhw2"], primaer && zuWarmwasser, col(ret));
     stroemt(["dots-zirk"], zirkAn, col(dhw));
-    stroke("pipe-zirk", col(dhw));
 
     // Blasen: je waermer der Speicher, desto mehr steigen auf.
     const blasen = (id, wert) => {
@@ -1913,17 +1909,14 @@ class LutarymHeatpumpCard extends HTMLElement {
     set(`hk${n}-pump-v`, pumpOn ? "läuft" : "aus");
 
     // Die beiden Leitungen dieses Heizkreises laufen nur mit seiner Pumpe.
-    [`dots-hk${n}`, `dots-hk${n}b`].forEach((id) => {
+    [`dots-hk${n}`, `dots-hk${n}b`].forEach((id, i) => {
       const el = sr.getElementById(id);
       if (!el) return;
       el.classList.toggle("is-on", animate && pumpOn);
-      el.setAttribute("stroke", col(water));
+      el.style.stroke = col(i === 0 ? water : water - 6);
     });
 
-    ["in", "out"].forEach((seite) => {
-      const el = sr.getElementById(`pipe-hk${n}-${seite}`);
-      if (el) el.setAttribute("stroke", col(seite === "in" ? water : water - 6));
-    });
+
     return pumpOn;
   }
 
