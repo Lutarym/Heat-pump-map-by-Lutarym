@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 2.4.0**
+**Version 2.4.1**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -384,6 +384,8 @@ Ist keine Anzeigequelle eingetragen, zeigt der Regler den Wert der stellbaren En
 Im Editor unter Darstellung lässt sich der **Demomodus** einschalten. Die Karte ersetzt dann alle Entitäten durch erfundene Werte und blendet über dem Schaubild eine Bedienleiste ein.
 
 Damit kannst du jede Anzeige und jede Bewegung ausprobieren, ohne auf den passenden Betriebszustand zu warten: Pumpen ein und aus, Ventil umschalten, Abtauung, Heizstäbe, Zirkulation, Legionellenschutz, alle vier SG-Ready-Zustände, eine Störung auslösen, und neun Schieberegler für Außen, Vorlauf, Rücklauf, Puffer, Warmwasser, beide Heizkreise, Verdichter und Durchfluss.
+
+Schaltbefehl und Rückmeldung gehören dabei zusammen: schaltest du im Demomodus die Wärmepumpe ab, folgt auch das Rückmeldetopic TOP0, und die Karte stellt die Bewegung ein. Dasselbe gilt für Aufheizen, Abtauen, Legionellenschutz, beide Heizstäbe und den Pufferbetrieb.
 
 **An die Wärmepumpe wird dabei nichts gesendet.** Auch die Fenster im Schaubild wirken nur auf die Nachbildung. Der Knopf "Zurücksetzen" stellt die Ausgangswerte wieder her.
 

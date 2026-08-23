@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.4.0";
+const CARD_VERSION = "2.4.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -121,6 +121,25 @@ const HOLD_MS = 12000;
 
 // Vorrat an Blasen je Speicher. Sichtbar ist ein Anteil davon.
 const BUBBLE_COUNT = 14;
+
+// Im Demomodus gehoeren Schaltbefehl und Rueckmeldetopic zusammen.
+// Wird das eine gesetzt, folgt das andere.
+const DEMO_PAARE = {
+  power_state: "heatpump_state",
+  heatpump_state: "power_state",
+  dhw_force: "dhw_force_state",
+  dhw_force_state: "dhw_force",
+  force_defrost: "defrost",
+  defrost: "force_defrost",
+  force_sterilization: "sterilization_state",
+  sterilization_state: "force_sterilization",
+  dhw_heater_switch: "dhw_heater",
+  dhw_heater: "dhw_heater_switch",
+  room_heater_switch: "room_heater",
+  room_heater: "room_heater_switch",
+  buffer_switch: "buffer_installed",
+  buffer_installed: "buffer_switch",
+};
 
 function clamp(v, lo, hi) {
   return Math.min(hi, Math.max(lo, v));
@@ -497,6 +516,7 @@ class LutarymHeatpumpCard extends HTMLElement {
   _demoAufbauen() {
     const werte = {
       outside_temp: 8.5, heatpump_state: 1, compressor: 42,
+      fan1_rpm: 640, fan2_rpm: 620,
       power_now: 1240, energy_today: 8.4,
       flow_temp: 39.2, return_temp: 33.1, pump_speed: 2400, pump_flow: 18.6,
       three_way_valve: 0, water_pressure: 1.8, defrost: 0, error: "0",
@@ -548,16 +568,44 @@ class LutarymHeatpumpCard extends HTMLElement {
         else if (dienst === "toggle") {
           states[id].state = states[id].state === "on" ? "off" : "on";
         }
+        // Auch ein Befehl aus einem Fenster zieht die Rueckmeldung nach.
+        const feld = id.slice(5);
+        const paar = DEMO_PAARE[feld];
+        if (paar && states[`demo.${paar}`]) {
+          const an = states[id].state === "on" || parseFloat(states[id].state) > 0;
+          const zielIstSchalter =
+            paar.endsWith("_switch") || paar.startsWith("force_") ||
+            paar === "power_state" || paar === "dhw_force" || paar === "buffer_switch";
+          states[`demo.${paar}`].state = zielIstSchalter
+            ? an ? "on" : "off"
+            : an ? "1" : "0";
+        }
         karte._render();
       },
     };
   }
 
-  /** Setzt einen Wert der Nachbildung. */
+  /**
+   * Setzt einen Wert der Nachbildung.
+   * Schaltbefehl und Rueckmeldetopic gehoeren zusammen und werden
+   * gemeinsam gesetzt. Sonst schaltet man im Demomodus etwas um,
+   * ohne dass die zugehoerige Rueckmeldung folgt.
+   */
   _demoSetze(feld, wert) {
     if (!this._demo) return;
-    const eintrag = this._demo.states[`demo.${feld}`];
-    if (eintrag) eintrag.state = String(wert);
+    const setze = (name, w) => {
+      const eintrag = this._demo.states[`demo.${name}`];
+      if (eintrag) eintrag.state = String(w);
+    };
+    setze(feld, wert);
+
+    const an = wert === "on" || parseFloat(wert) > 0;
+    const paar = DEMO_PAARE[feld];
+    if (paar) {
+      const zielIstSchalter = paar.endsWith("_switch") || paar.startsWith("force_") ||
+        paar === "power_state" || paar === "dhw_force" || paar === "buffer_switch";
+      setze(paar, zielIstSchalter ? (an ? "on" : "off") : an ? 1 : 0);
+    }
     this._render();
   }
 
