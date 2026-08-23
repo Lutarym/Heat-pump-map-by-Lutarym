@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 2.1.3**
+**Version 2.1.4**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -275,12 +275,14 @@ Sind diese Entitäten nicht zugeordnet, blendet die Karte nichts ab.
 
 Die laufenden Striche tragen die Farbe des Wassers, das dort gerade fließt, auf derselben Skala wie die Speicher. Von Blau bei kaltem bis Rot bei heißem Wasser, einstellbar über `scale_min` und `scale_max`. Die Rohre selbst bleiben neutral, damit sich die Strömung von ihnen abhebt.
 
+HeishaMon misst keine Rücklauftemperatur je Heizkreis. TOP36 und TOP37 sind die Vorlauftemperaturen der Kreise, TOP5 ist der Rücklauf der Wärmepumpe. Zu- und Ablauf eines Heizkreises tragen deshalb dieselbe Farbe. Ein Abschlag wäre geschätzt und nicht gemessen.
+
 | Abschnitt | Farbe nach |
 |---|---|
 | Primärer Vorlauf und Stiche zu Puffer und Speicher | Vorlauftemperatur |
 | Primärer Rücklauf und Abläufe | Rücklauftemperatur |
-| Sekundärer Vorlauf | Puffertemperatur |
-| Zulauf eines Heizkreises | dessen Wassertemperatur |
+| Sekundärkreis, beide Richtungen | Puffertemperatur |
+| Beide Richtungen eines Heizkreises | dessen Wassertemperatur |
 | Zirkulation | Warmwassertemperatur |
 
 ## Blasen in den Speichern
@@ -368,7 +370,7 @@ Ist keine Anzeigequelle eingetragen, zeigt der Regler den Wert der stellbaren En
 
 Im Editor unter Darstellung lässt sich der **Demomodus** einschalten. Die Karte ersetzt dann alle Entitäten durch erfundene Werte und blendet über dem Schaubild eine Bedienleiste ein.
 
-Damit kannst du jede Anzeige und jede Bewegung ausprobieren, ohne auf den passenden Betriebszustand zu warten: Pumpen ein und aus, Ventil umschalten, Abtauung, Heizstäbe, Zirkulation, Legionellenschutz, alle vier SG-Ready-Zustände, eine Störung auslösen, und Schieberegler für Außen-, Puffer-, Warmwasser- und Heizkreistemperaturen sowie Verdichter und Durchfluss.
+Damit kannst du jede Anzeige und jede Bewegung ausprobieren, ohne auf den passenden Betriebszustand zu warten: Pumpen ein und aus, Ventil umschalten, Abtauung, Heizstäbe, Zirkulation, Legionellenschutz, alle vier SG-Ready-Zustände, eine Störung auslösen, und neun Schieberegler für Außen, Vorlauf, Rücklauf, Puffer, Warmwasser, beide Heizkreise, Verdichter und Durchfluss.
 
 **An die Wärmepumpe wird dabei nichts gesendet.** Auch die Fenster im Schaubild wirken nur auf die Nachbildung. Der Knopf "Zurücksetzen" stellt die Ausgangswerte wieder her.
 

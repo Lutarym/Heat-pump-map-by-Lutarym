@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.1.3";
+const CARD_VERSION = "2.1.4";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -735,6 +735,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     ];
     const regler = [
       ["outside_temp", "Außen", -20, 40],
+      ["flow_temp", "Vorlauf", 15, 70],
+      ["return_temp", "Rücklauf", 15, 70],
       ["buffer_temp", "Puffer", 15, 70],
       ["dhw_temp", "Warmwasser", 15, 70],
       ["hk1_water", "HK1 Wasser", 15, 60],
@@ -818,7 +820,8 @@ class LutarymHeatpumpCard extends HTMLElement {
   /** Haelt die Bedienleiste des Demomodus auf Stand. */
   _syncDemo() {
     if (!this._config.demo || !this._demo) return;
-    const felder = ["outside_temp","buffer_temp","dhw_temp","hk1_water","hk2_water","compressor","pump_flow"];
+    const felder = ["outside_temp","flow_temp","return_temp","buffer_temp","dhw_temp",
+                    "hk1_water","hk2_water","compressor","pump_flow"];
     felder.forEach((feld, i) => {
       const el = this.shadowRoot.getElementById(`demo-r${i}`);
       const anzeige = this.shadowRoot.getElementById(`demo-r${i}-wert`);
@@ -1828,9 +1831,9 @@ class LutarymHeatpumpCard extends HTMLElement {
     const sekundaer = hk1Laeuft || hk2Laeuft;
     // Der Abschnitt zum zweiten Heizkreis nur, wenn dessen Pumpe laeuft.
     stroemt(["dots-sf-a"], sekundaer, col(buf));
-    stroemt(["dots-sr-a"], sekundaer, col(buf === null ? null : buf - 6));
+    stroemt(["dots-sr-a"], sekundaer, col(buf));
     stroemt(["dots-sf-b"], hk2Laeuft, col(buf));
-    stroemt(["dots-sr-b"], hk2Laeuft, col(buf === null ? null : buf - 6));
+    stroemt(["dots-sr-b"], hk2Laeuft, col(buf));
 
     /* Durchflussanimation */
     // Der Primaerkreis foerdert, wenn Pumpe oder Durchfluss das melden.
@@ -1913,7 +1916,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       const el = sr.getElementById(id);
       if (!el) return;
       el.classList.toggle("is-on", animate && pumpOn);
-      el.style.stroke = col(i === 0 ? water : water - 6);
+      // HeishaMon kennt keine Ruecklauftemperatur je Heizkreis.
+      // Beide Richtungen tragen deshalb den gemessenen Wert des Kreises.
+      el.style.stroke = col(water);
     });
 
 
