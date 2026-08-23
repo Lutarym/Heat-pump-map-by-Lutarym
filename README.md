@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 2.0.0**
+**Version 2.1.0**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -22,7 +22,7 @@ Die Anlage hat zwei getrennte Kreise, wie es bei einem Pufferspeicher üblich is
 
 Der **Primärkreis** verbindet die Wärmepumpe über das Dreiwegeventil entweder mit dem Puffer oder mit dem Warmwasserspeicher. Er wird von der Primärpumpe umgewälzt.
 
-Der **Sekundärkreis** verbindet den Puffer mit den Heizkreisen. Jeder Heizkreis hat seine eigene Pumpe und nimmt seine Wärme aus dem Puffer, nicht direkt aus der Wärmepumpe. Er bewegt sich, sobald mindestens eine Kreispumpe fördert, und ist in der Temperatur des Puffers eingefärbt.
+Der **Sekundärkreis** verbindet den Puffer mit den Heizkreisen. Jede seiner beiden Leitungen endet an ihrem letzten Anschluss, der Vorlauf am letzten Abgang, der Rücklauf am letzten Zulauf. Bei nur einem Heizkreis werden beide entsprechend kürzer. Jeder Heizkreis hat seine eigene Pumpe und nimmt seine Wärme aus dem Puffer, nicht direkt aus der Wärmepumpe. Er bewegt sich, sobald mindestens eine Kreispumpe fördert, und ist in der Temperatur des Puffers eingefärbt.
 
 Dadurch kann die Wärmepumpe Warmwasser laden, während die Heizkreise weiter aus dem Puffer versorgt werden. Genau dafür ist ein Puffer da.
 
@@ -32,7 +32,7 @@ Dadurch kann die Wärmepumpe Warmwasser laden, während die Heizkreise weiter au
 
 **Wasserdruck** als Manometer. Es erscheint nur, wenn ein Wert vorliegt, sonst bleibt die Stelle leer.
 
-**Dreiwegeventil** an der Abzweigung im Vorlauf. Es hat zwei sichtbare Wege, einen nach unten in den Puffer und einen nach rechts zum Warmwasserspeicher. Der gerade bediente Weg leuchtet in der Vorlauftemperatur, der gesperrte bleibt dunkel. Damit ist die Stellung ablesbar, ohne die Farbe deuten zu müssen.
+**Dreiwegeventil** an der Abzweigung im Vorlauf, als Kreis mit einem Pfeil darin. Der Pfeil zeigt, wohin das Ventil geöffnet ist: nach unten in den Puffer oder nach rechts zum Warmwasserspeicher. Er ist in der Vorlauftemperatur eingefärbt. Ist TOP20 nicht zugeordnet, bleibt der Kreis leer, denn dann ist die Stellung unbekannt.
 
 **Warmwasserspeicher** mit Ist- und Zieltemperatur und einem Hinweis, wenn der Heizstab läuft. Im Wasser steigen Blasen auf, umso mehr je wärmer der Speicher ist.
 
@@ -177,6 +177,7 @@ entities:
 | `label_dhw` | Warmwasser | Beschriftung des Warmwasserreglers |
 | `label_buffer` | Puffer | Beschriftung des Pufferspeichers |
 | `energy_daily` | true | Tagesverbrauch aus dem Zählerstand rechnen |
+| `demo` | false | Demomodus mit erfundenen Werten |
 | `label_energy` | leer | Beschriftung des Energiewerts, leer bedeutet automatisch |
 | `scale_min` | 20 | Untere Grenze der Heizungsfarbskala in Grad |
 | `scale_max` | 60 | Obere Grenze der Heizungsfarbskala in Grad |
@@ -348,6 +349,16 @@ Der Regler für einen Heizkreis zeigt den tatsächlichen Sollwert des Kreises au
 Verstellst du den Regler, schreibt die Karte auf `hk1_setpoint` beziehungsweise `hk2_setpoint`, also TOP27 und TOP34. Das sind die stellbaren Entitäten, denn TOP42 und TOP43 sind reine Messwerte ohne Schreibzugriff.
 
 Ist keine Anzeigequelle eingetragen, zeigt der Regler den Wert der stellbaren Entität, wie zuvor.
+
+## Demomodus
+
+Im Editor unter Darstellung lässt sich der **Demomodus** einschalten. Die Karte ersetzt dann alle Entitäten durch erfundene Werte und blendet über dem Schaubild eine Bedienleiste ein.
+
+Damit kannst du jede Anzeige und jede Bewegung ausprobieren, ohne auf den passenden Betriebszustand zu warten: Pumpen ein und aus, Ventil umschalten, Abtauung, Heizstäbe, Zirkulation, Legionellenschutz, alle vier SG-Ready-Zustände, eine Störung auslösen, und Schieberegler für Außen-, Puffer-, Warmwasser- und Heizkreistemperaturen sowie Verdichter und Durchfluss.
+
+**An die Wärmepumpe wird dabei nichts gesendet.** Auch die Fenster im Schaubild wirken nur auf die Nachbildung. Der Knopf "Zurücksetzen" stellt die Ausgangswerte wieder her.
+
+Beim Ausschalten arbeitet die Karte sofort wieder mit den echten Entitäten, ohne dass etwas nachwirkt.
 
 ## Fenster im Schaubild
 

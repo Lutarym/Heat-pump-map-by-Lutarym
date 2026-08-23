@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.0.0";
+const CARD_VERSION = "2.1.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -421,6 +421,7 @@ const DEFAULT_CONFIG = {
   label_energy: "",
   label_buffer: "Puffer",
   energy_daily: true,
+  demo: false,
   animate: true,
   entities: {},
 };
@@ -459,11 +460,13 @@ class LutarymHeatpumpCard extends HTMLElement {
     this._config.hk_count = this._config.hk_count === 1 ? 1 : 2;
     this._built = false;
     this._auto = null;
+    if (this._config.demo) this._demoAufbauen();
+    else this._demo = null;
     this._tagStart = undefined;
     this._tagStartTag = undefined;
     this._tagVersuch = 0;
     if (this.shadowRoot) this.shadowRoot.innerHTML = "";
-    if (this._hass) this._render();
+    if (this._quelle) this._render();
   }
 
   set hass(hass) {
@@ -476,13 +479,100 @@ class LutarymHeatpumpCard extends HTMLElement {
     return 18;
   }
 
+  /** Liefert die gerade gueltige Datenquelle. */
+  get _quelle() {
+    return this._config && this._config.demo ? this._demo : this._hass;
+  }
+
+  /**
+   * Baut einen vollstaendigen Satz erfundener Werte auf.
+   * Im Demomodus ersetzt er die echten Entitaeten restlos. Es wird
+   * nichts an die Waermepumpe gesendet, alle Bedienschritte aendern
+   * nur diese Nachbildung.
+   */
+  _demoAufbauen() {
+    const werte = {
+      outside_temp: 8.5, heatpump_state: 1, compressor: 42,
+      power_now: 1240, energy_today: 8.4,
+      flow_temp: 39.2, return_temp: 33.1, pump_speed: 2400, pump_flow: 18.6,
+      three_way_valve: 0, water_pressure: 1.8, defrost: 0, error: "0",
+      buffer_temp: 38.4, buffer_target: 42, room_heater: 0, buffer_installed: 1,
+      hk1_water: 34.2, hk1_water_target: 36, hk1_room: 21.5, hk1_pump: 1,
+      hk1_setpoint: 36, hk2_water: 30.1, hk2_water_target: 32, hk2_room: 20.8,
+      hk2_pump: 0, hk2_setpoint: 32, zones_state: 2,
+      dhw_temp: 48.3, dhw_setpoint: 50, dhw_heater: 0, dhw_installed: 1,
+      dhw_force_state: 0, sterilization_state: 0, circulation_pump: 0,
+      sg_k1: "off", sg_k2: "off",
+      dhw_force: "off", force_sterilization: "off", force_defrost: "off",
+      dhw_heater_switch: "off", room_heater_switch: "off", buffer_switch: "on",
+      power_state: "on", hk1_switch: "on", hk2_switch: "off",
+      operating_mode: 4,
+    };
+    const states = {};
+    Object.keys(werte).forEach((feld) => {
+      const attrs = {};
+      if (feld.endsWith("_setpoint")) {
+        Object.assign(attrs, { min: 15, max: 65, step: 0.5 });
+      }
+      states[`demo.${feld}`] = { state: String(werte[feld]), attributes: attrs };
+    });
+    states["demo.mode_select"] = {
+      state: "mode_4",
+      attributes: { options: ["mode_0", "mode_1", "mode_2", "mode_3", "mode_4", "mode_5", "mode_6"] },
+    };
+    states["demo.powerful_mode"] = {
+      state: "mode_0",
+      attributes: { options: ["mode_0", "mode_1", "mode_2", "mode_3"] },
+    };
+    states["demo.quiet_mode"] = {
+      state: "mode_2",
+      attributes: { options: ["mode_0", "mode_1", "mode_2", "mode_3"] },
+    };
+
+    const karte = this;
+    this._demo = {
+      states,
+      entities: {},
+      // Nimmt Befehle entgegen und aendert nur die Nachbildung.
+      callService(bereich, dienst, daten) {
+        const id = daten.entity_id;
+        if (!states[id]) return;
+        if (dienst === "set_value") states[id].state = String(daten.value);
+        else if (dienst === "select_option") states[id].state = daten.option;
+        else if (dienst === "turn_on") states[id].state = "on";
+        else if (dienst === "turn_off") states[id].state = "off";
+        else if (dienst === "toggle") {
+          states[id].state = states[id].state === "on" ? "off" : "on";
+        }
+        karte._render();
+      },
+    };
+  }
+
+  /** Setzt einen Wert der Nachbildung. */
+  _demoSetze(feld, wert) {
+    if (!this._demo) return;
+    const eintrag = this._demo.states[`demo.${feld}`];
+    if (eintrag) eintrag.state = String(wert);
+    this._render();
+  }
+
+  /** Liest einen Wert der Nachbildung. */
+  _demoLies(feld) {
+    if (!this._demo) return null;
+    const eintrag = this._demo.states[`demo.${feld}`];
+    return eintrag ? eintrag.state : null;
+  }
+
   _e(key) {
+    // Im Demomodus zeigen alle Felder auf die Nachbildung.
+    if (this._config && this._config.demo) return `demo.${key}`;
     const eintraege = this._config.entities || {};
     // Frueherer Feldname bleibt gueltig, damit bestehende Karten weiterlaufen.
     const alias = { power_state: "power_switch", buffer_temp: "buffer_top" };
     const configured = eintraege[key] || eintraege[alias[key]];
     if (configured) return configured;
-    if (!this._auto) this._auto = detectIntegration(this._hass).entities;
+    if (!this._auto) this._auto = detectIntegration(this._quelle).entities;
     return this._auto[key] || "";
   }
 
@@ -494,7 +584,7 @@ class LutarymHeatpumpCard extends HTMLElement {
    */
   async _ladeTagesstart() {
     const id = this._e("energy_today");
-    if (!id || !this._hass || !this._hass.callWS) return;
+    if (!id || !this._quelle || !this._quelle.callWS) return;
 
     const jetzt = new Date();
     const mitternacht = new Date(
@@ -507,7 +597,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     this._tagVersuch = jetzt.getTime();
 
     try {
-      const antwort = await this._hass.callWS({
+      const antwort = await this._quelle.callWS({
         type: "history/history_during_period",
         start_time: new Date(mitternacht).toISOString(),
         end_time: new Date(mitternacht + 120000).toISOString(),
@@ -558,10 +648,10 @@ class LutarymHeatpumpCard extends HTMLElement {
     const k2 = this._e("sg_k2");
     if (!k1 || !k2) return null;
     const unklar = [null, "unknown", "unavailable", ""];
-    if (unklar.includes(rawState(this._hass, k1))) return null;
-    if (unklar.includes(rawState(this._hass, k2))) return null;
-    const a = isOn(this._hass, k1);
-    const b = isOn(this._hass, k2);
+    if (unklar.includes(rawState(this._quelle, k1))) return null;
+    if (unklar.includes(rawState(this._quelle, k2))) return null;
+    const a = isOn(this._quelle, k1);
+    const b = isOn(this._quelle, k2);
     if (a === null || b === null) return null;
     if (a && !b) return 1;
     if (!a && !b) return 2;
@@ -586,6 +676,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       <ha-card class="lhc">
         <div class="lhc-alert" id="alert" hidden></div>
         <div class="lhc-hint" id="hinweis" hidden></div>
+        <div class="lhc-demo" id="demo-leiste" hidden></div>
         <div class="lhc-scene">${this._svg()}</div>
         <section class="lhc-switches" id="switches"></section>
 
@@ -614,12 +705,137 @@ class LutarymHeatpumpCard extends HTMLElement {
       </ha-card>
     `;
     this.shadowRoot.appendChild(root);
+    this._buildDemo();
     this._buildDialog();
     this._buildKlicks();
     this._buildSwitches();
   }
 
   /** Verdrahtet das Einstellfenster. */
+  /** Baut die Bedienleiste des Demomodus. */
+  _buildDemo() {
+    const host = this.shadowRoot.getElementById("demo-leiste");
+    if (!this._config.demo) {
+      host.hidden = true;
+      host.innerHTML = "";
+      return;
+    }
+    host.hidden = false;
+
+    const schalter = [
+      ["power_state", "Wärmepumpe"],
+      ["hk1_pump", "Pumpe HK1"],
+      ["hk2_pump", "Pumpe HK2"],
+      ["room_heater", "Heizstab Heizung"],
+      ["dhw_heater", "Heizstab Warmwasser"],
+      ["defrost", "Abtauung"],
+      ["circulation_pump", "Zirkulation"],
+      ["dhw_force_state", "Aufheizen"],
+      ["sterilization_state", "Legionellenschutz"],
+    ];
+    const regler = [
+      ["outside_temp", "Außen", -20, 40],
+      ["buffer_temp", "Puffer", 15, 70],
+      ["dhw_temp", "Warmwasser", 15, 70],
+      ["hk1_water", "HK1 Wasser", 15, 60],
+      ["hk2_water", "HK2 Wasser", 15, 60],
+      ["compressor", "Verdichter", 0, 90],
+      ["pump_flow", "Durchfluss", 0, 40],
+    ];
+
+    host.innerHTML = `
+      <div class="lhc-demo-kopf">
+        <span class="lhc-field-label">Demomodus</span>
+        <span class="lhc-demo-hinweis">Erfundene Werte, die Anlage bleibt unberührt</span>
+      </div>
+      <div class="lhc-demo-reihe">
+        ${schalter
+          .map(
+            ([feld, text], i) =>
+              `<button type="button" class="lhc-demo-knopf" id="demo-s${i}">${escapeHtml(
+                text
+              )}</button>`
+          )
+          .join("")}
+        <button type="button" class="lhc-demo-knopf" id="demo-ventil">Ventil</button>
+        <button type="button" class="lhc-demo-knopf" id="demo-sg">SG Ready</button>
+        <button type="button" class="lhc-demo-knopf" id="demo-stoerung">Störung</button>
+        <button type="button" class="lhc-demo-knopf" id="demo-zurueck">Zurücksetzen</button>
+      </div>
+      <div class="lhc-demo-regler">
+        ${regler
+          .map(
+            ([feld, text, lo, hi], i) => `
+          <label class="lhc-demo-schieber">
+            <span>${escapeHtml(text)} <b id="demo-r${i}-wert">--</b></span>
+            <input type="range" id="demo-r${i}" min="${lo}" max="${hi}" step="0.5">
+          </label>`
+          )
+          .join("")}
+      </div>`;
+
+    schalter.forEach(([feld], i) => {
+      const el = this.shadowRoot.getElementById(`demo-s${i}`);
+      el.addEventListener("click", () => {
+        const jetzt = this._demoLies(feld);
+        const an = jetzt === "on" || parseFloat(jetzt) > 0;
+        // Schalter kennen an und aus, Zustandstopics kennen 1 und 0.
+        const neu = jetzt === "on" || jetzt === "off" ? (an ? "off" : "on") : an ? 0 : 1;
+        this._demoSetze(feld, neu);
+      });
+    });
+
+    this.shadowRoot.getElementById("demo-ventil").addEventListener("click", () => {
+      this._demoSetze("three_way_valve", this._demoLies("three_way_valve") === "1" ? 0 : 1);
+    });
+    this.shadowRoot.getElementById("demo-sg").addEventListener("click", () => {
+      // Schaltet der Reihe nach durch alle vier Zustaende.
+      const k1 = this._demoLies("sg_k1") === "on";
+      const k2 = this._demoLies("sg_k2") === "on";
+      const folge = [[false, false], [true, false], [false, true], [true, true]];
+      const jetzt = folge.findIndex((f) => f[0] === k1 && f[1] === k2);
+      const naechste = folge[(jetzt + 1) % folge.length];
+      this._demoSetze("sg_k1", naechste[0] ? "on" : "off");
+      this._demoSetze("sg_k2", naechste[1] ? "on" : "off");
+    });
+    this.shadowRoot.getElementById("demo-stoerung").addEventListener("click", () => {
+      this._demoSetze("error", this._demoLies("error") === "0" ? "H76" : "0");
+    });
+    this.shadowRoot.getElementById("demo-zurueck").addEventListener("click", () => {
+      this._demoAufbauen();
+      this._buildDemo();
+      this._render();
+    });
+
+    regler.forEach(([feld], i) => {
+      const el = this.shadowRoot.getElementById(`demo-r${i}`);
+      el.value = this._demoLies(feld) || 0;
+      el.addEventListener("input", () => this._demoSetze(feld, el.value));
+    });
+    this._syncDemo();
+  }
+
+  /** Haelt die Bedienleiste des Demomodus auf Stand. */
+  _syncDemo() {
+    if (!this._config.demo || !this._demo) return;
+    const felder = ["outside_temp","buffer_temp","dhw_temp","hk1_water","hk2_water","compressor","pump_flow"];
+    felder.forEach((feld, i) => {
+      const el = this.shadowRoot.getElementById(`demo-r${i}`);
+      const anzeige = this.shadowRoot.getElementById(`demo-r${i}-wert`);
+      const wert = this._demoLies(feld);
+      if (el && el.value !== wert) el.value = wert;
+      if (anzeige) anzeige.textContent = wert;
+    });
+    const schalter = ["power_state","hk1_pump","hk2_pump","room_heater","dhw_heater",
+                      "defrost","circulation_pump","dhw_force_state","sterilization_state"];
+    schalter.forEach((feld, i) => {
+      const el = this.shadowRoot.getElementById(`demo-s${i}`);
+      if (!el) return;
+      const w = this._demoLies(feld);
+      el.classList.toggle("is-on", w === "on" || parseFloat(w) > 0);
+    });
+  }
+
   _buildDialog() {
     const sr = this.shadowRoot;
     // Ausdruecklich schliessen, nicht nur auf das Attribut im Markup vertrauen.
@@ -639,7 +855,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         this._offenTimer = null;
       }
       this._halte("dialog", wert);
-      this._hass.callService(id.split(".")[0], "set_value", {
+      this._quelle.callService(id.split(".")[0], "set_value", {
         entity_id: id,
         value: wert,
       });
@@ -745,7 +961,7 @@ class LutarymHeatpumpCard extends HTMLElement {
   _oeffneDialog(f) {
     const sr = this.shadowRoot;
     const tempId = f.feld ? this._e(f.feld) : "";
-    this._dialogKey = tempId && this._hass.states[tempId] ? f.feld : null;
+    this._dialogKey = tempId && this._quelle.states[tempId] ? f.feld : null;
     this._dialogAnzeige = f.anzeige || null;
     this._dialogAktionen = (f.aktionen || []).filter((a) => this._e(a.feld));
     if (this._gehalten) delete this._gehalten["dialog"];
@@ -756,6 +972,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     this._baueAktionen();
     sr.getElementById("dialog").hidden = false;
     this._syncDialog();
+    this._syncDemo();
   }
 
   /**
@@ -769,9 +986,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       if (!feld) return null;
       const id = this._e(feld);
       if (!id) return null;
-      const roh = rawState(this._hass, id);
+      const roh = rawState(this._quelle, id);
       if (roh === null || roh === "unknown" || roh === "unavailable") return null;
-      return isOn(this._hass, id);
+      return isOn(this._quelle, id);
     };
     // Nur gelesene Werte, nichts wird angenommen.
     // Zuerst das Rueckmeldetopic, danach die Schaltentitaet.
@@ -802,7 +1019,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       if (a.typ === "auswahl") {
         el.addEventListener("change", () => {
           const id = this._e(a.feld);
-          this._hass.callService("select", "select_option", {
+          this._quelle.callService("select", "select_option", {
             entity_id: id,
             option: el.value,
           });
@@ -811,7 +1028,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         el.addEventListener("click", () => {
           const id = this._e(a.feld);
           const an = this._zustand(a);
-          this._hass.callService("homeassistant", an === true ? "turn_off" : "turn_on", {
+          this._quelle.callService("homeassistant", an === true ? "turn_off" : "turn_on", {
             entity_id: id,
           });
         });
@@ -824,7 +1041,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     const liste = this._dialogAktionen || [];
     liste.forEach((a, i) => {
       const el = this.shadowRoot.getElementById(`dlg-a${i}`);
-      const st = this._hass.states[this._e(a.feld)];
+      const st = this._quelle.states[this._e(a.feld)];
       if (!el || !st) return;
       if (a.typ === "auswahl") {
         const optionen = st.attributes.options || [];
@@ -872,7 +1089,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     this._syncAktionen();
     if (!this._dialogKey) return;
     const sr = this.shadowRoot;
-    const st = this._hass.states[this._e(this._dialogKey)];
+    const st = this._quelle.states[this._e(this._dialogKey)];
     if (!st) return this._schliesseDialog();
     const range = sr.getElementById("dlg-range");
 
@@ -880,7 +1097,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     // wird weiterhin auf die stellbare Entitaet. Gleiche Trennung wie
     // bei den Schiebereglern unter dem Schaubild.
     const anzeigeId = this._dialogAnzeige ? this._e(this._dialogAnzeige) : "";
-    const stAnzeige = anzeigeId ? this._hass.states[anzeigeId] : null;
+    const stAnzeige = anzeigeId ? this._quelle.states[anzeigeId] : null;
     const quelle =
       stAnzeige && !Number.isNaN(parseFloat(stAnzeige.state)) ? stAnzeige : st;
     const wert = parseFloat(quelle.state);
@@ -945,8 +1162,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (hatHeizung) {
       this.shadowRoot.getElementById("sw-heat").addEventListener("click", () => {
         const entityId = this._e("heating_switch");
-        const on = isOn(this._hass, entityId);
-        this._hass.callService("homeassistant", on ? "turn_off" : "turn_on", {
+        const on = isOn(this._quelle, entityId);
+        this._quelle.callService("homeassistant", on ? "turn_off" : "turn_on", {
           entity_id: entityId,
         });
       });
@@ -954,7 +1171,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (hatModus) {
       const sel = this.shadowRoot.getElementById("mode-select");
       sel.addEventListener("change", () => {
-        this._hass.callService("select", "select_option", {
+        this._quelle.callService("select", "select_option", {
           entity_id: this._e("mode_select"),
           option: sel.value,
         });
@@ -975,8 +1192,10 @@ class LutarymHeatpumpCard extends HTMLElement {
     const R = L.RET_Y;
     const SF = L.SEC_FLOW;
     const SR = L.SEC_RET;
-    // Der Sekundaerkreis endet am letzten vorhandenen Heizkreis.
-    const SEC_ENDE = this._config.hk_count === 2 ? 1280 : 990;
+    // Jede Sekundaerleitung endet an ihrem letzten Anschluss:
+    // der Vorlauf am letzten Abgang, der Ruecklauf am letzten Zulauf.
+    const SEC_VL_ENDE = this._config.hk_count === 2 ? 1160 : 870;
+    const SEC_RL_ENDE = this._config.hk_count === 2 ? 1280 : 990;
     const T = L.TANK_TOP;
     const B = L.TANK_BOTTOM;
     const C = L.CAP_Y;
@@ -1034,11 +1253,11 @@ class LutarymHeatpumpCard extends HTMLElement {
       <path class="flowdots" id="dots-buf2" d="M630 ${B} V ${R}"/>
 
       <!-- Sekundaerkreis: vom Puffer zu den Heizkreisen und zurueck -->
-      <path class="pipe-shell" d="M730 ${SF} H ${SEC_ENDE} M730 ${SR} H ${SEC_ENDE}"/>
-      <path class="pipe" id="pipe-sec-flow" d="M730 ${SF} H ${SEC_ENDE}"/>
-      <path class="pipe" id="pipe-sec-ret" d="M730 ${SR} H ${SEC_ENDE}"/>
-      <path class="flowdots" id="dots-sec-flow" d="M730 ${SF} H ${SEC_ENDE}"/>
-      <path class="flowdots rev" id="dots-sec-ret" d="M730 ${SR} H ${SEC_ENDE}"/>
+      <path class="pipe-shell" d="M730 ${SF} H ${SEC_VL_ENDE} M730 ${SR} H ${SEC_RL_ENDE}"/>
+      <path class="pipe" id="pipe-sec-flow" d="M730 ${SF} H ${SEC_VL_ENDE}"/>
+      <path class="pipe" id="pipe-sec-ret" d="M730 ${SR} H ${SEC_RL_ENDE}"/>
+      <path class="flowdots" id="dots-sec-flow" d="M730 ${SF} H ${SEC_VL_ENDE}"/>
+      <path class="flowdots rev" id="dots-sec-ret" d="M730 ${SR} H ${SEC_RL_ENDE}"/>
 
       <path class="pipe-shell" d="M1525 ${F} V ${T} M1525 ${B} V ${R}"/>
       <path class="pipe" id="pipe-dhw-in" d="M1525 ${F} V ${T}"/>
@@ -1154,12 +1373,21 @@ class LutarymHeatpumpCard extends HTMLElement {
       <!-- Dreiwegeventil an der Abzweigung: hier teilt sich der Vorlauf
            nach unten in den Puffer oder weiter nach rechts zum Speicher. -->
       <g>
-        <path class="valve-arm" id="valve-arm-down" d="M630 ${F} V ${F + 34}"/>
-        <path class="valve-arm" id="valve-arm-right" d="M630 ${F} H 672"/>
-        <rect x="612" y="${F - 18}" width="36" height="36" rx="8"
-              fill="#0D1219" stroke="#33415A" stroke-width="2"
-              transform="rotate(45 630 ${F})"/>
-        <circle cx="630" cy="${F}" r="7" id="valve-dot" fill="${NEUTRAL}"/>
+        <circle cx="630" cy="${F}" r="22" fill="#0D1219"
+                stroke="#33415A" stroke-width="2"/>
+        <!-- Der Pfeil zeigt, wohin das Ventil geoeffnet ist. -->
+        <g id="valve-arrow-down" opacity="0">
+          <path id="valve-down-line" d="M630 ${F - 12} V ${F + 4}"
+                stroke="${NEUTRAL}" stroke-width="5" stroke-linecap="round" fill="none"/>
+          <path id="valve-down-head" d="M622 ${F + 2} L 630 ${F + 14} L 638 ${F + 2} Z"
+                fill="${NEUTRAL}"/>
+        </g>
+        <g id="valve-arrow-right" opacity="0">
+          <path id="valve-right-line" d="M${630 - 12} ${F} H ${630 + 4}"
+                stroke="${NEUTRAL}" stroke-width="5" stroke-linecap="round" fill="none"/>
+          <path id="valve-right-head" d="M${630 + 2} ${F - 8} L ${630 + 14} ${F} L ${630 + 2} ${F + 8} Z"
+                fill="${NEUTRAL}"/>
+        </g>
       </g>
 
       <!-- Warmwasserspeicher -->
@@ -1311,7 +1539,7 @@ class LutarymHeatpumpCard extends HTMLElement {
   /* -------------------- Aktualisierung -------------------- */
 
   _update() {
-    const hass = this._hass;
+    const hass = this._quelle;
     if (!hass) return;
     const sr = this.shadowRoot;
     const min = Number(this._config.scale_min);
@@ -1361,7 +1589,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     }).length;
     const hinweis = sr.getElementById("hinweis");
     if (hinweis) {
-      hinweis.hidden = gefunden > 0;
+      hinweis.hidden = gefunden > 0 || this._config.demo === true;
       if (gefunden === 0) {
         hinweis.textContent =
           "Keine Entitäten zugeordnet. Karte bearbeiten und oben auf " +
@@ -1544,18 +1772,19 @@ class LutarymHeatpumpCard extends HTMLElement {
       valveText = zuWarmwasser ? "Warmwasser" : "Heizung";
     }
     set("valve-v", valveText);
-    const dot = sr.getElementById("valve-dot");
-    if (dot) dot.setAttribute("fill", valveNum === null ? NEUTRAL : col(flow));
-    // Der bediente Weg leuchtet, der gesperrte bleibt dunkel.
-    const armAb = sr.getElementById("valve-arm-down");
-    const armRechts = sr.getElementById("valve-arm-right");
-    const gesperrt = "#2C3646";
-    if (armAb) {
-      armAb.setAttribute("stroke", zuWarmwasser ? gesperrt : col(flow));
-    }
-    if (armRechts) {
-      armRechts.setAttribute("stroke", zuWarmwasser ? col(flow) : gesperrt);
-    }
+    // Sichtbar ist nur der Pfeil in die geoeffnete Richtung.
+    const bekannt = valveNum !== null;
+    zeige("valve-arrow-down", bekannt && !zuWarmwasser);
+    zeige("valve-arrow-right", bekannt && zuWarmwasser);
+    const pfeilfarbe = col(flow);
+    ["valve-down-line", "valve-right-line"].forEach((id) => {
+      const el = sr.getElementById(id);
+      if (el) el.setAttribute("stroke", pfeilfarbe);
+    });
+    ["valve-down-head", "valve-right-head"].forEach((id) => {
+      const el = sr.getElementById(id);
+      if (el) el.setAttribute("fill", pfeilfarbe);
+    });
 
     /* Welche Kreise sind ueberhaupt aktiviert?
        TOP94 kennt drei Zustaende, TOP99 und TOP100 je zwei.
@@ -1631,7 +1860,7 @@ class LutarymHeatpumpCard extends HTMLElement {
   }
 
   _circuitUpdate(n, col, animate) {
-    const hass = this._hass;
+    const hass = this._quelle;
     const sr = this.shadowRoot;
     const water = numState(hass, this._e(`hk${n}_water`));
     const target = numState(hass, this._e(`hk${n}_water_target`));
@@ -1708,8 +1937,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     const btn = this.shadowRoot.getElementById(id);
     if (!btn) return;
     const entityId = this._e(key);
-    const known = this._hass.states[entityId] !== undefined;
-    const on = isOn(this._hass, entityId);
+    const known = this._quelle.states[entityId] !== undefined;
+    const on = isOn(this._quelle, entityId);
     btn.disabled = !known;
     btn.classList.toggle("is-on", on === true);
     btn.setAttribute("aria-pressed", on === true ? "true" : "false");
@@ -1720,7 +1949,7 @@ class LutarymHeatpumpCard extends HTMLElement {
   _syncModeSelect() {
     const sel = this.shadowRoot.getElementById("mode-select");
     if (!sel) return;
-    const st = this._hass.states[this._e("mode_select")];
+    const st = this._quelle.states[this._e("mode_select")];
     if (!st) {
       sel.disabled = true;
       return;
@@ -1773,6 +2002,43 @@ class LutarymHeatpumpCard extends HTMLElement {
         font-size: 14px;
       }
       .lhc-hint[hidden] { display: none; }
+
+      /* Bedienleiste des Demomodus. */
+      .lhc-demo {
+        margin-bottom: 14px; padding: 12px 14px; border-radius: 10px;
+        background: #16233A; border: 1px solid #3E6EA8;
+      }
+      .lhc-demo[hidden] { display: none; }
+      .lhc-demo-kopf {
+        display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
+      .lhc-demo-hinweis { font-size: 12px; color: #8FA8C8; }
+      .lhc-demo-reihe { display: flex; flex-wrap: wrap; gap: 8px; }
+      .lhc-demo-knopf {
+        padding: 7px 12px; border-radius: 8px; cursor: pointer; font: inherit;
+        font-size: 13px; background: #0F1826; color: var(--ink);
+        border: 1px solid #2E4661;
+      }
+      .lhc-demo-knopf.is-on {
+        background: #1E3A5C; border-color: #5A9BD8; color: #DDEBFA;
+      }
+      .lhc-demo-knopf:hover { border-color: #5A9BD8; }
+      .lhc-demo-regler {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px 18px; margin-top: 12px;
+      }
+      .lhc-demo-schieber { display: flex; flex-direction: column; gap: 4px; }
+      .lhc-demo-schieber span { font-size: 12px; color: #8FA8C8; }
+      .lhc-demo-schieber b { color: var(--ink); font-weight: 600; }
+      .lhc-demo-schieber input {
+        -webkit-appearance: none; appearance: none; width: 100%; height: 5px;
+        border-radius: 3px; background: #2A3B52; outline: none;
+      }
+      .lhc-demo-schieber input::-webkit-slider-thumb {
+        -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+        background: #5A9BD8; border: 2px solid #0F1826; cursor: pointer;
+      }
       .lhc-svg { width: 100%; height: auto; display: block; }
 
       .pipe-shell {
@@ -1824,12 +2090,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       /* Nicht aktivierte Kreise werden abgeblendet, nicht ausgeblendet.
          So bleibt erkennbar, dass es sie gibt. */
       .is-inaktiv { opacity: 0.28; transition: opacity 600ms ease; }
-      /* Die beiden Wege des Dreiwegeventils. Der bediente Weg leuchtet,
-         der gesperrte bleibt dunkel. */
-      .valve-arm {
-        fill: none; stroke: #2C3646; stroke-width: 9; stroke-linecap: round;
-        transition: stroke 600ms ease;
-      }
+      #valve-arrow-down, #valve-arrow-right { transition: opacity 400ms ease; }
       .cap { fill: #98A6BA; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
       .cap-s { fill: #7E8CA0; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
       .value-l {
@@ -1900,7 +2161,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       #unit-glow { transition: opacity 600ms ease; }
       #unit-glow.is-on { animation: lhc-glow 2.6s ease-in-out infinite; }
       #press-group { transition: opacity 300ms ease; }
-      #valve-dot, #press-needle { transition: all 900ms ease; }
+      #press-needle { transition: all 900ms ease; }
       @keyframes lhc-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
       @keyframes lhc-glow { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.5; } }
 
@@ -2168,6 +2429,10 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
             <span>Tagesverbrauch aus dem Zählerstand rechnen</span>
           </label>
           <label class="ed-row ed-check"><input type="checkbox" id="opt-animate"><span>Bewegung anzeigen</span></label>
+          <label class="ed-row ed-check">
+            <input type="checkbox" id="opt-demo">
+            <span>Demomodus<em>erfundene Werte zum Ausprobieren, die Anlage bleibt unberührt</em></span>
+          </label>
           <label class="ed-row ed-check"><input type="checkbox" id="opt-switches"><span>Betriebsart und Schalter anzeigen</span></label>
         </div>
 
@@ -2222,6 +2487,7 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     bind("opt-lenergy", (el) => put({ label_energy: el.value }));
     bind("opt-eday", (el) => put({ energy_daily: el.checked }));
     bind("opt-animate", (el) => put({ animate: el.checked }));
+    bind("opt-demo", (el) => put({ demo: el.checked }));
     bind("opt-switches", (el) => put({ show_switches: el.checked }));
 
     const applyMap = (map, merge) => {
@@ -2279,6 +2545,7 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     put("opt-lenergy", this._config.label_energy);
     check("opt-eday", this._config.energy_daily);
     check("opt-animate", this._config.animate);
+    check("opt-demo", this._config.demo === true);
     check("opt-switches", this._config.show_switches);
 
     const imFokus = sr.activeElement;
