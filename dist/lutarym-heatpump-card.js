@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "1.9.6";
+const CARD_VERSION = "1.9.7";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1138,12 +1138,13 @@ class LutarymHeatpumpCard extends HTMLElement {
       ${this._circuit(1, 820, 1040, 870, 990)}
       ${hk2 ? this._circuit(2, 1110, 1330, 1160, 1280) : ""}
 
-      <!-- Dreiwegeventil -->
+      <!-- Dreiwegeventil an der Abzweigung: hier teilt sich der Vorlauf
+           nach unten in den Puffer oder weiter nach rechts zum Speicher. -->
       <g>
-        <rect x="1507" y="248" width="36" height="36" rx="8"
+        <rect x="612" y="${F - 18}" width="36" height="36" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="2"
-              transform="rotate(45 1525 266)"/>
-        <circle cx="1525" cy="266" r="9" id="valve-dot" fill="${NEUTRAL}"/>
+              transform="rotate(45 630 ${F})"/>
+        <circle cx="630" cy="${F}" r="9" id="valve-dot" fill="${NEUTRAL}"/>
       </g>
 
       <!-- Warmwasserspeicher -->

@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 1.9.6**
+**Version 1.9.7**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -26,7 +26,7 @@ In Fließrichtung liegen auf dem Rücklauf nacheinander: Warmwasserspeicher, Hei
 
 **Wasserdruck** als Manometer. Es erscheint nur, wenn ein Wert vorliegt, sonst bleibt die Stelle leer.
 
-**Dreiwegeventil** am Abzweig zum Warmwasserspeicher. Seine Stellung erkennst du an der Farbe des Punktes, die zur jeweils bedienten Seite passt.
+**Dreiwegeventil** an der Abzweigung im Vorlauf, also dort wo sich der Weg teilt: nach unten in den Puffer oder weiter nach rechts zum Warmwasserspeicher. Seine Stellung erkennst du an der Farbe des Punktes, die zur jeweils bedienten Seite passt.
 
 **Warmwasserspeicher** mit Ist- und Zieltemperatur und einem Hinweis, wenn der Heizstab läuft. Im Wasser steigen Blasen auf, umso mehr je wärmer der Speicher ist.
 
