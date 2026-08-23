@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.2.0";
+const CARD_VERSION = "2.3.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -246,6 +246,7 @@ const COMMAND_TO_FIELD = {
   setroomheaterstate: "room_heater_switch",
   setpowerfulmode: "powerful_mode",
   setquietmode: "quiet_mode",
+  setzones: "zones_select",
   setbuffer: "buffer_switch",
 };
 
@@ -265,6 +266,7 @@ const FIELD_DOMAIN = {
   room_heater_switch: ["switch", "input_boolean"],
   powerful_mode: ["select", "input_select"],
   quiet_mode: ["select", "input_select"],
+  zones_select: ["select", "input_select"],
   buffer_switch: ["switch", "input_boolean"],
   circulation_pump: ["switch", "input_boolean", "binary_sensor", "sensor"],
   sg_k1: ["switch", "input_boolean", "binary_sensor", "sensor"],
@@ -378,6 +380,7 @@ const ENTITY_FIELDS = [
   { key: "room_heater_switch", label: "Heizstab Heizung schalten", group: "Heizungspuffer", hint: "SetRoomHeaterState, switch" },
 
   { key: "zones_state", label: "Aktivierte Zonen", group: "Heizkreis 1", hint: "TOP94, gilt für beide" },
+  { key: "zones_select", label: "Zonen umschalten", group: "Heizkreis 1", hint: "SetZones, gilt für beide" },
   { key: "hk1_water", label: "HK1 Wassertemperatur", group: "Heizkreis 1", hint: "TOP36" },
   { key: "hk1_water_target", label: "HK1 Wasser Sollwert", group: "Heizkreis 1", hint: "TOP42" },
   { key: "hk1_room", label: "HK1 Raumtemperatur", group: "Heizkreis 1", hint: "TOP56" },
@@ -642,6 +645,36 @@ class LutarymHeatpumpCard extends HTMLElement {
       return null;
     }
     return eintrag.wert;
+  }
+
+  /**
+   * Schaltet einen Heizkreis zu oder ab.
+   * SetZones kennt nur drei Werte: 0 nur Zone 1, 1 nur Zone 2,
+   * 2 beide Zonen. Beide gleichzeitig aus ist nicht vorgesehen,
+   * ein solcher Versuch wird deshalb nicht ausgefuehrt.
+   */
+  _zoneSchalten(nummer) {
+    const id = this._e("zones_select");
+    if (!id) return;
+    const jetzt = numState(this._quelle, this._e("zones_state"));
+    const zone1 = jetzt === null ? true : jetzt === 0 || jetzt === 2;
+    const zone2 = jetzt === null ? true : jetzt === 1 || jetzt === 2;
+    const neu1 = nummer === 1 ? !zone1 : zone1;
+    const neu2 = nummer === 2 ? !zone2 : zone2;
+    if (!neu1 && !neu2) return;
+    const wert = neu1 && neu2 ? 2 : neu1 ? 0 : 1;
+    this._quelle.callService("select", "select_option", {
+      entity_id: id,
+      option: `mode_${wert}`,
+    });
+  }
+
+  /** Ist der genannte Heizkreis aktiv? Rueckgabe null bei Unkenntnis. */
+  _zoneAktiv(nummer) {
+    if (!this._e("zones_state")) return null;
+    const jetzt = numState(this._quelle, this._e("zones_state"));
+    if (jetzt === null) return null;
+    return nummer === 1 ? jetzt === 0 || jetzt === 2 : jetzt === 1 || jetzt === 2;
   }
 
   _sgMode() {
@@ -940,14 +973,20 @@ class LutarymHeatpumpCard extends HTMLElement {
         feld: "hk1_setpoint",
         beschriftung: "label_hk1",
         anzeige: "hk1_water_target",
-        aktionen: [{ feld: "hk1_switch", typ: "schalter", an: "Heizkreis ist an, ausschalten", aus: "Heizkreis einschalten" }],
+        aktionen: [
+          { feld: "zones_select", typ: "zone", nummer: 1 },
+          { feld: "hk1_switch", typ: "schalter", an: "Heizkreis ist an, ausschalten", aus: "Heizkreis einschalten" },
+        ],
       },
       {
         gruppe: "hk2-group",
         feld: "hk2_setpoint",
         beschriftung: "label_hk2",
         anzeige: "hk2_water_target",
-        aktionen: [{ feld: "hk2_switch", typ: "schalter", an: "Heizkreis ist an, ausschalten", aus: "Heizkreis einschalten" }],
+        aktionen: [
+          { feld: "zones_select", typ: "zone", nummer: 2 },
+          { feld: "hk2_switch", typ: "schalter", an: "Heizkreis ist an, ausschalten", aus: "Heizkreis einschalten" },
+        ],
       },
     ];
 
@@ -1029,6 +1068,8 @@ class LutarymHeatpumpCard extends HTMLElement {
             option: el.value,
           });
         });
+      } else if (a.typ === "zone") {
+        el.addEventListener("click", () => this._zoneSchalten(a.nummer));
       } else {
         el.addEventListener("click", () => {
           const id = this._e(a.feld);
@@ -1047,7 +1088,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     liste.forEach((a, i) => {
       const el = this.shadowRoot.getElementById(`dlg-a${i}`);
       const st = this._quelle.states[this._e(a.feld)];
-      if (!el || !st) return;
+      if (!el) return;
+      if (a.typ !== "zone" && !st) return;
       if (a.typ === "auswahl") {
         const optionen = st.attributes.options || [];
         const kennung = optionen.join("|");
@@ -1063,6 +1105,19 @@ class LutarymHeatpumpCard extends HTMLElement {
           el.dataset.kennung = kennung;
         }
         if (el.value !== st.state) el.value = st.state;
+      } else if (a.typ === "zone") {
+        const aktiv = this._zoneAktiv(a.nummer);
+        const andere = this._zoneAktiv(a.nummer === 1 ? 2 : 1);
+        el.textContent =
+          aktiv === null
+            ? "Zonen unbekannt"
+            : aktiv
+            ? "Heizkreis abschalten"
+            : "Heizkreis zuschalten";
+        el.classList.toggle("is-on", aktiv === true);
+        // Der letzte verbleibende Kreis laesst sich nicht abschalten.
+        el.disabled = aktiv === true && andere !== true;
+        if (el.disabled) el.textContent = "Einziger aktiver Heizkreis";
       } else {
         const an = this._zustand(a);
         el.textContent = an === null ? `${a.aus} (Zustand unbekannt)` : an ? a.an : a.aus;

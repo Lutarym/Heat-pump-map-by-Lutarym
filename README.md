@@ -2,7 +2,7 @@
 
 Eine große Lovelace-Karte für Home Assistant, die eine Panasonic Aquarea Wärmepumpe als vollständiges Anlagenschema darstellt.
 
-**Version 2.2.0**
+**Version 2.3.0**
 
 Die Karte liest ausschließlich vorhandene Entitäten. Sie ist auf die Topics von [HeishaMon](https://github.com/IgorYbema/HeishaMon) zugeschnitten, funktioniert aber mit jeder Quelle, solange die Werte als Entitäten in Home Assistant vorliegen.
 
@@ -221,6 +221,7 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 | `room_heater` | TOP59 | Heizstab Heizung |
 | `room_heater_switch` | SetRoomHeaterState | Heizstab Heizung schalten |
 | `zones_state` | TOP94 | Aktivierte Zonen |
+| `zones_select` | SetZones | Zonen umschalten |
 | `hk1_water` | TOP36 | HK1 Wassertemperatur |
 | `hk1_water_target` | TOP42 | HK1 Wasser Sollwert |
 | `hk1_room` | TOP56 | HK1 Raumtemperatur |
@@ -248,15 +249,21 @@ Alle Felder sind optional. Fehlt eines, zeigt die Karte an dieser Stelle zwei St
 
 ## Heizkreise schalten
 
-Die Firmware kennt das Kommando `SetZones` mit drei Werten, passend zu TOP94:
+Jeder Heizkreis lässt sich in seinem Fenster einzeln zu- und abschalten. Der Knopf steht dort ganz oben und heißt je nach Lage "Heizkreis abschalten" oder "Heizkreis zuschalten".
+
+Dahinter steckt das Kommando `SetZones` mit drei zulässigen Werten:
 
 | Wert | Wirkung |
 |---|---|
-| 0 | nur Zone 1 aktiv |
-| 1 | nur Zone 2 aktiv |
-| 2 | beide Zonen aktiv |
+| 0 | nur Heizkreis 1 aktiv |
+| 1 | nur Heizkreis 2 aktiv |
+| 2 | beide Heizkreise aktiv |
 
-Beide Kreise gleichzeitig aus ist damit nicht vorgesehen. Die Integration legt für `SetZones` bisher keine Entität an, die Karte kann also nicht direkt darauf schreiben. Die Felder `hk1_switch` und `hk2_switch` sind deshalb für eine eigene Entität gedacht, etwa einen Schalter, der eine Automation auslöst.
+Die Karte rechnet den passenden Wert selbst aus. Willst du bei zwei aktiven Kreisen den ersten abschalten, sendet sie 1, also nur Heizkreis 2.
+
+**Beide Kreise gleichzeitig aus ist nicht vorgesehen.** Die Wärmepumpe kennt dafür keinen Wert. Ist nur noch ein Kreis aktiv, ist sein Knopf gesperrt und heißt "Einziger aktiver Heizkreis". Die Karte sendet in dem Fall nichts, statt einen unzulässigen Wert zu schicken.
+
+Dafür braucht es die Integration ab Version 0.6.0, die `SetZones` als Auswahlentität anlegt. Das Feld heißt `zones_select` und wird über "Aus Integration übernehmen" eingetragen.
 
 ## Aktivierte Kreise
 
