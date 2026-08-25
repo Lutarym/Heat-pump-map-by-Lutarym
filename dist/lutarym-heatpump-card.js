@@ -1501,16 +1501,16 @@ class LutarymHeatpumpCard extends HTMLElement {
       </defs>
 
       <!-- Sammelleitungen -->
-      <path class="pipe-shell" d="M1602 ${R} H 280"/>
-      <path class="pipe" id="pipe-return" d="M1602 ${R} H 280"/>
+      <path class="pipe-shell" d="M340 ${R} H 1525"/>
+      <path class="pipe" id="pipe-return" d="M340 ${R} H 1525"/>
       <path class="pipe-shell" d="M340 ${F} H 1525"/>
       <path class="pipe" id="pipe-flow" d="M340 ${F} H 1525"/>
       <!-- Zwei Abschnitte je Leitung: bis zum Ventil und dahinter.
            Der Teil hinter dem Ventil fuehrt nur zum Warmwasserspeicher. -->
       <path class="flowdots" id="dots-vl-a" d="M340 ${F} H 630"/>
       <path class="flowdots" id="dots-vl-b" d="M630 ${F} H 1525"/>
-      <path class="flowdots rev" id="dots-rl-a" d="M630 ${R} H 280"/>
-      <path class="flowdots rev" id="dots-rl-b" d="M1602 ${R} H 280"/>
+      <path class="flowdots rev" id="dots-rl-a" d="M630 ${R} H 340"/>
+      <path class="flowdots rev" id="dots-rl-b" d="M1525 ${R} H 630"/>
 
       <path class="pipe-shell" d="M630 ${F} V ${T} M630 ${B} V ${R}"/>
       <path class="pipe" id="pipe-buf-in" d="M630 ${F} V ${T}"/>
