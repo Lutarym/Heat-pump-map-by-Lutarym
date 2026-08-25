@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.5.10";
+const CARD_VERSION = "2.5.11";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1011,32 +1011,36 @@ class LutarymHeatpumpCard extends HTMLElement {
   _setupDemoHandlers() {
     if (!this._config.demo || !this._demo) return;
     const sr = this.shadowRoot;
+    const demoLeiste = sr.getElementById("demo-leiste");
+    if (!demoLeiste) return;
     
-    const schalter = [
-      ["power_state", "Wärmepumpe"],
-      ["hk1_pump", "Pumpe HK1"],
-      ["hk2_pump", "Pumpe HK2"],
-      ["room_heater", "Heizstab Heizung"],
-      ["dhw_heater", "Heizstab Warmwasser"],
-      ["defrost", "Abtauung"],
-      ["circulation_pump", "Zirkulation Status"],
-      ["circ_switch", "Zirkulation Schalter"],
-      ["dhw_force_state", "Aufheizen"],
-      ["sterilization_state", "Legionellenschutz"],
-    ];
-    
-    schalter.forEach(([feld], i) => {
-      const el = sr.getElementById(`demo-s${i}`);
-      if (!el) return;
-      el.onclick = () => {
-        const aktuell = this._demoLies(feld);
-        const aktuellistAn = aktuell === "on" || parseFloat(aktuell) > 0;
-        const neu = aktuellistAn ? "off" : "on";
-        this._demoSetze(feld, neu);
-        el.classList.toggle("is-on", neu === "on");
-        this._syncDemo();
-      };
-    });
+    demoLeiste.onclick = (e) => {
+      const btn = e.target.closest("button[id^='demo-s']");
+      if (!btn) return;
+      
+      const idx = parseInt(btn.id.replace("demo-s", ""));
+      const schalter = [
+        ["power_state"],
+        ["hk1_pump"],
+        ["hk2_pump"],
+        ["room_heater"],
+        ["dhw_heater"],
+        ["defrost"],
+        ["circulation_pump"],
+        ["circ_switch"],
+        ["dhw_force_state"],
+        ["sterilization_state"],
+      ];
+      
+      const feld = schalter[idx]?.[0];
+      if (!feld) return;
+      
+      const aktuell = this._demoLies(feld);
+      const aktuellistAn = aktuell === "on" || parseFloat(aktuell) > 0;
+      const neu = aktuellistAn ? "off" : "on";
+      this._demoSetze(feld, neu);
+      btn.classList.toggle("is-on", neu === "on");
+    };
   }
 
   /** Haelt die Bedienleiste des Demomodus auf Stand. */
@@ -1834,7 +1838,6 @@ class LutarymHeatpumpCard extends HTMLElement {
   _update() {
     const hass = this._quelle;
     if (!hass) return;
-    this._buildDemo();
     const sr = this.shadowRoot;
     const min = Number(this._config.scale_min);
     const max = Number(this._config.scale_max);
