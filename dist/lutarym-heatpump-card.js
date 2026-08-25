@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.5.1";
+const CARD_VERSION = "2.5.3";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -995,10 +995,23 @@ class LutarymHeatpumpCard extends HTMLElement {
       this._render();
     });
 
+    schalter.forEach(([feld], i) => {
+      const el = this.shadowRoot.getElementById(`demo-s${i}`);
+      if (!el) return;
+      el.addEventListener("click", () => {
+        const jetzt = this._demoLies(feld);
+        const neu = jetzt === "on" || jetzt === 1 ? "off" : "on";
+        this._demoSetze(feld, neu);
+        this._syncDemo();
+      });
+    });
     regler.forEach(([feld], i) => {
       const el = this.shadowRoot.getElementById(`demo-r${i}`);
       el.value = this._demoLies(feld) || 0;
-      el.addEventListener("input", () => this._demoSetze(feld, el.value));
+      el.addEventListener("input", () => {
+        this._demoSetze(feld, el.value);
+        this._syncDemo();
+      });
     });
     this._syncDemo();
   }
