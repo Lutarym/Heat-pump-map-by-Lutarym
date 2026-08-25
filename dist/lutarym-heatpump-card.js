@@ -1613,7 +1613,7 @@ class LutarymHeatpumpCard extends HTMLElement {
             <circle r="4" fill="#0D1219"/>
           </g>
         </g>
-        <text class="cap-s" x="580" y="${C}" text-anchor="middle">Pumpe</text>
+        <text class="cap-s" x="580" y="${F - 60}" text-anchor="middle">Pumpe</text>
       </g>
 
       <!-- Heizungspuffer -->
@@ -1630,7 +1630,7 @@ class LutarymHeatpumpCard extends HTMLElement {
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
-        <text class="cap" x="635" y="${C}" text-anchor="middle">${escapeHtml(
+        <text class="cap" x="635" y="${F - 60}" text-anchor="middle">${escapeHtml(
           this._config.label_buffer
         )}</text>
       </g>
@@ -1645,7 +1645,7 @@ class LutarymHeatpumpCard extends HTMLElement {
                 stroke="${NEUTRAL}" stroke-width="3" stroke-linecap="round"/>
           <circle r="4" fill="#55637A"/>
         </g>
-        <text class="cap-s" x="1390" y="${C}" text-anchor="middle">Druck</text>
+        <text class="cap-s" x="1390" y="${F - 60}" text-anchor="middle">Druck</text>
       </g>
 
       ${this._circuit(1, 820, 1040, 870, 990)}
@@ -1685,7 +1685,7 @@ class LutarymHeatpumpCard extends HTMLElement {
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
-        <text class="cap" x="1525" y="${C}" text-anchor="middle">${escapeHtml(
+        <text class="cap" x="1525" y="${F - 60}" text-anchor="middle">${escapeHtml(
           this._config.label_dhw
         )}</text>
       </g>
@@ -1760,7 +1760,7 @@ class LutarymHeatpumpCard extends HTMLElement {
           <text class="tag-v" id="hk${n}-room-v" x="86" y="26" text-anchor="end">--</text>
         </g>
 
-        <text class="cap" x="${mid}" y="${L.CAP_Y}" text-anchor="middle">${escapeHtml(
+        <text class="cap" x="${mid}" y="${F - 60}" text-anchor="middle">${escapeHtml(
           this._config[`label_hk${n}`] || `Heizkreis ${n}`
         )}</text>
       </g>`;
