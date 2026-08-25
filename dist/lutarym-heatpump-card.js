@@ -1567,21 +1567,21 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- SG Ready, neben der Wärmepumpe, ohne Rahmen -->
       <g id="sg-group" opacity="0">
-        <text class="sg-label" x="445" y="420" text-anchor="middle">SG Ready</text>
-        <g transform="translate(445 434)">
+        <text class="sg-label" x="445" y="350" text-anchor="middle">SG Ready</text>
+        <g transform="translate(445 364)">
           <rect x="-68" y="0" width="32" height="11" rx="5.5" id="sg-seg-1" fill="#3A4658"/>
           <rect x="-34" y="0" width="32" height="11" rx="5.5" id="sg-seg-2" fill="#3A4658"/>
           <rect x="2" y="0" width="32" height="11" rx="5.5" id="sg-seg-3" fill="#3A4658"/>
           <rect x="36" y="0" width="32" height="11" rx="5.5" id="sg-seg-4" fill="#3A4658"/>
         </g>
-        <text class="sg-value" id="sg-text" x="445" y="468"
+        <text class="sg-value" id="sg-text" x="445" y="398"
               text-anchor="middle">--</text>
       </g>
 
       <!-- Aktuelle Leistung der Photovoltaik -->
       <g id="pv-group" opacity="0">
-        <text class="sg-label" x="445" y="470" text-anchor="middle">PV Leistung</text>
-        <text class="pv-value" id="pv-v" x="445" y="502"
+        <text class="sg-label" x="445" y="450" text-anchor="middle">PV Leistung</text>
+        <text class="pv-value" id="pv-v" x="445" y="488"
               text-anchor="middle">--</text>
       </g>
 
@@ -1593,12 +1593,12 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
       <g id="verbrauch-group" opacity="0">
-        <text class="unit-label" x="445" y="520" text-anchor="middle">Leistung</text>
-        <text class="verbrauch-v" id="power-now-v" x="445" y="556"
+        <text class="unit-label" x="445" y="550" text-anchor="middle">Leistung</text>
+        <text class="verbrauch-v" id="power-now-v" x="445" y="586"
               text-anchor="middle">--</text>
-        <text class="unit-label" id="energy-label" x="445" y="596"
+        <text class="unit-label" id="energy-label" x="445" y="650"
               text-anchor="middle">--</text>
-        <text class="unit-value" id="energy-today-v" x="445" y="628"
+        <text class="unit-value" id="energy-today-v" x="445" y="682"
               text-anchor="middle">--</text>
       </g>
 
