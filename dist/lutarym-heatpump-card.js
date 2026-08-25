@@ -1576,7 +1576,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         </g>
         <text class="sg-value" id="sg-text" x="445" y="${F + 108}"
               text-anchor="middle">--</text>
-        <line x1="350" y1="${F + 125}" x2="540" y2="${F + 125}" stroke="#33415A" stroke-width="0.5"/>
+        <line x1="380" y1="${F + 125}" x2="510" y2="${F + 125}" stroke="#33415A" stroke-width="0.5"/>
       </g>
 
       <!-- PV Leistung -->
@@ -1584,7 +1584,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="sg-label" x="445" y="${F + 165}" text-anchor="middle">PV Leistung</text>
         <text class="pv-value" id="pv-v" x="445" y="${F + 203}"
               text-anchor="middle">--</text>
-        <line x1="350" y1="${F + 220}" x2="540" y2="${F + 220}" stroke="#33415A" stroke-width="0.5"/>
+        <line x1="380" y1="${F + 220}" x2="510" y2="${F + 220}" stroke="#33415A" stroke-width="0.5"/>
       </g>
 
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
@@ -1595,11 +1595,11 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
       <g id="verbrauch-group" opacity="0">
-        <text class="unit-label" x="445" y="${F + 260}" text-anchor="middle">Leistung</text>
+        <text class="sg-label" x="445" y="${F + 260}" text-anchor="middle">Leistung</text>
         <text class="verbrauch-v" id="power-now-v" x="445" y="${F + 298}"
               text-anchor="middle">--</text>
-        <line x1="350" y1="${F + 315}" x2="540" y2="${F + 315}" stroke="#33415A" stroke-width="0.5"/>
-        <text class="unit-label" id="energy-label" x="445" y="${F + 355}"
+        <line x1="380" y1="${F + 315}" x2="510" y2="${F + 315}" stroke="#33415A" stroke-width="0.5"/>
+        <text class="sg-label" id="energy-label" x="445" y="${F + 355}"
               text-anchor="middle">--</text>
         <text class="unit-value" id="energy-today-v" x="445" y="${F + 395}"
               text-anchor="middle">--</text>
