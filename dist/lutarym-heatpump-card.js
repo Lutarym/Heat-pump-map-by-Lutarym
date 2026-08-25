@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.6.3";
+const CARD_VERSION = "2.6.2";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1139,8 +1139,6 @@ class LutarymHeatpumpCard extends HTMLElement {
           { feld: "force_defrost", status: "defrost", typ: "schalter", an: "Abtauen läuft, beenden", aus: "Abtauen erzwingen" },
           { feld: "powerful_mode", typ: "auswahl", titel: "Turbomodus", texte: POWERFUL_LABELS },
           { feld: "quiet_mode", typ: "auswahl", titel: "Leisemodus", texte: QUIET_LABELS },
-          { feld: "zones_select", typ: "zone", nummer: 1 },
-          { feld: "zones_select", typ: "zone", nummer: 2 },
         ],
       },
       {
@@ -1167,6 +1165,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         beschriftung: "label_hk1",
         anzeige: "hk1_water_target",
         aktionen: [
+          { feld: "zones_select", typ: "zone", nummer: 1 },
           { feld: "hk1_switch", typ: "schalter", an: "Heizkreis ist an, ausschalten", aus: "Heizkreis einschalten" },
         ],
       },
@@ -1176,6 +1175,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         beschriftung: "label_hk2",
         anzeige: "hk2_water_target",
         aktionen: [
+          { feld: "zones_select", typ: "zone", nummer: 2 },
           { feld: "hk2_switch", typ: "schalter", an: "Heizkreis ist an, ausschalten", aus: "Heizkreis einschalten" },
         ],
       },
