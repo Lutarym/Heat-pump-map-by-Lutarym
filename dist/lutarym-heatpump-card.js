@@ -7,11 +7,7 @@
  * Autor: Lutarym
  */
 
-<<<<<<< HEAD
 const CARD_VERSION = "2.6.3";
-=======
-const CARD_VERSION = "2.6.2";
->>>>>>> fd923693342bb6c03c91cdf49dcb4bc3f2b1aa9d
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
