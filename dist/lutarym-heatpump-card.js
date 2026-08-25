@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.5.11";
+const CARD_VERSION = "2.5.12";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1039,7 +1039,12 @@ class LutarymHeatpumpCard extends HTMLElement {
       const aktuellistAn = aktuell === "on" || parseFloat(aktuell) > 0;
       const neu = aktuellistAn ? "off" : "on";
       this._demoSetze(feld, neu);
-      btn.classList.toggle("is-on", neu === "on");
+      // Warte kurz, bis _render() fertig ist, dann update die Klasse
+      setTimeout(() => {
+        const w = this._demoLies(feld);
+        const istAn = w === "on" || parseFloat(w) > 0;
+        btn.classList.toggle("is-on", istAn);
+      }, 10);
     };
   }
 
