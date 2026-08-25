@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.5.9";
+const CARD_VERSION = "2.5.10";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1042,7 +1042,6 @@ class LutarymHeatpumpCard extends HTMLElement {
   /** Haelt die Bedienleiste des Demomodus auf Stand. */
   _syncDemo() {
     if (!this._config.demo || !this._demo) return;
-    this._setupDemoHandlers();
     const felder = ["pv_power","outside_temp","flow_temp","return_temp","buffer_temp","dhw_temp",
                     "hk1_water","hk2_water","compressor","pump_flow"];
     felder.forEach((feld, i) => {
@@ -1835,6 +1834,7 @@ class LutarymHeatpumpCard extends HTMLElement {
   _update() {
     const hass = this._quelle;
     if (!hass) return;
+    this._buildDemo();
     const sr = this.shadowRoot;
     const min = Number(this._config.scale_min);
     const max = Number(this._config.scale_max);
