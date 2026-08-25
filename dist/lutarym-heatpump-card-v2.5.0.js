@@ -7,11 +7,7 @@
  * Autor: Lutarym
  */
 
-<<<<<<< HEAD
-const CARD_VERSION = "2.6.3";
-=======
-const CARD_VERSION = "2.6.2";
->>>>>>> fd923693342bb6c03c91cdf49dcb4bc3f2b1aa9d
+const CARD_VERSION = "2.5.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -292,7 +288,6 @@ const FIELD_DOMAIN = {
   zones_select: ["select", "input_select"],
   buffer_switch: ["switch", "input_boolean"],
   circulation_pump: ["switch", "input_boolean", "binary_sensor", "sensor"],
-  circ_switch: ["switch", "input_boolean"],
   sg_k1: ["switch", "input_boolean", "binary_sensor", "sensor"],
   sg_k2: ["switch", "input_boolean", "binary_sensor", "sensor"],
 };
@@ -429,7 +424,6 @@ const ENTITY_FIELDS = [
   { key: "sterilization_state", label: "Legionellenschutz läuft", group: "Warmwasser", hint: "TOP69" },
   { key: "dhw_heater_switch", label: "Heizstab Warmwasser schalten", group: "Warmwasser", hint: "SetDHWHeaterState, switch" },
   { key: "circulation_pump", label: "Zirkulationspumpe läuft", group: "Warmwasser", hint: "Shelly oder eigener Schalter" },
-  { key: "circ_switch", label: "Zirkulation Schalter (klickbar)", group: "Warmwasser", hint: "Switch zum Ein/Ausschalten der Zirkulation" },
 
   { key: "mode_select", label: "Betriebsart umschalten", group: "Steuerung", hint: "SetOperationMode, select" },
   { key: "heating_switch", label: "Heizung ein und aus", group: "Steuerung", hint: "eigener Helfer, optional" },
@@ -540,7 +534,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       hk1_setpoint: 36, hk2_water: 30.1, hk2_water_target: 32, hk2_room: 20.8,
       hk2_pump: 0, hk2_setpoint: 32, zones_state: 2,
       dhw_temp: 48.3, dhw_setpoint: 50, dhw_heater: 0, dhw_installed: 1,
-      dhw_force_state: 0, sterilization_state: 0, circulation_pump: 0, circ_switch: "off", pv_power: 3400,
+      dhw_force_state: 0, sterilization_state: 0, circulation_pump: 0, pv_power: 3400,
       sg_k1: "off", sg_k2: "off",
       dhw_force: "off", force_sterilization: "off", force_defrost: "off",
       dhw_heater_switch: "off", room_heater_switch: "off", buffer_switch: "on",
@@ -814,14 +808,9 @@ class LutarymHeatpumpCard extends HTMLElement {
   }
 
   _startAnimationLoop() {
-    let lastTime = performance.now();
-    
     const tick = (time) => {
       if (!this.isConnected) return;
-      
-      const deltaTime = (time - lastTime) / 1000; // in Sekunden
-      lastTime = time;
-      this._animTime += deltaTime;
+      this._animTime = (this._animTime + 0.016) % 100;
       
       const sr = this.shadowRoot;
       if (!sr) {
@@ -834,44 +823,25 @@ class LutarymHeatpumpCard extends HTMLElement {
         if (!state || state.type !== "flow") return;
         const el = sr.getElementById(id);
         if (!el) return;
-        const cycle = this._animTime % 1.2;
-        const progress = cycle / 1.2;
+        const progress = (this._animTime % 1.2) / 1.2;
         const offset = state.reverse ? 44 * progress : -44 * progress;
         el.setAttribute("stroke-dashoffset", offset.toFixed(1));
       });
 
-      // Bubbles animieren - neu vereinfacht
-      const bubbleGroups = ["buf-bubbles", "dhw-bubbles"];
-      bubbleGroups.forEach(groupId => {
-        const group = sr.getElementById(groupId);
-        if (!group) return;
-        const bubbles = group.querySelectorAll("circle");
-        bubbles.forEach((bubble, idx) => {
-          // Blasen-Parametern berechnen (immer gleich basierend auf Index)
-          let seed = idx + 42;
-          const rnd = () => {
-            seed = (seed * 1103515245 + 12345) % 2147483648;
-            return seed / 2147483648;
-          };
-          const dur = 4 + rnd() * 4;
-          const delay = idx * 0.3; // einfacher Delay basierend auf Index
-          
-          // Animation: Zeit seit Start
-          const time = (this._animTime + delay) % dur;
-          const prog = time / dur;
-          
-          // translateY: oben nach unten (-330px)
-          const moveY = -330 * prog;
-          
-          // opacity: Kurve (sichtbar von 15% bis 85%)
-          let op = 0;
-          if (prog < 0.15) op = (prog / 0.15) * 0.4;
-          else if (prog < 0.85) op = 0.4;
-          else op = 0.4 * (1 - (prog - 0.85) / 0.15);
-          
-          bubble.setAttribute("transform", `translate(0,${moveY.toFixed(1)})`);
-          bubble.setAttribute("opacity", op.toFixed(3));
-        });
+      // Bubbles animieren (translateY + opacity)
+      this._animState.forEach((state, id) => {
+        if (!state || state.type !== "bubble") return;
+        const el = sr.getElementById(id);
+        if (!el) return;
+        const elapsed = (this._animTime - state.startTime) % state.duration;
+        const progress = elapsed / state.duration;
+        const y = -330 * progress;
+        let opacity = 0;
+        if (progress < 0.15) opacity = (progress / 0.15) * 0.38;
+        else if (progress < 0.85) opacity = 0.36;
+        else opacity = 0.36 * (1 - (progress - 0.85) / 0.15);
+        el.setAttribute("transform", `translateY(${y})`);
+        el.setAttribute("opacity", opacity.toFixed(2));
       });
 
       // Pulse/Glow animieren (opacity)
@@ -889,9 +859,9 @@ class LutarymHeatpumpCard extends HTMLElement {
         if (!state || state.type !== "spin") return;
         const el = sr.getElementById(id);
         if (!el) return;
-        const elapsed = this._animTime % state.duration;
+        const elapsed = (this._animTime - state.startTime) % state.duration;
         const progress = (elapsed / state.duration) * 360;
-        el.setAttribute("transform", `rotate(${progress.toFixed(2)} 0 0)`);
+        el.setAttribute("transform", `rotate(${progress.toFixed(1)} 0 0)`);
       });
 
       this._animLoop = requestAnimationFrame(tick);
@@ -917,8 +887,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       ["room_heater", "Heizstab Heizung"],
       ["dhw_heater", "Heizstab Warmwasser"],
       ["defrost", "Abtauung"],
-      ["circulation_pump", "Zirkulation Status"],
-      ["circ_switch", "Zirkulation Schalter"],
+      ["circulation_pump", "Zirkulation"],
       ["dhw_force_state", "Aufheizen"],
       ["sterilization_state", "Legionellenschutz"],
     ];
@@ -941,47 +910,47 @@ class LutarymHeatpumpCard extends HTMLElement {
         <span class="lhc-demo-hinweis">Erfundene Werte, die Anlage bleibt unberührt</span>
       </div>
       <div class="lhc-demo-reihe">
-        ${schalter.map(([feld, text], i) => `<button type="button" class="lhc-demo-knopf" id="demo-s${i}" data-feld="${feld}">${escapeHtml(text)}</button>`).join("")}
+        ${schalter
+          .map(
+            ([feld, text], i) =>
+              `<button type="button" class="lhc-demo-knopf" id="demo-s${i}">${escapeHtml(
+                text
+              )}</button>`
+          )
+          .join("")}
         <button type="button" class="lhc-demo-knopf" id="demo-ventil">Ventil</button>
         <button type="button" class="lhc-demo-knopf" id="demo-sg">SG Ready</button>
         <button type="button" class="lhc-demo-knopf" id="demo-stoerung">Störung</button>
         <button type="button" class="lhc-demo-knopf" id="demo-zurueck">Zurücksetzen</button>
       </div>
       <div class="lhc-demo-regler">
-        ${regler.map(([feld, text, lo, hi], i) => `
+        ${regler
+          .map(
+            ([feld, text, lo, hi], i) => `
           <label class="lhc-demo-schieber">
-            <span>${escapeHtml(text)} <b data-regler="${feld}">--</b></span>
-            <input type="range" data-feld="${feld}" min="${lo}" max="${hi}" step="0.5">
-          </label>`).join("")}
+            <span>${escapeHtml(text)} <b id="demo-r${i}-wert">--</b></span>
+            <input type="range" id="demo-r${i}" min="${lo}" max="${hi}" step="0.5">
+          </label>`
+          )
+          .join("")}
       </div>`;
 
-    // Schalter: einfache Delegation
-    host.addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-feld]");
-      if (!btn) return;
-      const feld = btn.getAttribute("data-feld");
-      const jetzt = this._demoLies(feld);
-      const istAn = jetzt === "on" || parseFloat(jetzt) > 0;
-      this._demoSetze(feld, istAn ? "off" : "on");
-      this._syncDemo();
+    schalter.forEach(([feld], i) => {
+      const el = this.shadowRoot.getElementById(`demo-s${i}`);
+      el.addEventListener("click", () => {
+        const jetzt = this._demoLies(feld);
+        const an = jetzt === "on" || parseFloat(jetzt) > 0;
+        // Schalter kennen an und aus, Zustandstopics kennen 1 und 0.
+        const neu = jetzt === "on" || jetzt === "off" ? (an ? "off" : "on") : an ? 0 : 1;
+        this._demoSetze(feld, neu);
+      });
     });
 
-    // Regler: einfach Input-Events
-    host.addEventListener("input", (e) => {
-      const inp = e.target.closest("input[data-feld]");
-      if (!inp) return;
-      const feld = inp.getAttribute("data-feld");
-      this._demoSetze(feld, inp.value);
-      this._syncDemo();
-    });
-
-    // Spezielle Buttons (Ventil, SG, etc.)
     this.shadowRoot.getElementById("demo-ventil").addEventListener("click", () => {
       this._demoSetze("three_way_valve", this._demoLies("three_way_valve") === "1" ? 0 : 1);
-      this._syncDemo();
     });
-    
     this.shadowRoot.getElementById("demo-sg").addEventListener("click", () => {
+      // Schaltet der Reihe nach durch alle vier Zustaende.
       const k1 = this._demoLies("sg_k1") === "on";
       const k2 = this._demoLies("sg_k2") === "on";
       const folge = [[false, false], [true, false], [false, true], [true, true]];
@@ -989,62 +958,22 @@ class LutarymHeatpumpCard extends HTMLElement {
       const naechste = folge[(jetzt + 1) % folge.length];
       this._demoSetze("sg_k1", naechste[0] ? "on" : "off");
       this._demoSetze("sg_k2", naechste[1] ? "on" : "off");
-      this._syncDemo();
     });
-    
     this.shadowRoot.getElementById("demo-stoerung").addEventListener("click", () => {
       this._demoSetze("error", this._demoLies("error") === "0" ? "H76" : "0");
-      this._syncDemo();
     });
-    
     this.shadowRoot.getElementById("demo-zurueck").addEventListener("click", () => {
       this._demoAufbauen();
       this._buildDemo();
       this._render();
     });
 
+    regler.forEach(([feld], i) => {
+      const el = this.shadowRoot.getElementById(`demo-r${i}`);
+      el.value = this._demoLies(feld) || 0;
+      el.addEventListener("input", () => this._demoSetze(feld, el.value));
+    });
     this._syncDemo();
-  }
-
-
-  _setupDemoHandlers() {
-    if (!this._config.demo || !this._demo) return;
-    const sr = this.shadowRoot;
-    const demoLeiste = sr.getElementById("demo-leiste");
-    if (!demoLeiste) return;
-    
-    demoLeiste.onclick = (e) => {
-      const btn = e.target.closest("button[id^='demo-s']");
-      if (!btn) return;
-      
-      const idx = parseInt(btn.id.replace("demo-s", ""));
-      const schalter = [
-        ["power_state"],
-        ["hk1_pump"],
-        ["hk2_pump"],
-        ["room_heater"],
-        ["dhw_heater"],
-        ["defrost"],
-        ["circulation_pump"],
-        ["circ_switch"],
-        ["dhw_force_state"],
-        ["sterilization_state"],
-      ];
-      
-      const feld = schalter[idx]?.[0];
-      if (!feld) return;
-      
-      const aktuell = this._demoLies(feld);
-      const aktuellistAn = aktuell === "on" || parseFloat(aktuell) > 0;
-      const neu = aktuellistAn ? "off" : "on";
-      this._demoSetze(feld, neu);
-      // Warte kurz, bis _render() fertig ist, dann update die Klasse
-      setTimeout(() => {
-        const w = this._demoLies(feld);
-        const istAn = w === "on" || parseFloat(w) > 0;
-        btn.classList.toggle("is-on", istAn);
-      }, 10);
-    };
   }
 
   /** Haelt die Bedienleiste des Demomodus auf Stand. */
@@ -1060,7 +989,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       if (anzeige) anzeige.textContent = wert;
     });
     const schalter = ["power_state","hk1_pump","hk2_pump","room_heater","dhw_heater",
-                      "defrost","circulation_pump","circ_switch","dhw_force_state","sterilization_state"];
+                      "defrost","circulation_pump","dhw_force_state","sterilization_state"];
     schalter.forEach((feld, i) => {
       const el = this.shadowRoot.getElementById(`demo-s${i}`);
       if (!el) return;
@@ -1143,8 +1072,6 @@ class LutarymHeatpumpCard extends HTMLElement {
           { feld: "force_defrost", status: "defrost", typ: "schalter", an: "Abtauen läuft, beenden", aus: "Abtauen erzwingen" },
           { feld: "powerful_mode", typ: "auswahl", titel: "Turbomodus", texte: POWERFUL_LABELS },
           { feld: "quiet_mode", typ: "auswahl", titel: "Leisemodus", texte: QUIET_LABELS },
-          { feld: "zones_select", typ: "zone", nummer: 1 },
-          { feld: "zones_select", typ: "zone", nummer: 2 },
         ],
       },
       {
@@ -1171,6 +1098,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         beschriftung: "label_hk1",
         anzeige: "hk1_water_target",
         aktionen: [
+          { feld: "zones_select", typ: "zone", nummer: 1 },
           { feld: "hk1_switch", typ: "schalter", an: "Heizkreis ist an, ausschalten", aus: "Heizkreis einschalten" },
         ],
       },
@@ -1180,6 +1108,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         beschriftung: "label_hk2",
         anzeige: "hk2_water_target",
         aktionen: [
+          { feld: "zones_select", typ: "zone", nummer: 2 },
           { feld: "hk2_switch", typ: "schalter", an: "Heizkreis ist an, ausschalten", aus: "Heizkreis einschalten" },
         ],
       },
@@ -1194,29 +1123,6 @@ class LutarymHeatpumpCard extends HTMLElement {
       if (!hatTemperatur && !hatAktion) return;
       el.classList.add("klickbar");
       el.addEventListener("click", () => this._oeffneDialog(f));
-    });
-
-    // Zirkulations-Pumpe: Direkter Schalter ohne Dialog
-    const zirkEl = sr.getElementById("zirkulation-group");
-    if (zirkEl && this._e("circ_switch")) {
-      zirkEl.classList.add("klickbar");
-      zirkEl.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        this._schaltCircSwitch();
-      });
-    }
-  }
-
-  _schaltCircSwitch() {
-    const switchId = this._e("circ_switch");
-    if (!switchId) return;
-    
-    const state = this._hass.states[switchId];
-    const currentState = state ? state.state : "off";
-    const newState = currentState === "on" ? "off" : "on";
-    
-    this._hass.callService("homeassistant", "turn_" + newState, {
-      entity_id: switchId,
     });
   }
 
@@ -1796,19 +1702,30 @@ class LutarymHeatpumpCard extends HTMLElement {
    */
   _bubbles(id, x, y, w, h, anzahl) {
     const n = anzahl || BUBBLE_COUNT;
-    let zufall = 1;
+    let zufall = 1; // einfacher, wiederholbarer Zahlengenerator
     const naechste = () => {
       zufall = (zufall * 1103515245 + 12345) % 2147483648;
       return zufall / 2147483648;
     };
     let kreise = "";
+    const bubbles = [];
     for (let i = 0; i < n; i++) {
       const cx = Math.round(x + 10 + naechste() * (w - 20));
       const r = (1.6 + naechste() * 2.4).toFixed(1);
-      naechste(); // dauer (wird in loop berechnet)
-      naechste(); // start (wird in loop berechnet)
+      const dauer = 4 + naechste() * 4;
+      const start = naechste() * 7;
       const bubbleId = `${id}-bubble-${i}`;
-      kreise += `<circle class="bubble" id="${bubbleId}" cx="${cx}" cy="${y + h - 4}" r="${r}"/>`;
+      kreise +=
+        `<circle class="bubble" id="${bubbleId}" cx="${cx}" cy="${y + h - 4}" r="${r}"/>`;
+      bubbles.push({ id: bubbleId, duration: dauer, delay: -start });
+    }
+    // Registriere Bubbles für Animation (wird nach SVG ins DOM eingefügt)
+    if (bubbles.length > 0) {
+      Promise.resolve().then(() => {
+        bubbles.forEach(b => {
+          this._animState.set(b.id, { type: "bubble", duration: b.duration, startTime: this._animTime + b.delay });
+        });
+      });
     }
     return `<g id="${id}">${kreise}</g>`;
   }
@@ -2040,7 +1957,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (zirkRotor) {
       zirkRotor.classList.toggle("is-still", !zirkAn);
       if (zirkAn && animate && laeuft) {
-        this._animState.set("zirk-rotor", { type: "spin", duration: PUMP_SECONDS });
+        this._animState.set("zirk-rotor", { type: "spin", duration: PUMP_SECONDS, startTime: this._animTime });
       } else {
         this._animState.delete("zirk-rotor");
       }
@@ -2253,7 +2170,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       rotor.classList.toggle("is-still", !pumpOn);
       const rotorId = `hk${n}-rotor`;
       if (pumpOn && animate && laeuft) {
-        this._animState.set(rotorId, { type: "spin", duration: PUMP_SECONDS });
+        this._animState.set(rotorId, { type: "spin", duration: PUMP_SECONDS, startTime: this._animTime });
       } else {
         this._animState.delete(rotorId);
       }
@@ -2295,12 +2212,12 @@ class LutarymHeatpumpCard extends HTMLElement {
     const animate = this._config.animate !== false;
     if (rpm === null || rpm <= 0 || !animate || erlaubt === false) {
       el.classList.toggle("is-still", rpm === null || rpm <= 0);
-      this._animState.delete(rotorId);
+      this._animState.set(rotorId, null);
       return;
     }
     el.classList.remove("is-still");
     const duration = festeDauer ? festeDauer : clamp(900 / rpm, 0.25, 6);
-    this._animState.set(rotorId, { type: "spin", duration });
+    this._animState.set(rotorId, { type: "spin", duration, startTime: this._animTime });
   }
 
   _syncToggle(id, key) {
@@ -2474,7 +2391,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       /* Aufsteigende Blasen. Je waermer der Speicher, desto mehr
          davon werden sichtbar geschaltet. */
       .bubble {
-        fill: #FFFFFF;
+        fill: #FFFFFF; opacity: 0;
       }
       .tag-l { fill: #8494AA; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
       /* Vorlauf rot, Ruecklauf blau, unabhaengig von der Temperatur. */
@@ -2515,7 +2432,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       }
       /* Der Zustandstext leuchtet leicht in seiner eigenen Farbe,
          damit er sich vom dunklen Gehaeuse abhebt. */
-      .sg-value.is-active { }
+      .sg-value.is-active { filter: drop-shadow(0 0 6px currentColor); }
       #sg-group { transition: opacity 300ms ease; }
       #sg-group rect { transition: all 400ms ease; }
       /* Der aktive Balken leuchtet, damit er sich klar abhebt. */
