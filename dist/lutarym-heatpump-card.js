@@ -14,7 +14,7 @@ const CARD_VERSION = "2.6.2";
  * ------------------------------------------------------------------ */
 const L = {
   W: 1650,
-  H: 750,
+  H: 700,
   FLOW_Y: 240,
   RET_Y: 700,
   TANK_TOP: 290,
@@ -1465,7 +1465,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     const hk2 = this._config.hk_count === 2;
 
     return `
-    <svg viewBox="0 0 ${L.W} ${L.H}" class="lhc-svg" role="img"
+    <svg viewBox="0 80 ${L.W} ${L.H}" class="lhc-svg" role="img"
          aria-label="Schema der Wärmepumpenanlage">
       <defs>
         <linearGradient id="casing" x1="0" y1="0" x2="0" y2="1">
