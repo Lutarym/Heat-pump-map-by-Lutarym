@@ -1509,8 +1509,8 @@ class LutarymHeatpumpCard extends HTMLElement {
            Der Teil hinter dem Ventil fuehrt nur zum Warmwasserspeicher. -->
       <path class="flowdots" id="dots-vl-a" d="M340 ${F} H 630"/>
       <path class="flowdots" id="dots-vl-b" d="M630 ${F} H 1525"/>
-      <path class="flowdots rev" id="dots-rl-a" d="M630 ${R} H 340"/>
-      <path class="flowdots rev" id="dots-rl-b" d="M1525 ${R} H 630"/>
+      <path class="flowdots" id="dots-rl-a" d="M630 ${R} H 340"/>
+      <path class="flowdots" id="dots-rl-b" d="M1525 ${R} H 630"/>
 
       <path class="pipe-shell" d="M630 ${F} V ${T} M630 ${B} V ${R}"/>
       <path class="pipe" id="pipe-buf-in" d="M630 ${F} V ${T}"/>
@@ -1549,7 +1549,7 @@ class LutarymHeatpumpCard extends HTMLElement {
 
         <circle cx="66" cy="156" r="9" id="power-led" fill="#2C3646"/>
         <text class="unit-label" x="86" y="161">Betrieb</text>
-        <g id="defrost-badge" class="badge" transform="translate(250 96)">
+        <g id="defrost-badge" class="badge" transform="translate(180 150)">
           <rect x="-62" y="-16" width="124" height="32" rx="16"
                 fill="#0E2A4A" stroke="#3E9BE0" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Abtauung</text>
@@ -2490,7 +2490,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         fill: #C3D0E0; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
       }
       .sg-value {
-        fill: ${NEUTRAL}; font-size: 26px; font-weight: 700;
+        fill: ${NEUTRAL}; font-size: 16px; font-weight: 700;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums; transition: fill 400ms ease;
       }
