@@ -1616,7 +1616,7 @@ class LutarymHeatpumpCard extends HTMLElement {
             <circle r="4" fill="#0D1219"/>
           </g>
         </g>
-        <text class="cap-s" x="580" y="${F - 60}" text-anchor="middle">Pumpe</text>
+        <text class="cap-s" x="580" y="${R + 40}" text-anchor="middle">Pumpe</text>
       </g>
 
       <!-- Heizungspuffer -->
@@ -1648,7 +1648,7 @@ class LutarymHeatpumpCard extends HTMLElement {
                 stroke="${NEUTRAL}" stroke-width="3" stroke-linecap="round"/>
           <circle r="4" fill="#55637A"/>
         </g>
-        <text class="cap-s" x="1390" y="${F - 60}" text-anchor="middle">Druck</text>
+        <text class="cap-s" x="1390" y="${R + 40}" text-anchor="middle">Druck</text>
       </g>
 
       ${this._circuit(1, 820, 1040, 870, 990)}
