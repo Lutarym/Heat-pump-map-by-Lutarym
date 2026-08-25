@@ -1411,21 +1411,12 @@ class LutarymHeatpumpCard extends HTMLElement {
       return;
     }
     const hatHeizung = Boolean(this._e("heating_switch"));
-    const hatModus = Boolean(this._e("mode_select"));
-    if (!hatHeizung && !hatModus) {
+    if (!hatHeizung) {
       host.hidden = true;
       return;
     }
 
     host.innerHTML = `
-      ${
-        hatModus
-          ? `<label class="lhc-modepick">
-               <span class="lhc-field-label">Betriebsart</span>
-               <select id="mode-select"></select>
-             </label>`
-          : ""
-      }
       ${
         hatHeizung
           ? `<button type="button" class="lhc-toggle" id="sw-heat" aria-pressed="false">
@@ -1445,15 +1436,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         const on = isOn(this._quelle, entityId);
         this._quelle.callService("homeassistant", on ? "turn_off" : "turn_on", {
           entity_id: entityId,
-        });
-      });
-    }
-    if (hatModus) {
-      const sel = this.shadowRoot.getElementById("mode-select");
-      sel.addEventListener("change", () => {
-        this._quelle.callService("select", "select_option", {
-          entity_id: this._e("mode_select"),
-          option: sel.value,
         });
       });
     }
