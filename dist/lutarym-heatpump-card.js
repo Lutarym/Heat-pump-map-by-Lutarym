@@ -808,9 +808,14 @@ class LutarymHeatpumpCard extends HTMLElement {
   }
 
   _startAnimationLoop() {
+    let lastTime = performance.now();
+    
     const tick = (time) => {
       if (!this.isConnected) return;
-      this._animTime = (this._animTime + 0.016) % 100;
+      
+      const deltaTime = (time - lastTime) / 1000; // in Sekunden
+      lastTime = time;
+      this._animTime += deltaTime;
       
       const sr = this.shadowRoot;
       if (!sr) {
@@ -823,7 +828,8 @@ class LutarymHeatpumpCard extends HTMLElement {
         if (!state || state.type !== "flow") return;
         const el = sr.getElementById(id);
         if (!el) return;
-        const progress = (this._animTime % 1.2) / 1.2;
+        const cycle = this._animTime % 1.2;
+        const progress = cycle / 1.2;
         const offset = state.reverse ? 44 * progress : -44 * progress;
         el.setAttribute("stroke-dashoffset", offset.toFixed(1));
       });
