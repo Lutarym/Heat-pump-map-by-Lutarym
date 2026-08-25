@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.6.0";
+const CARD_VERSION = "2.6.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -937,7 +937,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <span class="lhc-demo-hinweis">Erfundene Werte, die Anlage bleibt unberührt</span>
       </div>
       <div class="lhc-demo-reihe">
-        ${schalter.map(([feld, text], i) => `<button type="button" class="lhc-demo-knopf" data-feld="${feld}" data-idx="${i}">${escapeHtml(text)}</button>`).join("")}
+        ${schalter.map(([feld, text], i) => `<button type="button" class="lhc-demo-knopf" id="demo-s${i}" data-feld="${feld}">${escapeHtml(text)}</button>`).join("")}
         <button type="button" class="lhc-demo-knopf" id="demo-ventil">Ventil</button>
         <button type="button" class="lhc-demo-knopf" id="demo-sg">SG Ready</button>
         <button type="button" class="lhc-demo-knopf" id="demo-stoerung">Störung</button>
