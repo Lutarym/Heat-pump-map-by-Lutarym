@@ -2432,7 +2432,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       }
       /* Der Zustandstext leuchtet leicht in seiner eigenen Farbe,
          damit er sich vom dunklen Gehaeuse abhebt. */
-      .sg-value.is-active { filter: drop-shadow(0 0 6px currentColor); }
+      .sg-value.is-active { }
       #sg-group { transition: opacity 300ms ease; }
       #sg-group rect { transition: all 400ms ease; }
       /* Der aktive Balken leuchtet, damit er sich klar abhebt. */
