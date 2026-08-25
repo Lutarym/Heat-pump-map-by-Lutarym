@@ -1447,8 +1447,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     const two = this._config.fan_count === 2;
     // Luefter uebereinander, wie beim echten Aussengeraet.
     const fans = two
-      ? `${this._fan("fan1", 190, 300, 96)}${this._fan("fan2", 190, 548, 96)}`
-      : this._fan("fan1", 190, 420, 120);
+      ? `${this._fan("fan1", 190, 360, 96)}${this._fan("fan2", 190, 608, 96)}`
+      : this._fan("fan1", 190, 480, 120);
 
     const F = L.FLOW_Y;
     const R = L.RET_Y;
@@ -1547,19 +1547,19 @@ class LutarymHeatpumpCard extends HTMLElement {
               fill="none" stroke="#E0762E" stroke-width="2" opacity="0"/>
         <rect x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16" fill="url(#glass)"/>
 
-        <circle cx="66" cy="96" r="9" id="power-led" fill="#2C3646"/>
-        <text class="unit-label" x="86" y="101">Betrieb</text>
+        <circle cx="66" cy="156" r="9" id="power-led" fill="#2C3646"/>
+        <text class="unit-label" x="86" y="161">Betrieb</text>
         <g id="defrost-badge" class="badge" transform="translate(250 96)">
           <rect x="-62" y="-16" width="124" height="32" rx="16"
                 fill="#0E2A4A" stroke="#3E9BE0" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Abtauung</text>
         </g>
 
-        <text class="unit-label" x="115" y="140" text-anchor="middle">Außen</text>
-        <text class="unit-value" id="outside-v" x="115" y="168"
+        <text class="unit-label" x="115" y="200" text-anchor="middle">Außen</text>
+        <text class="unit-value" id="outside-v" x="115" y="228"
               text-anchor="middle">--</text>
-        <text class="unit-label" x="265" y="140" text-anchor="middle">Verdichter</text>
-        <text class="unit-value" id="comp-v" x="265" y="168" text-anchor="middle">--</text>
+        <text class="unit-label" x="265" y="200" text-anchor="middle">Verdichter</text>
+        <text class="unit-value" id="comp-v" x="265" y="228" text-anchor="middle">--</text>
 
         ${fans}
 
@@ -1593,19 +1593,19 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
       <g id="verbrauch-group" opacity="0">
-        <text class="unit-label" x="445" y="404" text-anchor="middle">Leistung</text>
-        <text class="verbrauch-v" id="power-now-v" x="445" y="440"
+        <text class="unit-label" x="445" y="464" text-anchor="middle">Leistung</text>
+        <text class="verbrauch-v" id="power-now-v" x="445" y="500"
               text-anchor="middle">--</text>
-        <text class="unit-label" id="energy-label" x="445" y="492"
+        <text class="unit-label" id="energy-label" x="445" y="552"
               text-anchor="middle">--</text>
-        <text class="unit-value" id="energy-today-v" x="445" y="524"
+        <text class="unit-value" id="energy-today-v" x="445" y="584"
               text-anchor="middle">--</text>
       </g>
 
       <!-- Primärpumpe -->
       <g>
-        <text class="value-s" id="pump-v" x="496" y="662" text-anchor="start">--</text>
-        <text class="value-s" id="flow-v" x="496" y="684" text-anchor="start">--</text>
+        <text class="value-s" id="pump-v" x="496" y="722" text-anchor="start">--</text>
+        <text class="value-s" id="flow-v" x="496" y="744" text-anchor="start">--</text>
         <g transform="translate(460 ${R})">
           <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <g class="rotor" id="pump-rotor">
