@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.4.1";
+const CARD_VERSION = "2.5.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -461,6 +461,15 @@ class LutarymHeatpumpCard extends HTMLElement {
     this._hass = null;
     this._auto = null;
     this._dragging = null;
+    
+    // Animation Engine (GData-kompatibel)
+    this._animLoop = null;
+    this._animTime = 0;
+    this._animState = new Map();
+  }
+
+  disconnectedCallback() {
+    if (this._animLoop) cancelAnimationFrame(this._animLoop);
   }
 
   static getConfigElement() {
@@ -752,6 +761,10 @@ class LutarymHeatpumpCard extends HTMLElement {
   /* -------------------- Aufbau -------------------- */
 
   _build() {
+    if (this._animLoop) cancelAnimationFrame(this._animLoop);
+    this._animTime = 0;
+    this._animState.clear();
+    
     const root = document.createElement("div");
     root.innerHTML = `
       <style>${this._css()}</style>
@@ -791,6 +804,69 @@ class LutarymHeatpumpCard extends HTMLElement {
     this._buildDialog();
     this._buildKlicks();
     this._buildSwitches();
+    this._startAnimationLoop();
+  }
+
+  _startAnimationLoop() {
+    const tick = (time) => {
+      if (!this.isConnected) return;
+      this._animTime = (this._animTime + 0.016) % 100;
+      
+      const sr = this.shadowRoot;
+      if (!sr) {
+        this._animLoop = requestAnimationFrame(tick);
+        return;
+      }
+
+      // Flowdots animieren (stroke-dashoffset)
+      this._animState.forEach((state, id) => {
+        if (!state || state.type !== "flow") return;
+        const el = sr.getElementById(id);
+        if (!el) return;
+        const progress = (this._animTime % 1.2) / 1.2;
+        const offset = state.reverse ? 44 * progress : -44 * progress;
+        el.setAttribute("stroke-dashoffset", offset.toFixed(1));
+      });
+
+      // Bubbles animieren (translateY + opacity)
+      this._animState.forEach((state, id) => {
+        if (!state || state.type !== "bubble") return;
+        const el = sr.getElementById(id);
+        if (!el) return;
+        const elapsed = (this._animTime - state.startTime) % state.duration;
+        const progress = elapsed / state.duration;
+        const y = -330 * progress;
+        let opacity = 0;
+        if (progress < 0.15) opacity = (progress / 0.15) * 0.38;
+        else if (progress < 0.85) opacity = 0.36;
+        else opacity = 0.36 * (1 - (progress - 0.85) / 0.15);
+        el.setAttribute("transform", `translateY(${y})`);
+        el.setAttribute("opacity", opacity.toFixed(2));
+      });
+
+      // Pulse/Glow animieren (opacity)
+      this._animState.forEach((state, id) => {
+        if (!state || state.type !== "pulse") return;
+        const el = sr.getElementById(id);
+        if (!el) return;
+        const cycle = (this._animTime % state.duration) / state.duration;
+        const opacity = cycle < 0.5 ? 1 - (cycle / 0.5) * 0.6 : 0.4 + ((cycle - 0.5) / 0.5) * 0.6;
+        el.setAttribute("opacity", opacity.toFixed(2));
+      });
+
+      // Spin animieren (rotate)
+      this._animState.forEach((state, id) => {
+        if (!state || state.type !== "spin") return;
+        const el = sr.getElementById(id);
+        if (!el) return;
+        const elapsed = (this._animTime - state.startTime) % state.duration;
+        const progress = (elapsed / state.duration) * 360;
+        el.setAttribute("transform", `rotate(${progress.toFixed(1)} 0 0)`);
+      });
+
+      this._animLoop = requestAnimationFrame(tick);
+    };
+    this._animLoop = requestAnimationFrame(tick);
   }
 
   /** Verdrahtet das Einstellfenster. */
@@ -1632,14 +1708,24 @@ class LutarymHeatpumpCard extends HTMLElement {
       return zufall / 2147483648;
     };
     let kreise = "";
+    const bubbles = [];
     for (let i = 0; i < n; i++) {
       const cx = Math.round(x + 10 + naechste() * (w - 20));
       const r = (1.6 + naechste() * 2.4).toFixed(1);
-      const dauer = (4 + naechste() * 4).toFixed(1);
-      const start = (naechste() * 7).toFixed(1);
+      const dauer = 4 + naechste() * 4;
+      const start = naechste() * 7;
+      const bubbleId = `${id}-bubble-${i}`;
       kreise +=
-        `<circle class="bubble" cx="${cx}" cy="${y + h - 4}" r="${r}"` +
-        ` style="animation-duration:${dauer}s;animation-delay:-${start}s"/>`;
+        `<circle class="bubble" id="${bubbleId}" cx="${cx}" cy="${y + h - 4}" r="${r}"/>`;
+      bubbles.push({ id: bubbleId, duration: dauer, delay: -start });
+    }
+    // Registriere Bubbles für Animation (wird nach SVG ins DOM eingefügt)
+    if (bubbles.length > 0) {
+      Promise.resolve().then(() => {
+        bubbles.forEach(b => {
+          this._animState.set(b.id, { type: "bubble", duration: b.duration, startTime: this._animTime + b.delay });
+        });
+      });
     }
     return `<g id="${id}">${kreise}</g>`;
   }
@@ -1696,17 +1782,29 @@ class LutarymHeatpumpCard extends HTMLElement {
       if (!el) return;
       el.classList.toggle("is-on", aktiv);
       el.classList.toggle("is-pulsing", aktiv && animate);
+      if (aktiv && animate) {
+        this._animState.set(id, { type: "pulse", duration: 2.2 });
+      } else {
+        this._animState.delete(id);
+      }
     };
     // Schaltet die Laufstriche eines Leitungsabschnitts.
     // Die laufenden Striche tragen die Temperatur des Wassers, das
-    // dort gerade fliesst. Die Stilregel .flowdots setzt stroke, und
-    // CSS schlaegt ein Attribut, daher als Inline-Stil.
+    // dort gerade fliesst. Animation läuft via requestAnimationFrame.
     const stroemt = (ids, an, farbe) => {
       ids.forEach((id) => {
         const el = sr.getElementById(id);
         if (!el) return;
-        el.classList.toggle("is-on", animate && laeuft && an === true);
+        const aktiv = animate && laeuft && an === true;
+        el.classList.toggle("is-on", aktiv);
         if (farbe) el.style.stroke = farbe;
+        if (aktiv) {
+          const isRev = el.classList.contains("rev");
+          this._animState.set(id, { type: "flow", reverse: isRev });
+        } else {
+          this._animState.delete(id);
+          el.setAttribute("stroke-dashoffset", "0");
+        }
       });
     };
 
@@ -1780,7 +1878,14 @@ class LutarymHeatpumpCard extends HTMLElement {
     abzeichen("defrost-badge", isOn(hass, this._e("defrost")) === true);
     const glow = sr.getElementById("unit-glow");
     if (glow) {
-      glow.classList.toggle("is-on", animate && laeuft && comp !== null && comp > 0);
+      const glowAn = animate && laeuft && comp !== null && comp > 0;
+      glow.classList.toggle("is-on", glowAn);
+      if (glowAn) {
+        this._animState.set("unit-glow", { type: "pulse", duration: 2.6 });
+      } else {
+        this._animState.delete("unit-glow");
+        glow.setAttribute("opacity", "0.12");
+      }
     }
 
     /* SG Ready */
@@ -1851,9 +1956,11 @@ class LutarymHeatpumpCard extends HTMLElement {
     const zirkRotor = sr.getElementById("zirk-rotor");
     if (zirkRotor) {
       zirkRotor.classList.toggle("is-still", !zirkAn);
-      zirkRotor.style.animationDuration = `${PUMP_SECONDS}s`;
-      zirkRotor.style.animationPlayState =
-        zirkAn && animate && laeuft ? "running" : "paused";
+      if (zirkAn && animate && laeuft) {
+        this._animState.set("zirk-rotor", { type: "spin", duration: PUMP_SECONDS, startTime: this._animTime });
+      } else {
+        this._animState.delete("zirk-rotor");
+      }
     }
 
     /* Leistung der Photovoltaik */
@@ -2061,9 +2168,12 @@ class LutarymHeatpumpCard extends HTMLElement {
     const rotor = sr.getElementById(`hk${n}-rotor`);
     if (rotor) {
       rotor.classList.toggle("is-still", !pumpOn);
-      rotor.style.animationDuration = `${PUMP_SECONDS}s`;
-      rotor.style.animationPlayState =
-        pumpOn && animate && laeuft ? "running" : "paused";
+      const rotorId = `hk${n}-rotor`;
+      if (pumpOn && animate && laeuft) {
+        this._animState.set(rotorId, { type: "spin", duration: PUMP_SECONDS, startTime: this._animTime });
+      } else {
+        this._animState.delete(rotorId);
+      }
     }
     set(`hk${n}-pump-v`, pumpOn ? "läuft" : "aus");
 
@@ -2071,10 +2181,17 @@ class LutarymHeatpumpCard extends HTMLElement {
     [`dots-hk${n}`, `dots-hk${n}b`].forEach((id, i) => {
       const el = sr.getElementById(id);
       if (!el) return;
-      el.classList.toggle("is-on", animate && laeuft && pumpOn);
+      const aktiv = animate && laeuft && pumpOn;
+      el.classList.toggle("is-on", aktiv);
       // Beide Richtungen tragen die Puffertemperatur, wie die
       // waagerechten Leitungen, an die sie anschliessen.
       el.style.stroke = col(buf);
+      if (aktiv) {
+        this._animState.set(id, { type: "flow", reverse: false });
+      } else {
+        this._animState.delete(id);
+        el.setAttribute("stroke-dashoffset", "0");
+      }
     });
 
 
@@ -2094,15 +2211,13 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (!el) return;
     const animate = this._config.animate !== false;
     if (rpm === null || rpm <= 0 || !animate || erlaubt === false) {
-      el.style.animationPlayState = "paused";
       el.classList.toggle("is-still", rpm === null || rpm <= 0);
+      this._animState.set(rotorId, null);
       return;
     }
     el.classList.remove("is-still");
-    el.style.animationDuration = festeDauer
-      ? `${festeDauer}s`
-      : `${clamp(900 / rpm, 0.25, 6).toFixed(2)}s`;
-    el.style.animationPlayState = "running";
+    const duration = festeDauer ? festeDauer : clamp(900 / rpm, 0.25, 6);
+    this._animState.set(rotorId, { type: "spin", duration, startTime: this._animTime });
   }
 
   _syncToggle(id, key) {
@@ -2167,7 +2282,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         font-size: 14px; font-weight: 500;
       }
       .lhc-alert[hidden] { display: none; }
-      .lhc-alert.is-pulsing { animation: lhc-pulse 2s ease-in-out infinite; }
+      .lhc-alert.is-pulsing { }
       .lhc-hint {
         margin-bottom: 14px; padding: 12px 16px; border-radius: 10px;
         background: #2A2313; border: 1px solid #B07B2E; color: #F2DFB0;
@@ -2231,13 +2346,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       .flowdots {
         fill: none; stroke: #FFFFFF; stroke-width: 7;
         stroke-linecap: round; stroke-dasharray: 14 30;
-        opacity: 0; animation: lhc-flow 1.2s linear infinite;
-        animation-play-state: paused;
+        opacity: 0;
       }
-      .flowdots.is-on { opacity: 0.9; animation-play-state: running; }
-      .flowdots.rev { animation-name: lhc-flow-rev; }
-      @keyframes lhc-flow { to { stroke-dashoffset: -44; } }
-      @keyframes lhc-flow-rev { to { stroke-dashoffset: 44; } }
+      .flowdots.is-on { opacity: 0.9; }
 
       .unit-label {
         fill: #7E8CA0; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase;
@@ -2281,14 +2392,6 @@ class LutarymHeatpumpCard extends HTMLElement {
          davon werden sichtbar geschaltet. */
       .bubble {
         fill: #FFFFFF; opacity: 0;
-        animation-name: lhc-bubble; animation-timing-function: linear;
-        animation-iteration-count: infinite;
-      }
-      @keyframes lhc-bubble {
-        0% { transform: translateY(0); opacity: 0; }
-        15% { opacity: 0.38; }
-        85% { opacity: 0.34; }
-        100% { transform: translateY(-330px); opacity: 0; }
       }
       .tag-l { fill: #8494AA; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
       /* Vorlauf rot, Ruecklauf blau, unabhaengig von der Temperatur. */
@@ -2311,7 +2414,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       }
       .badge { opacity: 0; transition: opacity 300ms ease; }
       .badge.is-on { opacity: 1; }
-      .badge.is-on.is-pulsing { animation: lhc-pulse 2.2s ease-in-out infinite; }
+      .badge.is-on.is-pulsing { }
 
       .pv-value {
         fill: #7BD88F; font-size: 26px; font-weight: 700;
@@ -2337,21 +2440,17 @@ class LutarymHeatpumpCard extends HTMLElement {
       #power-led { transition: fill 400ms ease; }
       #power-led.is-on { filter: drop-shadow(0 0 6px rgba(70,192,122,0.9)); }
       #unit-glow { transition: opacity 600ms ease; }
-      #unit-glow.is-on { animation: lhc-glow 2.6s ease-in-out infinite; }
+      #unit-glow.is-on { }
       #press-group { transition: opacity 300ms ease; }
       #press-needle { transition: all 900ms ease; }
-      @keyframes lhc-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-      @keyframes lhc-glow { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.5; } }
 
       /* Die Rotoren tragen selbst kein transform-Attribut, sonst wuerde
          die Animation es ueberschreiben und sie an den Nullpunkt werfen. */
       .rotor {
-        transform-origin: 0 0; animation: lhc-spin 2s linear infinite;
-        animation-play-state: paused;
+        transform-origin: 0 0;
       }
       .rotor .blades path { fill: #55637A; }
       .rotor.is-still .blades path, .rotor.is-still > path { fill: #3A4557; }
-      @keyframes lhc-spin { to { transform: rotate(360deg); } }
 
       .lhc-field-label {
         font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
