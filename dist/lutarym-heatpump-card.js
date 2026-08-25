@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.6.1";
+const CARD_VERSION = "2.6.2";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -959,6 +959,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       const jetzt = this._demoLies(feld);
       const istAn = jetzt === "on" || parseFloat(jetzt) > 0;
       this._demoSetze(feld, istAn ? "off" : "on");
+      this._syncDemo();
     });
 
     // Regler: einfach Input-Events
@@ -967,11 +968,13 @@ class LutarymHeatpumpCard extends HTMLElement {
       if (!inp) return;
       const feld = inp.getAttribute("data-feld");
       this._demoSetze(feld, inp.value);
+      this._syncDemo();
     });
 
     // Spezielle Buttons (Ventil, SG, etc.)
     this.shadowRoot.getElementById("demo-ventil").addEventListener("click", () => {
       this._demoSetze("three_way_valve", this._demoLies("three_way_valve") === "1" ? 0 : 1);
+      this._syncDemo();
     });
     
     this.shadowRoot.getElementById("demo-sg").addEventListener("click", () => {
@@ -982,10 +985,12 @@ class LutarymHeatpumpCard extends HTMLElement {
       const naechste = folge[(jetzt + 1) % folge.length];
       this._demoSetze("sg_k1", naechste[0] ? "on" : "off");
       this._demoSetze("sg_k2", naechste[1] ? "on" : "off");
+      this._syncDemo();
     });
     
     this.shadowRoot.getElementById("demo-stoerung").addEventListener("click", () => {
       this._demoSetze("error", this._demoLies("error") === "0" ? "H76" : "0");
+      this._syncDemo();
     });
     
     this.shadowRoot.getElementById("demo-zurueck").addEventListener("click", () => {
