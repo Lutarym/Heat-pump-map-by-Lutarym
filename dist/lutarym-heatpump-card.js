@@ -1568,23 +1568,23 @@ class LutarymHeatpumpCard extends HTMLElement {
       <!-- SG Ready, PV Leistung, Leistung, Verbrauch - zentriert zwischen VL und RL -->
       <g id="sg-group" opacity="0">
         <text class="sg-label" x="445" y="${F + 60}" text-anchor="middle">SG Ready</text>
-        <g transform="translate(445 ${F + 74})">
+        <g transform="translate(445 ${F + 90})">
           <rect x="-68" y="0" width="32" height="11" rx="5.5" id="sg-seg-1" fill="#3A4658"/>
           <rect x="-34" y="0" width="32" height="11" rx="5.5" id="sg-seg-2" fill="#3A4658"/>
           <rect x="2" y="0" width="32" height="11" rx="5.5" id="sg-seg-3" fill="#3A4658"/>
           <rect x="36" y="0" width="32" height="11" rx="5.5" id="sg-seg-4" fill="#3A4658"/>
         </g>
-        <text class="sg-value" id="sg-text" x="445" y="${F + 108}"
+        <text class="sg-value" id="sg-text" x="445" y="${F + 130}"
               text-anchor="middle">--</text>
-        <line x1="380" y1="${F + 125}" x2="510" y2="${F + 125}" stroke="#33415A" stroke-width="0.5"/>
+        <line x1="380" y1="${F + 150}" x2="510" y2="${F + 150}" stroke="#33415A" stroke-width="0.5"/>
       </g>
 
       <!-- PV Leistung -->
       <g id="pv-group" opacity="0">
-        <text class="sg-label" x="445" y="${F + 165}" text-anchor="middle">PV Leistung</text>
-        <text class="pv-value" id="pv-v" x="445" y="${F + 203}"
+        <text class="sg-label" x="445" y="${F + 190}" text-anchor="middle">PV Leistung</text>
+        <text class="pv-value" id="pv-v" x="445" y="${F + 228}"
               text-anchor="middle">--</text>
-        <line x1="380" y1="${F + 220}" x2="510" y2="${F + 220}" stroke="#33415A" stroke-width="0.5"/>
+        <line x1="380" y1="${F + 245}" x2="510" y2="${F + 245}" stroke="#33415A" stroke-width="0.5"/>
       </g>
 
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
@@ -1595,13 +1595,13 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
       <g id="verbrauch-group" opacity="0">
-        <text class="sg-label" x="445" y="${F + 260}" text-anchor="middle">Leistung</text>
-        <text class="verbrauch-v" id="power-now-v" x="445" y="${F + 298}"
+        <text class="sg-label" x="445" y="${F + 285}" text-anchor="middle">Leistung</text>
+        <text class="verbrauch-v" id="power-now-v" x="445" y="${F + 323}"
               text-anchor="middle">--</text>
-        <line x1="380" y1="${F + 315}" x2="510" y2="${F + 315}" stroke="#33415A" stroke-width="0.5"/>
-        <text class="sg-label" id="energy-label" x="445" y="${F + 355}"
+        <line x1="380" y1="${F + 340}" x2="510" y2="${F + 340}" stroke="#33415A" stroke-width="0.5"/>
+        <text class="sg-label" id="energy-label" x="445" y="${F + 380}"
               text-anchor="middle">--</text>
-        <text class="unit-value" id="energy-today-v" x="445" y="${F + 395}"
+        <text class="unit-value" id="energy-today-v" x="445" y="${F + 420}"
               text-anchor="middle">--</text>
       </g>
 
