@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.5.8";
+const CARD_VERSION = "2.5.9";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -995,21 +995,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       this._render();
     });
 
-    schalter.forEach(([feld], i) => {
-      const el = this.shadowRoot.getElementById(`demo-s${i}`);
-      if (!el) return;
-      const wert = this._demoLies(feld);
-      const istAn = wert === "on" || parseFloat(wert) > 0;
-      el.classList.toggle("is-on", istAn);
-      el.addEventListener("click", () => {
-        const aktuell = this._demoLies(feld);
-        const aktuellistAn = aktuell === "on" || parseFloat(aktuell) > 0;
-        const neu = aktuellistAn ? "off" : "on";
-        this._demoSetze(feld, neu);
-        el.classList.toggle("is-on", neu === "on");
-        this._render();
-      });
-    });
+
     regler.forEach(([feld], i) => {
       const el = this.shadowRoot.getElementById(`demo-r${i}`);
       el.value = this._demoLies(feld) || 0;
@@ -1018,12 +1004,45 @@ class LutarymHeatpumpCard extends HTMLElement {
         this._syncDemo();
       });
     });
+    this._setupDemoHandlers();
     this._syncDemo();
+  }
+
+  _setupDemoHandlers() {
+    if (!this._config.demo || !this._demo) return;
+    const sr = this.shadowRoot;
+    
+    const schalter = [
+      ["power_state", "Wärmepumpe"],
+      ["hk1_pump", "Pumpe HK1"],
+      ["hk2_pump", "Pumpe HK2"],
+      ["room_heater", "Heizstab Heizung"],
+      ["dhw_heater", "Heizstab Warmwasser"],
+      ["defrost", "Abtauung"],
+      ["circulation_pump", "Zirkulation Status"],
+      ["circ_switch", "Zirkulation Schalter"],
+      ["dhw_force_state", "Aufheizen"],
+      ["sterilization_state", "Legionellenschutz"],
+    ];
+    
+    schalter.forEach(([feld], i) => {
+      const el = sr.getElementById(`demo-s${i}`);
+      if (!el) return;
+      el.onclick = () => {
+        const aktuell = this._demoLies(feld);
+        const aktuellistAn = aktuell === "on" || parseFloat(aktuell) > 0;
+        const neu = aktuellistAn ? "off" : "on";
+        this._demoSetze(feld, neu);
+        el.classList.toggle("is-on", neu === "on");
+        this._syncDemo();
+      };
+    });
   }
 
   /** Haelt die Bedienleiste des Demomodus auf Stand. */
   _syncDemo() {
     if (!this._config.demo || !this._demo) return;
+    this._setupDemoHandlers();
     const felder = ["pv_power","outside_temp","flow_temp","return_temp","buffer_temp","dhw_temp",
                     "hk1_water","hk2_water","compressor","pump_flow"];
     felder.forEach((feld, i) => {
