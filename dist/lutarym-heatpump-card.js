@@ -1549,7 +1549,7 @@ class LutarymHeatpumpCard extends HTMLElement {
 
         <circle cx="66" cy="156" r="9" id="power-led" fill="#2C3646"/>
         <text class="unit-label" x="86" y="161">Betrieb</text>
-        <g id="defrost-badge" class="badge" transform="translate(190 150)">
+        <g id="defrost-badge" class="badge" transform="translate(260 150)">
           <rect x="-62" y="-16" width="124" height="32" rx="16"
                 fill="#0E2A4A" stroke="#3E9BE0" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Abtauung</text>
