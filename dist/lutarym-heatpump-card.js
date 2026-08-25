@@ -2430,7 +2430,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       /* Aufsteigende Blasen. Je waermer der Speicher, desto mehr
          davon werden sichtbar geschaltet. */
       .bubble {
-        fill: #FFFFFF; opacity: 0;
+        fill: #FFFFFF;
       }
       .tag-l { fill: #8494AA; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
       /* Vorlauf rot, Ruecklauf blau, unabhaengig von der Temperatur. */
