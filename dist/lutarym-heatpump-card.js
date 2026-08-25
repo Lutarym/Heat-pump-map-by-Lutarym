@@ -2381,7 +2381,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       }
       .lhc-demo-schieber { display: flex; flex-direction: column; gap: 4px; }
       .lhc-demo-schieber span { font-size: 12px; color: #8FA8C8; }
-      .lhc-demo-schieber b { color: var(--ink); font-weight: 600; }
+      .lhc-demo-schieber b { color: var(--ink); font-weight: 700; }
       .lhc-demo-schieber input {
         -webkit-appearance: none; appearance: none; width: 100%; height: 5px;
         border-radius: 3px; background: #2A3B52; outline: none;
@@ -2418,19 +2418,19 @@ class LutarymHeatpumpCard extends HTMLElement {
         fill: #7E8CA0; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
       }
       .verbrauch-v {
-        fill: #E0762E; font-size: 26px; font-weight: 650;
+        fill: #E0762E; font-size: 26px; font-weight: 700;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums;
       }
       #verbrauch-group, #zirkulation-group { transition: opacity 300ms ease; }
       .unit-value {
-        fill: #E8EDF4; font-size: 20px; font-weight: 600;
+        fill: #E8EDF4; font-size: 26px; font-weight: 700;
         transition: fill 600ms ease;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums;
       }
       .sensor-value {
-        fill: ${NEUTRAL}; font-size: 30px; font-weight: 650;
+        fill: ${NEUTRAL}; font-size: 30px; font-weight: 700;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums; transition: fill 600ms ease;
       }
@@ -2441,7 +2441,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       .cap { fill: #98A6BA; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
       .cap-s { fill: #7E8CA0; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
       .value-l {
-        fill: #FFFFFF; font-size: 30px; font-weight: 650;
+        fill: #FFFFFF; font-size: 30px; font-weight: 700;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums;
         paint-order: stroke; stroke: rgba(0,0,0,0.45); stroke-width: 5px;
@@ -2467,7 +2467,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       .vl-value { fill: #FF5F52; }
       .rl-value { fill: #4D9BFF; }
       .tag-v {
-        fill: #FFFFFF; font-size: 19px; font-weight: 600;
+        fill: #FFFFFF; font-size: 19px; font-weight: 700;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums;
       }
@@ -2490,7 +2490,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         fill: #C3D0E0; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
       }
       .sg-value {
-        fill: ${NEUTRAL}; font-size: 23px; font-weight: 700;
+        fill: ${NEUTRAL}; font-size: 26px; font-weight: 700;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums; transition: fill 400ms ease;
       }
@@ -2603,7 +2603,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       .lhc-dialog-value {
         display: block; margin: 10px 0 18px; text-align: center;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
-        font-size: 40px; font-weight: 650; font-variant-numeric: tabular-nums;
+        font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums;
       }
       .lhc-dialog-row { display: flex; align-items: center; gap: 14px; }
       .lhc-step {
