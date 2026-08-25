@@ -288,6 +288,7 @@ const FIELD_DOMAIN = {
   zones_select: ["select", "input_select"],
   buffer_switch: ["switch", "input_boolean"],
   circulation_pump: ["switch", "input_boolean", "binary_sensor", "sensor"],
+  circ_switch: ["switch", "input_boolean"],
   sg_k1: ["switch", "input_boolean", "binary_sensor", "sensor"],
   sg_k2: ["switch", "input_boolean", "binary_sensor", "sensor"],
 };
@@ -424,6 +425,7 @@ const ENTITY_FIELDS = [
   { key: "sterilization_state", label: "Legionellenschutz läuft", group: "Warmwasser", hint: "TOP69" },
   { key: "dhw_heater_switch", label: "Heizstab Warmwasser schalten", group: "Warmwasser", hint: "SetDHWHeaterState, switch" },
   { key: "circulation_pump", label: "Zirkulationspumpe läuft", group: "Warmwasser", hint: "Shelly oder eigener Schalter" },
+  { key: "circ_switch", label: "Zirkulation Schalter (klickbar)", group: "Warmwasser", hint: "Switch zum Ein/Ausschalten der Zirkulation" },
 
   { key: "mode_select", label: "Betriebsart umschalten", group: "Steuerung", hint: "SetOperationMode, select" },
   { key: "heating_switch", label: "Heizung ein und aus", group: "Steuerung", hint: "eigener Helfer, optional" },
@@ -534,7 +536,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       hk1_setpoint: 36, hk2_water: 30.1, hk2_water_target: 32, hk2_room: 20.8,
       hk2_pump: 0, hk2_setpoint: 32, zones_state: 2,
       dhw_temp: 48.3, dhw_setpoint: 50, dhw_heater: 0, dhw_installed: 1,
-      dhw_force_state: 0, sterilization_state: 0, circulation_pump: 0, pv_power: 3400,
+      dhw_force_state: 0, sterilization_state: 0, circulation_pump: 0, circ_switch: "off", pv_power: 3400,
       sg_k1: "off", sg_k2: "off",
       dhw_force: "off", force_sterilization: "off", force_defrost: "off",
       dhw_heater_switch: "off", room_heater_switch: "off", buffer_switch: "on",
@@ -834,20 +836,38 @@ class LutarymHeatpumpCard extends HTMLElement {
         el.setAttribute("stroke-dashoffset", offset.toFixed(1));
       });
 
-      // Bubbles animieren (translateY + opacity)
-      this._animState.forEach((state, id) => {
-        if (!state || state.type !== "bubble") return;
-        const el = sr.getElementById(id);
-        if (!el) return;
-        const elapsed = (this._animTime - state.startTime) % state.duration;
-        const progress = elapsed / state.duration;
-        const y = -330 * progress;
-        let opacity = 0;
-        if (progress < 0.15) opacity = (progress / 0.15) * 0.38;
-        else if (progress < 0.85) opacity = 0.36;
-        else opacity = 0.36 * (1 - (progress - 0.85) / 0.15);
-        el.setAttribute("transform", `translateY(${y})`);
-        el.setAttribute("opacity", opacity.toFixed(2));
+      // Bubbles animieren - direkt berechnet
+      const bubbleGroups = ["buf-bubbles", "dhw-bubbles"];
+      bubbleGroups.forEach(groupId => {
+        const group = sr.getElementById(groupId);
+        if (!group) return;
+        const bubbles = group.querySelectorAll("circle");
+        bubbles.forEach((bubble, idx) => {
+          const bubbleId = bubble.id;
+          // Zufälliger Start pro Blase (basierend auf ID)
+          const seed = parseInt(bubbleId.split("-").pop()) + 1;
+          let zufall = seed;
+          const rand = () => {
+            zufall = (zufall * 1103515245 + 12345) % 2147483648;
+            return zufall / 2147483648;
+          };
+          const dauer = 4 + rand() * 4;
+          const startOffset = rand() * 7;
+          
+          const elapsed = (this._animTime - startOffset) % dauer;
+          const progress = elapsed / dauer;
+          
+          const cy0 = parseFloat(bubble.getAttribute("cy")) - (-330); // Original cy
+          const y = -330 * progress;
+          
+          let opacity = 0;
+          if (progress < 0.15) opacity = (progress / 0.15) * 0.38;
+          else if (progress < 0.85) opacity = 0.36;
+          else opacity = 0.36 * (1 - (progress - 0.85) / 0.15);
+          
+          bubble.setAttribute("transform", `translate(0,${y})`);
+          bubble.setAttribute("opacity", opacity.toFixed(2));
+        });
       });
 
       // Pulse/Glow animieren (opacity)
@@ -995,7 +1015,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       if (anzeige) anzeige.textContent = wert;
     });
     const schalter = ["power_state","hk1_pump","hk2_pump","room_heater","dhw_heater",
-                      "defrost","circulation_pump","dhw_force_state","sterilization_state"];
+                      "defrost","circulation_pump","circ_switch","dhw_force_state","sterilization_state"];
     schalter.forEach((feld, i) => {
       const el = this.shadowRoot.getElementById(`demo-s${i}`);
       if (!el) return;
@@ -1129,6 +1149,29 @@ class LutarymHeatpumpCard extends HTMLElement {
       if (!hatTemperatur && !hatAktion) return;
       el.classList.add("klickbar");
       el.addEventListener("click", () => this._oeffneDialog(f));
+    });
+
+    // Zirkulations-Pumpe: Direkter Schalter ohne Dialog
+    const zirkEl = sr.getElementById("zirkulation-group");
+    if (zirkEl && this._e("circ_switch")) {
+      zirkEl.classList.add("klickbar");
+      zirkEl.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        this._schaltCircSwitch();
+      });
+    }
+  }
+
+  _schaltCircSwitch() {
+    const switchId = this._e("circ_switch");
+    if (!switchId) return;
+    
+    const state = this._hass.states[switchId];
+    const currentState = state ? state.state : "off";
+    const newState = currentState === "on" ? "off" : "on";
+    
+    this._hass.callService("homeassistant", "turn_" + newState, {
+      entity_id: switchId,
     });
   }
 
@@ -1708,30 +1751,19 @@ class LutarymHeatpumpCard extends HTMLElement {
    */
   _bubbles(id, x, y, w, h, anzahl) {
     const n = anzahl || BUBBLE_COUNT;
-    let zufall = 1; // einfacher, wiederholbarer Zahlengenerator
+    let zufall = 1;
     const naechste = () => {
       zufall = (zufall * 1103515245 + 12345) % 2147483648;
       return zufall / 2147483648;
     };
     let kreise = "";
-    const bubbles = [];
     for (let i = 0; i < n; i++) {
       const cx = Math.round(x + 10 + naechste() * (w - 20));
       const r = (1.6 + naechste() * 2.4).toFixed(1);
-      const dauer = 4 + naechste() * 4;
-      const start = naechste() * 7;
+      naechste(); // dauer (wird in loop berechnet)
+      naechste(); // start (wird in loop berechnet)
       const bubbleId = `${id}-bubble-${i}`;
-      kreise +=
-        `<circle class="bubble" id="${bubbleId}" cx="${cx}" cy="${y + h - 4}" r="${r}"/>`;
-      bubbles.push({ id: bubbleId, duration: dauer, delay: -start });
-    }
-    // Registriere Bubbles für Animation (wird nach SVG ins DOM eingefügt)
-    if (bubbles.length > 0) {
-      Promise.resolve().then(() => {
-        bubbles.forEach(b => {
-          this._animState.set(b.id, { type: "bubble", duration: b.duration, startTime: this._animTime + b.delay });
-        });
-      });
+      kreise += `<circle class="bubble" id="${bubbleId}" cx="${cx}" cy="${y + h - 4}" r="${r}"/>`;
     }
     return `<g id="${id}">${kreise}</g>`;
   }
