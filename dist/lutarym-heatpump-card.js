@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.5.12";
+const CARD_VERSION = "2.6.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -937,47 +937,44 @@ class LutarymHeatpumpCard extends HTMLElement {
         <span class="lhc-demo-hinweis">Erfundene Werte, die Anlage bleibt unberührt</span>
       </div>
       <div class="lhc-demo-reihe">
-        ${schalter
-          .map(
-            ([feld, text], i) =>
-              `<button type="button" class="lhc-demo-knopf" id="demo-s${i}">${escapeHtml(
-                text
-              )}</button>`
-          )
-          .join("")}
+        ${schalter.map(([feld, text], i) => `<button type="button" class="lhc-demo-knopf" data-feld="${feld}" data-idx="${i}">${escapeHtml(text)}</button>`).join("")}
         <button type="button" class="lhc-demo-knopf" id="demo-ventil">Ventil</button>
         <button type="button" class="lhc-demo-knopf" id="demo-sg">SG Ready</button>
         <button type="button" class="lhc-demo-knopf" id="demo-stoerung">Störung</button>
         <button type="button" class="lhc-demo-knopf" id="demo-zurueck">Zurücksetzen</button>
       </div>
       <div class="lhc-demo-regler">
-        ${regler
-          .map(
-            ([feld, text, lo, hi], i) => `
+        ${regler.map(([feld, text, lo, hi], i) => `
           <label class="lhc-demo-schieber">
-            <span>${escapeHtml(text)} <b id="demo-r${i}-wert">--</b></span>
-            <input type="range" id="demo-r${i}" min="${lo}" max="${hi}" step="0.5">
-          </label>`
-          )
-          .join("")}
+            <span>${escapeHtml(text)} <b data-regler="${feld}">--</b></span>
+            <input type="range" data-feld="${feld}" min="${lo}" max="${hi}" step="0.5">
+          </label>`).join("")}
       </div>`;
 
-    schalter.forEach(([feld], i) => {
-      const el = this.shadowRoot.getElementById(`demo-s${i}`);
-      el.addEventListener("click", () => {
-        const jetzt = this._demoLies(feld);
-        const an = jetzt === "on" || parseFloat(jetzt) > 0;
-        // Schalter kennen an und aus, Zustandstopics kennen 1 und 0.
-        const neu = jetzt === "on" || jetzt === "off" ? (an ? "off" : "on") : an ? 0 : 1;
-        this._demoSetze(feld, neu);
-      });
+    // Schalter: einfache Delegation
+    host.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-feld]");
+      if (!btn) return;
+      const feld = btn.getAttribute("data-feld");
+      const jetzt = this._demoLies(feld);
+      const istAn = jetzt === "on" || parseFloat(jetzt) > 0;
+      this._demoSetze(feld, istAn ? "off" : "on");
     });
 
+    // Regler: einfach Input-Events
+    host.addEventListener("input", (e) => {
+      const inp = e.target.closest("input[data-feld]");
+      if (!inp) return;
+      const feld = inp.getAttribute("data-feld");
+      this._demoSetze(feld, inp.value);
+    });
+
+    // Spezielle Buttons (Ventil, SG, etc.)
     this.shadowRoot.getElementById("demo-ventil").addEventListener("click", () => {
       this._demoSetze("three_way_valve", this._demoLies("three_way_valve") === "1" ? 0 : 1);
     });
+    
     this.shadowRoot.getElementById("demo-sg").addEventListener("click", () => {
-      // Schaltet der Reihe nach durch alle vier Zustaende.
       const k1 = this._demoLies("sg_k1") === "on";
       const k2 = this._demoLies("sg_k2") === "on";
       const folge = [[false, false], [true, false], [false, true], [true, true]];
@@ -986,27 +983,20 @@ class LutarymHeatpumpCard extends HTMLElement {
       this._demoSetze("sg_k1", naechste[0] ? "on" : "off");
       this._demoSetze("sg_k2", naechste[1] ? "on" : "off");
     });
+    
     this.shadowRoot.getElementById("demo-stoerung").addEventListener("click", () => {
       this._demoSetze("error", this._demoLies("error") === "0" ? "H76" : "0");
     });
+    
     this.shadowRoot.getElementById("demo-zurueck").addEventListener("click", () => {
       this._demoAufbauen();
       this._buildDemo();
       this._render();
     });
 
-
-    regler.forEach(([feld], i) => {
-      const el = this.shadowRoot.getElementById(`demo-r${i}`);
-      el.value = this._demoLies(feld) || 0;
-      el.addEventListener("input", () => {
-        this._demoSetze(feld, el.value);
-        this._syncDemo();
-      });
-    });
-    this._setupDemoHandlers();
     this._syncDemo();
   }
+
 
   _setupDemoHandlers() {
     if (!this._config.demo || !this._demo) return;
