@@ -1588,7 +1588,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
       <text class="vl-value" id="unit-flow-v" x="410" y="${F - 20}"
             text-anchor="middle">--</text>
-      <text class="rl-value" id="unit-ret-v" x="410" y="${R - 20}"
+      <text class="rl-value" id="unit-ret-v" x="410" y="${R + 40}"
             text-anchor="middle">--</text>
 
       <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
