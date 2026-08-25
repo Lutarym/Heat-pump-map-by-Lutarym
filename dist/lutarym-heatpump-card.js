@@ -1567,21 +1567,21 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- SG Ready, neben der Wärmepumpe, ohne Rahmen -->
       <g id="sg-group" opacity="0">
-        <text class="sg-label" x="480" y="${SG}" text-anchor="middle">SG Ready</text>
-        <g transform="translate(480 ${SG + 14})">
+        <text class="sg-label" x="380" y="464" text-anchor="middle">SG Ready</text>
+        <g transform="translate(380 478)">
           <rect x="-68" y="0" width="32" height="11" rx="5.5" id="sg-seg-1" fill="#3A4658"/>
           <rect x="-34" y="0" width="32" height="11" rx="5.5" id="sg-seg-2" fill="#3A4658"/>
           <rect x="2" y="0" width="32" height="11" rx="5.5" id="sg-seg-3" fill="#3A4658"/>
           <rect x="36" y="0" width="32" height="11" rx="5.5" id="sg-seg-4" fill="#3A4658"/>
         </g>
-        <text class="sg-value" id="sg-text" x="480" y="${SG + 58}"
+        <text class="sg-value" id="sg-text" x="380" y="522"
               text-anchor="middle">--</text>
       </g>
 
       <!-- Aktuelle Leistung der Photovoltaik -->
       <g id="pv-group" opacity="0">
-        <text class="sg-label" x="800" y="${SG}" text-anchor="middle">PV Leistung</text>
-        <text class="pv-value" id="pv-v" x="800" y="${SG + 44}"
+        <text class="sg-label" x="620" y="464" text-anchor="middle">PV Leistung</text>
+        <text class="pv-value" id="pv-v" x="620" y="508"
               text-anchor="middle">--</text>
       </g>
 
