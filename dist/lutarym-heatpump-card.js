@@ -1502,7 +1502,7 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Sammelleitungen -->
       <path class="pipe-shell" d="M340 ${R} H 1525"/>
-      <path class="pipe" id="pipe-return" d="M340 ${R} H 1525"/>
+      <path class="pipe" id="pipe-return" d="M340 ${R} H 1560"/>
       <path class="pipe-shell" d="M340 ${F} H 1525"/>
       <path class="pipe" id="pipe-flow" d="M340 ${F} H 1525"/>
       <!-- Zwei Abschnitte je Leitung: bis zum Ventil und dahinter.
@@ -1706,8 +1706,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="value-s" id="zirk-v" x="1680" y="630" text-anchor="middle">--</text>
       </g>
 
-      <text class="version" x="${L.W - 10}" y="${L.H - 8}"
-            text-anchor="end">v${CARD_VERSION}</text>
+
     </svg>`;
   }
 
@@ -2809,6 +2808,10 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
           die Karte daraus selbst ab. Die Knöpfe oben führen zusammen und
           löschen eigene Einträge nicht.
         </p>
+
+        <p class="ed-info">
+          <strong>Lutarym Heatpump Card v${CARD_VERSION}</strong>
+        </p>
       </div>
     `;
 
@@ -2954,6 +2957,10 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
       .ed-note {
         margin: 0; font-size: 12px; line-height: 1.5;
         color: var(--secondary-text-color, #8A94A6);
+      }
+      .ed-info {
+        margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--divider-color, #E0E0E0);
+        font-size: 12px; color: var(--secondary-text-color, #8A94A6);
       }
       @media (max-width: 600px) { .ed-row { grid-template-columns: 1fr; align-items: stretch; } }
     `;
