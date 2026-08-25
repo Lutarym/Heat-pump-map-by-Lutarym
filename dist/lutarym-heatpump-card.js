@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.5.0";
+const CARD_VERSION = "2.5.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -885,9 +885,9 @@ class LutarymHeatpumpCard extends HTMLElement {
         if (!state || state.type !== "spin") return;
         const el = sr.getElementById(id);
         if (!el) return;
-        const elapsed = (this._animTime - state.startTime) % state.duration;
+        const elapsed = this._animTime % state.duration;
         const progress = (elapsed / state.duration) * 360;
-        el.setAttribute("transform", `rotate(${progress.toFixed(1)} 0 0)`);
+        el.setAttribute("transform", `rotate(${progress.toFixed(2)} 0 0)`);
       });
 
       this._animLoop = requestAnimationFrame(tick);
@@ -1995,7 +1995,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (zirkRotor) {
       zirkRotor.classList.toggle("is-still", !zirkAn);
       if (zirkAn && animate && laeuft) {
-        this._animState.set("zirk-rotor", { type: "spin", duration: PUMP_SECONDS, startTime: this._animTime });
+        this._animState.set("zirk-rotor", { type: "spin", duration: PUMP_SECONDS });
       } else {
         this._animState.delete("zirk-rotor");
       }
@@ -2208,7 +2208,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       rotor.classList.toggle("is-still", !pumpOn);
       const rotorId = `hk${n}-rotor`;
       if (pumpOn && animate && laeuft) {
-        this._animState.set(rotorId, { type: "spin", duration: PUMP_SECONDS, startTime: this._animTime });
+        this._animState.set(rotorId, { type: "spin", duration: PUMP_SECONDS });
       } else {
         this._animState.delete(rotorId);
       }
@@ -2250,12 +2250,12 @@ class LutarymHeatpumpCard extends HTMLElement {
     const animate = this._config.animate !== false;
     if (rpm === null || rpm <= 0 || !animate || erlaubt === false) {
       el.classList.toggle("is-still", rpm === null || rpm <= 0);
-      this._animState.set(rotorId, null);
+      this._animState.delete(rotorId);
       return;
     }
     el.classList.remove("is-still");
     const duration = festeDauer ? festeDauer : clamp(900 / rpm, 0.25, 6);
-    this._animState.set(rotorId, { type: "spin", duration, startTime: this._animTime });
+    this._animState.set(rotorId, { type: "spin", duration });
   }
 
   _syncToggle(id, key) {
