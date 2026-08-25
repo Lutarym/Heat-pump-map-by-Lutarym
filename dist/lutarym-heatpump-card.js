@@ -836,37 +836,37 @@ class LutarymHeatpumpCard extends HTMLElement {
         el.setAttribute("stroke-dashoffset", offset.toFixed(1));
       });
 
-      // Bubbles animieren - direkt berechnet
+      // Bubbles animieren - neu vereinfacht
       const bubbleGroups = ["buf-bubbles", "dhw-bubbles"];
       bubbleGroups.forEach(groupId => {
         const group = sr.getElementById(groupId);
         if (!group) return;
         const bubbles = group.querySelectorAll("circle");
         bubbles.forEach((bubble, idx) => {
-          const bubbleId = bubble.id;
-          // Zufälliger Start pro Blase (basierend auf ID)
-          const seed = parseInt(bubbleId.split("-").pop()) + 1;
-          let zufall = seed;
-          const rand = () => {
-            zufall = (zufall * 1103515245 + 12345) % 2147483648;
-            return zufall / 2147483648;
+          // Blasen-Parametern berechnen (immer gleich basierend auf Index)
+          let seed = idx + 42;
+          const rnd = () => {
+            seed = (seed * 1103515245 + 12345) % 2147483648;
+            return seed / 2147483648;
           };
-          const dauer = 4 + rand() * 4;
-          const startOffset = rand() * 7;
+          const dur = 4 + rnd() * 4;
+          const delay = idx * 0.3; // einfacher Delay basierend auf Index
           
-          const elapsed = (this._animTime - startOffset) % dauer;
-          const progress = elapsed / dauer;
+          // Animation: Zeit seit Start
+          const time = (this._animTime + delay) % dur;
+          const prog = time / dur;
           
-          const cy0 = parseFloat(bubble.getAttribute("cy")) - (-330); // Original cy
-          const y = -330 * progress;
+          // translateY: oben nach unten (-330px)
+          const moveY = -330 * prog;
           
-          let opacity = 0;
-          if (progress < 0.15) opacity = (progress / 0.15) * 0.38;
-          else if (progress < 0.85) opacity = 0.36;
-          else opacity = 0.36 * (1 - (progress - 0.85) / 0.15);
+          // opacity: Kurve (sichtbar von 15% bis 85%)
+          let op = 0;
+          if (prog < 0.15) op = (prog / 0.15) * 0.4;
+          else if (prog < 0.85) op = 0.4;
+          else op = 0.4 * (1 - (prog - 0.85) / 0.15);
           
-          bubble.setAttribute("transform", `translate(0,${y})`);
-          bubble.setAttribute("opacity", opacity.toFixed(2));
+          bubble.setAttribute("transform", `translate(0,${moveY.toFixed(1)})`);
+          bubble.setAttribute("opacity", op.toFixed(3));
         });
       });
 
@@ -913,7 +913,8 @@ class LutarymHeatpumpCard extends HTMLElement {
       ["room_heater", "Heizstab Heizung"],
       ["dhw_heater", "Heizstab Warmwasser"],
       ["defrost", "Abtauung"],
-      ["circulation_pump", "Zirkulation"],
+      ["circulation_pump", "Zirkulation Status"],
+      ["circ_switch", "Zirkulation Schalter"],
       ["dhw_force_state", "Aufheizen"],
       ["sterilization_state", "Legionellenschutz"],
     ];
