@@ -1576,7 +1576,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         </g>
         <text class="sg-value" id="sg-text" x="445" y="${F + 108}"
               text-anchor="middle">--</text>
-        <line x1="350" y1="${F + 125}" x2="540" y2="${F + 125}" stroke="#33415A" stroke-width="1"/>
+        <line x1="350" y1="${F + 125}" x2="540" y2="${F + 125}" stroke="#33415A" stroke-width="0.5"/>
       </g>
 
       <!-- PV Leistung -->
@@ -1584,7 +1584,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="sg-label" x="445" y="${F + 165}" text-anchor="middle">PV Leistung</text>
         <text class="pv-value" id="pv-v" x="445" y="${F + 203}"
               text-anchor="middle">--</text>
-        <line x1="350" y1="${F + 220}" x2="540" y2="${F + 220}" stroke="#33415A" stroke-width="1"/>
+        <line x1="350" y1="${F + 220}" x2="540" y2="${F + 220}" stroke="#33415A" stroke-width="0.5"/>
       </g>
 
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
@@ -1598,7 +1598,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="unit-label" x="445" y="${F + 260}" text-anchor="middle">Leistung</text>
         <text class="verbrauch-v" id="power-now-v" x="445" y="${F + 298}"
               text-anchor="middle">--</text>
-        <line x1="350" y1="${F + 315}" x2="540" y2="${F + 315}" stroke="#33415A" stroke-width="1"/>
+        <line x1="350" y1="${F + 315}" x2="540" y2="${F + 315}" stroke="#33415A" stroke-width="0.5"/>
         <text class="unit-label" id="energy-label" x="445" y="${F + 355}"
               text-anchor="middle">--</text>
         <text class="unit-value" id="energy-today-v" x="445" y="${F + 395}"
@@ -2415,7 +2415,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       .flowdots.is-on { opacity: 0.9; }
 
       .unit-label {
-        fill: #7E8CA0; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase;
+        fill: #7E8CA0; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
       }
       .verbrauch-v {
         fill: #E0762E; font-size: 26px; font-weight: 650;
