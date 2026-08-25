@@ -1588,7 +1588,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
       <text class="vl-value" id="unit-flow-v" x="410" y="${F - 20}"
             text-anchor="middle">--</text>
-      <text class="rl-value" id="unit-ret-v" x="410" y="${R - 20}"
+      <text class="rl-value" id="unit-ret-v" x="410" y="${R + 20}"
             text-anchor="middle">--</text>
 
       <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
@@ -1604,8 +1604,8 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Primärpumpe -->
       <g>
-        <text class="value-s" id="pump-v" x="496" y="722" text-anchor="start">--</text>
-        <text class="value-s" id="flow-v" x="496" y="744" text-anchor="start">--</text>
+        <text class="value-s" id="pump-v" x="550" y="722" text-anchor="start">--</text>
+        <text class="value-s" id="flow-v" x="550" y="744" text-anchor="start">--</text>
         <g transform="translate(460 ${R})">
           <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <g class="rotor" id="pump-rotor">
@@ -1702,8 +1702,8 @@ class LutarymHeatpumpCard extends HTMLElement {
             <circle r="4" fill="#0D1219"/>
           </g>
         </g>
-        <text class="cap-s" x="1720" y="606" text-anchor="middle">Zirkulation</text>
-        <text class="value-s" id="zirk-v" x="1720" y="630" text-anchor="middle">--</text>
+        <text class="cap-s" x="1680" y="606" text-anchor="middle">Zirkulation</text>
+        <text class="value-s" id="zirk-v" x="1680" y="630" text-anchor="middle">--</text>
       </g>
 
 
