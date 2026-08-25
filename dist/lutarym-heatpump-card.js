@@ -1706,7 +1706,7 @@ class LutarymHeatpumpCard extends HTMLElement {
           </g>
         </g>
         <text class="cap-s" x="1370" y="290" text-anchor="middle">Zirkulation</text>
-        <text class="value-s" id="zirk-v" x="1370" y="310" text-anchor="middle">--</text>
+        <text class="value-s" id="zirk-v" x="1310" y="310" text-anchor="middle">--</text>
       </g>
 
 
