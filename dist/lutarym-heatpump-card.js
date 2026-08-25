@@ -1604,8 +1604,8 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Primärpumpe -->
       <g>
-        <text class="value-s" id="pump-v" x="550" y="722" text-anchor="start">--</text>
-        <text class="value-s" id="flow-v" x="550" y="744" text-anchor="start">--</text>
+        <text class="value-s" id="pump-v" x="680" y="722" text-anchor="start">--</text>
+        <text class="value-s" id="flow-v" x="680" y="744" text-anchor="start">--</text>
         <g transform="translate(460 ${R})">
           <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <g class="rotor" id="pump-rotor">
