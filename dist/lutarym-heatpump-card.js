@@ -1565,24 +1565,26 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       </g>
 
-      <!-- SG Ready, neben der Wärmepumpe, ohne Rahmen -->
+      <!-- SG Ready, PV Leistung, Leistung, Verbrauch - zentriert zwischen VL und RL -->
       <g id="sg-group" opacity="0">
-        <text class="sg-label" x="445" y="350" text-anchor="middle">SG Ready</text>
-        <g transform="translate(445 364)">
+        <text class="sg-label" x="445" y="${(F + R) / 4 + 40}" text-anchor="middle">SG Ready</text>
+        <g transform="translate(445 ${(F + R) / 4 + 54})">
           <rect x="-68" y="0" width="32" height="11" rx="5.5" id="sg-seg-1" fill="#3A4658"/>
           <rect x="-34" y="0" width="32" height="11" rx="5.5" id="sg-seg-2" fill="#3A4658"/>
           <rect x="2" y="0" width="32" height="11" rx="5.5" id="sg-seg-3" fill="#3A4658"/>
           <rect x="36" y="0" width="32" height="11" rx="5.5" id="sg-seg-4" fill="#3A4658"/>
         </g>
-        <text class="sg-value" id="sg-text" x="445" y="398"
+        <text class="sg-value" id="sg-text" x="445" y="${(F + R) / 4 + 88}"
               text-anchor="middle">--</text>
+        <line x1="350" y1="${(F + R) / 4 + 110}" x2="540" y2="${(F + R) / 4 + 110}" stroke="#33415A" stroke-width="1"/>
       </g>
 
-      <!-- Aktuelle Leistung der Photovoltaik -->
+      <!-- PV Leistung -->
       <g id="pv-group" opacity="0">
-        <text class="sg-label" x="445" y="450" text-anchor="middle">PV Leistung</text>
-        <text class="pv-value" id="pv-v" x="445" y="488"
+        <text class="sg-label" x="445" y="${(F + R) / 2 - 40}" text-anchor="middle">PV Leistung</text>
+        <text class="pv-value" id="pv-v" x="445" y="${(F + R) / 2}"
               text-anchor="middle">--</text>
+        <line x1="350" y1="${(F + R) / 2 + 20}" x2="540" y2="${(F + R) / 2 + 20}" stroke="#33415A" stroke-width="1"/>
       </g>
 
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
@@ -1593,12 +1595,13 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
       <g id="verbrauch-group" opacity="0">
-        <text class="unit-label" x="445" y="550" text-anchor="middle">Leistung</text>
-        <text class="verbrauch-v" id="power-now-v" x="445" y="586"
+        <text class="unit-label" x="445" y="${3 * (F + R) / 4 - 40}" text-anchor="middle">Leistung</text>
+        <text class="verbrauch-v" id="power-now-v" x="445" y="${3 * (F + R) / 4}"
               text-anchor="middle">--</text>
-        <text class="unit-label" id="energy-label" x="445" y="650"
+        <line x1="350" y1="${3 * (F + R) / 4 + 20}" x2="540" y2="${3 * (F + R) / 4 + 20}" stroke="#33415A" stroke-width="1"/>
+        <text class="unit-label" id="energy-label" x="445" y="${3 * (F + R) / 4 + 60}"
               text-anchor="middle">--</text>
-        <text class="unit-value" id="energy-today-v" x="445" y="682"
+        <text class="unit-value" id="energy-today-v" x="445" y="${3 * (F + R) / 4 + 100}"
               text-anchor="middle">--</text>
       </g>
 
