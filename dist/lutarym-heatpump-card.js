@@ -1139,6 +1139,7 @@ class LutarymHeatpumpCard extends HTMLElement {
           { feld: "force_defrost", status: "defrost", typ: "schalter", an: "Abtauen läuft, beenden", aus: "Abtauen erzwingen" },
           { feld: "powerful_mode", typ: "auswahl", titel: "Turbomodus", texte: POWERFUL_LABELS },
           { feld: "quiet_mode", typ: "auswahl", titel: "Leisemodus", texte: QUIET_LABELS },
+          { feld: "mode_select", typ: "auswahl", titel: "Betriebsart", texte: MODE_LABELS },
         ],
       },
       {
