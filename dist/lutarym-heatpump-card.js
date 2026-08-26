@@ -79,11 +79,6 @@ const POWERFUL_LABELS = {
 
 const VALVE_LABELS = { Room: "Heizung", DHW: "Warmwasser", 0: "Heizung", 1: "Warmwasser" };
 
-function modeLabel(wert) {
-  if (wert === null || wert === undefined || wert === "") return null;
-  return MODE_LABELS[wert] !== undefined ? MODE_LABELS[wert] : String(wert);
-}
-
 /* ------------------------------------------------------------------ *
  *  SG Ready
  *
@@ -460,7 +455,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     this._hass = null;
     this._auto = null;
     this._dragging = null;
-    
+
     // Animation Engine (GData-kompatibel)
     this._animLoop = null;
     this._animTime = 0;
@@ -763,7 +758,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (this._animLoop) cancelAnimationFrame(this._animLoop);
     this._animTime = 0;
     this._animState.clear();
-    
+
     const root = document.createElement("div");
     root.innerHTML = `
       <style>${this._css()}</style>
@@ -806,14 +801,14 @@ class LutarymHeatpumpCard extends HTMLElement {
 
   _startAnimationLoop() {
     let lastTime = performance.now();
-    
+
     const tick = (time) => {
       if (!this.isConnected) return;
-      
+
       const deltaTime = (time - lastTime) / 1000; // in Sekunden
       lastTime = time;
       this._animTime += deltaTime;
-      
+
       const sr = this.shadowRoot;
       if (!sr) {
         this._animLoop = requestAnimationFrame(tick);
@@ -846,20 +841,20 @@ class LutarymHeatpumpCard extends HTMLElement {
           };
           const dur = 4 + rnd() * 4;
           const delay = idx * 0.3; // einfacher Delay basierend auf Index
-          
+
           // Animation: Zeit seit Start
           const time = (this._animTime + delay) % dur;
           const prog = time / dur;
-          
+
           // translateY: oben nach unten (-330px)
           const moveY = -330 * prog;
-          
+
           // opacity: Kurve (sichtbar von 15% bis 85%)
           let op = 0;
           if (prog < 0.15) op = (prog / 0.15) * 0.4;
           else if (prog < 0.85) op = 0.4;
           else op = 0.4 * (1 - (prog - 0.85) / 0.15);
-          
+
           bubble.setAttribute("transform", `translate(0,${moveY.toFixed(1)})`);
           bubble.setAttribute("opacity", op.toFixed(3));
         });
@@ -1004,7 +999,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       this._demoSetze("three_way_valve", this._demoLies("three_way_valve") === "1" ? 0 : 1);
       this._syncDemo();
     });
-    
+
     this.shadowRoot.getElementById("demo-sg").addEventListener("click", () => {
       const k1 = this._demoLies("sg_k1") === "on";
       const k2 = this._demoLies("sg_k2") === "on";
@@ -1015,12 +1010,12 @@ class LutarymHeatpumpCard extends HTMLElement {
       this._demoSetze("sg_k2", naechste[1] ? "on" : "off");
       this._syncDemo();
     });
-    
+
     this.shadowRoot.getElementById("demo-stoerung").addEventListener("click", () => {
       this._demoSetze("error", this._demoLies("error") === "0" ? "H76" : "0");
       this._syncDemo();
     });
-    
+
     this.shadowRoot.getElementById("demo-zurueck").addEventListener("click", () => {
       this._demoAufbauen();
       this._buildDemo();
@@ -1029,7 +1024,6 @@ class LutarymHeatpumpCard extends HTMLElement {
 
     this._syncDemo();
   }
-
 
   /** Haelt die Bedienleiste des Demomodus auf Stand. */
   _syncDemo() {
@@ -1196,11 +1190,11 @@ class LutarymHeatpumpCard extends HTMLElement {
   _schaltCircSwitch() {
     const switchId = this._e("circ_switch");
     if (!switchId) return;
-    
+
     const state = this._hass.states[switchId];
     const currentState = state ? state.state : "off";
     const newState = currentState === "on" ? "off" : "on";
-    
+
     this._hass.callService("homeassistant", "turn_" + newState, {
       entity_id: switchId,
     });
@@ -1685,7 +1679,6 @@ class LutarymHeatpumpCard extends HTMLElement {
           this._config.label_dhw
         )}</text>
       </g>
-
 
     </svg>`;
   }
@@ -2242,7 +2235,6 @@ class LutarymHeatpumpCard extends HTMLElement {
       }
     });
 
-
     return pumpOn;
   }
 
@@ -2347,9 +2339,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         stroke-linecap: round; stroke-linejoin: round; transition: stroke 900ms ease;
       }
       /* Signalleitung des Außenfühlers, bewusst keine Rohrleitung */
-      .signal {
-        fill: none; stroke: #46536A; stroke-width: 2; stroke-dasharray: 5 5;
-      }
       /* Laufende Striche zeigen an, dass in genau dieser Leitung
          gerade Wasser stroemt. Kurze Punkte verschwinden beim
          Herunterskalieren, daher bewusst lang und kraeftig. */
@@ -2374,11 +2363,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         transition: fill 600ms ease;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums;
-      }
-      .sensor-value {
-        fill: ${NEUTRAL}; font-size: 30px; font-weight: 700;
-        font-family: ui-monospace, "SF Mono", Menlo, monospace;
-        font-variant-numeric: tabular-nums; transition: fill 600ms ease;
       }
       /* Nicht aktivierte Kreise werden abgeblendet, nicht ausgeblendet.
          So bleibt erkennbar, dass es sie gibt. */
@@ -2418,10 +2402,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         font-variant-numeric: tabular-nums;
       }
       .badge-t { fill: #E8EDF4; font-size: 13px; }
-      .version {
-        fill: #3A4757; font-size: 12px;
-        font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      }
       .badge { opacity: 0; transition: opacity 300ms ease; }
       .badge.is-on { opacity: 1; }
 
@@ -2460,16 +2440,6 @@ class LutarymHeatpumpCard extends HTMLElement {
       .lhc-field-label {
         font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
       }
-      .lhc-modepick {
-        display: flex; flex-direction: column; gap: 6px; justify-content: center;
-        padding: 10px 14px; border-radius: 12px;
-        background: var(--panel); border: 1px solid var(--line);
-      }
-      .lhc-modepick select {
-        background: #0D131B; color: var(--ink); font: inherit; font-size: 15px;
-        border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; width: 100%;
-      }
-
       .lhc-ctl-scale {
         display: flex; justify-content: space-between; margin-top: 6px;
         font-size: 11px; color: var(--muted);
@@ -2490,8 +2460,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         background: var(--thumb, #E0762E); border: 3px solid #0D131B; cursor: pointer;
       }
       .lhc-slider:focus-visible { box-shadow: 0 0 0 3px rgba(224,118,46,0.4); }
-      .lhc-empty { color: var(--muted); font-size: 13px; margin: 0; }
-
       /* Anklickbare Baugruppen und das Einstellfenster. */
       .klickbar { cursor: pointer; }
       .klickbar:hover { filter: brightness(1.15); }
