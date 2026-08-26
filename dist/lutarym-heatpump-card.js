@@ -1689,7 +1689,7 @@ class LutarymHeatpumpCard extends HTMLElement {
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
-        <rect x="1450" y="305" width="150" height="30" rx="8" fill="#0D1219" stroke="#33415A" stroke-width="1" opacity="0.5"/>
+        <rect x="1458" y="305" width="134" height="30" rx="8" fill="#0D1219" stroke="#33415A" stroke-width="1" opacity="0.5"/>
         <text class="cap" x="1525" y="320" text-anchor="middle" dominant-baseline="middle">${escapeHtml(
           this._config.label_dhw
         )}</text>
