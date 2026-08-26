@@ -1676,7 +1676,23 @@ class LutarymHeatpumpCard extends HTMLElement {
       </g>
 
       <!-- Warmwasserspeicher -->
-      <g id="dhw-group">
+      <!-- Zirkulationskreis am Warmwasserspeicher -->
+      <g id="zirkulation-group" opacity="0">
+        <path class="pipe-shell" fill="none" d="M1440 320 H 1370 V 560 H 1440"/>
+        <path class="pipe" id="pipe-zirk" fill="none" d="M1440 320 H 1370 V 560 H 1440"/>
+        <path class="flowdots" id="dots-zirk" fill="none" d="M1440 320 H 1370 V 560 H 1440"/>
+        <g transform="translate(1370 360)">
+          <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+          <g class="rotor" id="zirk-rotor">
+            <path d="M0 -13 L4 -3 L14 0 L4 3 L0 13 L-4 3 L-14 0 L-4 -3 Z" fill="#55637A"/>
+            <circle r="4" fill="#0D1219"/>
+          </g>
+        </g>
+        <text class="cap-s" x="1370" y="300" text-anchor="middle">Zirkulation</text>
+        <text class="value-s" id="zirk-v" x="1335" y="366" text-anchor="end">--</text>
+      </g>
+
+            <g id="dhw-group">
         <rect x="1440" y="${T}" width="170" height="350" rx="34"
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
         <rect x="1448" y="298" width="154" height="334" rx="28" fill="url(#dhwFill)"/>
@@ -1693,22 +1709,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="cap" x="1525" y="320" text-anchor="middle" dominant-baseline="middle">${escapeHtml(
           this._config.label_dhw
         )}</text>
-      </g>
-
-      <!-- Zirkulationskreis am Warmwasserspeicher -->
-      <g id="zirkulation-group" opacity="0">
-        <path class="pipe-shell" fill="none" d="M1440 320 H 1370 V 560 H 1440"/>
-        <path class="pipe" id="pipe-zirk" fill="none" d="M1440 320 H 1370 V 560 H 1440"/>
-        <path class="flowdots" id="dots-zirk" fill="none" d="M1440 320 H 1370 V 560 H 1440"/>
-        <g transform="translate(1370 360)">
-          <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
-          <g class="rotor" id="zirk-rotor">
-            <path d="M0 -13 L4 -3 L14 0 L4 3 L0 13 L-4 3 L-14 0 L-4 -3 Z" fill="#55637A"/>
-            <circle r="4" fill="#0D1219"/>
-          </g>
-        </g>
-        <text class="cap-s" x="1370" y="300" text-anchor="middle">Zirkulation</text>
-        <text class="value-s" id="zirk-v" x="1335" y="366" text-anchor="end">--</text>
       </g>
 
 
