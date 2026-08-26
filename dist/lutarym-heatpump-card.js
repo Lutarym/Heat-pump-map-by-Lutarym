@@ -1970,8 +1970,8 @@ class LutarymHeatpumpCard extends HTMLElement {
         this._animState.set("unit-glow", {
           type: "pulse",
           duration: 2.6,
-          min: 0.35,
-          max: 0.9,
+          min: 0.05,
+          max: 1,
         });
       } else {
         this._animState.delete("unit-glow");
@@ -2203,7 +2203,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     stroemt(["dots-buf2"], primaer && !zuWarmwasser, col(ret));
     stroemt(["dots-dhw"], primaer && zuWarmwasser, col(flow));
     stroemt(["dots-dhw2"], primaer && zuWarmwasser, col(ret));
-    stroemt(["dots-zirk"], zirkAn, col(dhw));
+    stroemt(["dots-zirk-h1", "dots-zirk-v", "dots-zirk-h2"], zirkAn, col(dhw));
 
     // Blasen: je waermer der Speicher, desto mehr steigen auf.
     const blasen = (id, wert) => {
@@ -2530,7 +2530,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       #sg-group rect.is-active { filter: drop-shadow(0 0 5px currentColor); }
       #power-led { transition: fill 400ms ease; }
       #power-led.is-on { filter: drop-shadow(0 0 6px rgba(70,192,122,0.9)); }
-      #unit-glow { transition: opacity 600ms ease; }
+      #unit-glow { transition: none; }
       #unit-glow.is-on { }
       #press-group { transition: opacity 300ms ease; }
       #press-needle { transition: all 900ms ease; }
