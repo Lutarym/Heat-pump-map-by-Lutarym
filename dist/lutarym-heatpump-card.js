@@ -1633,6 +1633,7 @@ class LutarymHeatpumpCard extends HTMLElement {
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
+        <rect x="590" y="305" width="90" height="30" rx="8" fill="#0D1219" stroke="#33415A" stroke-width="1" opacity="0.9"/>
         <text class="cap" x="635" y="320" text-anchor="middle">${escapeHtml(
           this._config.label_buffer
         )}</text>
@@ -1688,7 +1689,8 @@ class LutarymHeatpumpCard extends HTMLElement {
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
-        <text class="cap" x="1525" y="${F - 60}" text-anchor="middle">${escapeHtml(
+        <rect x="1480" y="305" width="90" height="30" rx="8" fill="#0D1219" stroke="#33415A" stroke-width="1" opacity="0.9"/>
+        <text class="cap" x="1525" y="320" text-anchor="middle">${escapeHtml(
           this._config.label_dhw
         )}</text>
       </g>
@@ -1763,6 +1765,7 @@ class LutarymHeatpumpCard extends HTMLElement {
           <text class="tag-v" id="hk${n}-room-v" x="86" y="26" text-anchor="end">--</text>
         </g>
 
+        <rect x="${mid - 55}" y="405" width="110" height="30" rx="8" fill="#0D1219" stroke="#33415A" stroke-width="1" opacity="0.9"/>
         <text class="cap" x="${mid}" y="420" text-anchor="middle">${escapeHtml(
           this._config[`label_hk${n}`] || `Heizkreis ${n}`
         )}</text>
