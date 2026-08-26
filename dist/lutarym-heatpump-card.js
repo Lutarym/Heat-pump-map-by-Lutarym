@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.6.2";
+const CARD_VERSION = "2.6.5";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1037,54 +1037,15 @@ class LutarymHeatpumpCard extends HTMLElement {
   }
 
 
-  _setupDemoHandlers() {
-    if (!this._config.demo || !this._demo) return;
-    const sr = this.shadowRoot;
-    const demoLeiste = sr.getElementById("demo-leiste");
-    if (!demoLeiste) return;
-    
-    demoLeiste.onclick = (e) => {
-      const btn = e.target.closest("button[id^='demo-s']");
-      if (!btn) return;
-      
-      const idx = parseInt(btn.id.replace("demo-s", ""));
-      const schalter = [
-        ["power_state"],
-        ["hk1_pump"],
-        ["hk2_pump"],
-        ["room_heater"],
-        ["dhw_heater"],
-        ["defrost"],
-        ["circulation_pump"],
-        ["circ_switch"],
-        ["dhw_force_state"],
-        ["sterilization_state"],
-      ];
-      
-      const feld = schalter[idx]?.[0];
-      if (!feld) return;
-      
-      const aktuell = this._demoLies(feld);
-      const aktuellistAn = aktuell === "on" || parseFloat(aktuell) > 0;
-      const neu = aktuellistAn ? "off" : "on";
-      this._demoSetze(feld, neu);
-      // Warte kurz, bis _render() fertig ist, dann update die Klasse
-      setTimeout(() => {
-        const w = this._demoLies(feld);
-        const istAn = w === "on" || parseFloat(w) > 0;
-        btn.classList.toggle("is-on", istAn);
-      }, 10);
-    };
-  }
-
   /** Haelt die Bedienleiste des Demomodus auf Stand. */
   _syncDemo() {
     if (!this._config.demo || !this._demo) return;
     const felder = ["pv_power","outside_temp","flow_temp","return_temp","buffer_temp","dhw_temp",
                     "hk1_water","hk2_water","compressor","pump_flow"];
-    felder.forEach((feld, i) => {
-      const el = this.shadowRoot.getElementById(`demo-r${i}`);
-      const anzeige = this.shadowRoot.getElementById(`demo-r${i}-wert`);
+    felder.forEach((feld) => {
+      // Die Regler tragen keine id, sondern data-feld. Ebenso die Anzeige.
+      const el = this.shadowRoot.querySelector(`input[data-feld="${feld}"]`);
+      const anzeige = this.shadowRoot.querySelector(`b[data-regler="${feld}"]`);
       const wert = this._demoLies(feld);
       if (el && el.value !== wert) el.value = wert;
       if (anzeige) anzeige.textContent = wert;
@@ -1895,7 +1856,6 @@ class LutarymHeatpumpCard extends HTMLElement {
       const el = sr.getElementById(id);
       if (!el) return;
       el.classList.toggle("is-on", aktiv);
-      el.classList.toggle("is-pulsing", aktiv && animate);
       if (aktiv && animate) {
         this._animState.set(id, { type: "pulse", duration: 2.2 });
       } else {
@@ -1947,7 +1907,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     const alertEl = sr.getElementById("alert");
     if (alertEl) {
       alertEl.hidden = !stoerung;
-      alertEl.classList.toggle("is-pulsing", stoerung && animate);
       if (stoerung) alertEl.textContent = `Störung der Wärmepumpe: ${err}`;
     }
 
@@ -1996,7 +1955,6 @@ class LutarymHeatpumpCard extends HTMLElement {
       const glowStoerung = animate && stoerung;
       const glowBetrieb = animate && laeuft && comp !== null && comp > 0;
       const glowAn = glowStoerung || glowBetrieb;
-      glow.classList.toggle("is-on", glowAn);
       glow.setAttribute("stroke", glowStoerung ? "#EF4444" : "#22C55E");
       if (glowAn) {
         this._animState.set("unit-glow", {
@@ -2025,7 +1983,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         if (t) {
           t.setAttribute("fill", farbe);
           t.style.color = farbe;
-          t.classList.toggle("is-active", sg !== null);
         }
         for (let i = 1; i <= 4; i++) {
           const seg = sr.getElementById(`sg-seg-${i}`);
@@ -2257,7 +2214,6 @@ class LutarymHeatpumpCard extends HTMLElement {
 
     /* Bedienung */
     this._syncToggle("sw-heat", "heating_switch");
-    this._syncModeSelect();
     this._syncDialog();
   }
 
@@ -2356,30 +2312,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (state) state.textContent = !known ? "nicht gefunden" : on ? "an" : "aus";
   }
 
-  _syncModeSelect() {
-    const sel = this.shadowRoot.getElementById("mode-select");
-    if (!sel) return;
-    const st = this._quelle.states[this._e("mode_select")];
-    if (!st) {
-      sel.disabled = true;
-      return;
-    }
-    sel.disabled = false;
-    const options = st.attributes.options || [];
-    const signature = options.join("|");
-    if (sel.dataset.signature !== signature) {
-      // Die Rohwerte bleiben als Wert erhalten, angezeigt wird Klartext.
-      sel.innerHTML = options
-        .map(
-          (o) =>
-            `<option value="${escapeHtml(o)}">${escapeHtml(modeLabel(o) || o)}</option>`
-        )
-        .join("");
-      sel.dataset.signature = signature;
-    }
-    if (sel.value !== st.state) sel.value = st.state;
-  }
-
   /**
    * Aktualisiert einen Sollwertregler.
    * key      ist die stellbare Entitaet, auf die geschrieben wird.
@@ -2405,7 +2337,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         font-size: 14px; font-weight: 500;
       }
       .lhc-alert[hidden] { display: none; }
-      .lhc-alert.is-pulsing { }
       .lhc-hint {
         margin-bottom: 14px; padding: 12px 16px; border-radius: 10px;
         background: #2A2313; border: 1px solid #B07B2E; color: #F2DFB0;
@@ -2537,7 +2468,6 @@ class LutarymHeatpumpCard extends HTMLElement {
       }
       .badge { opacity: 0; transition: opacity 300ms ease; }
       .badge.is-on { opacity: 1; }
-      .badge.is-on.is-pulsing { }
 
       .pv-value {
         fill: #7BD88F; font-size: 26px; font-weight: 700;
@@ -2553,9 +2483,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums; transition: fill 400ms ease;
       }
-      /* Der Zustandstext leuchtet leicht in seiner eigenen Farbe,
-         damit er sich vom dunklen Gehaeuse abhebt. */
-      .sg-value.is-active { }
       #sg-group { transition: opacity 300ms ease; }
       #sg-group rect { transition: all 400ms ease; }
       /* Der aktive Balken leuchtet, damit er sich klar abhebt. */
@@ -2563,7 +2490,6 @@ class LutarymHeatpumpCard extends HTMLElement {
       #power-led { transition: fill 400ms ease; }
       #power-led.is-on { filter: drop-shadow(0 0 6px rgba(70,192,122,0.9)); }
       #unit-glow { transition: none; }
-      #unit-glow.is-on { }
       #press-group { transition: opacity 300ms ease; }
       #press-needle { transition: all 900ms ease; }
 

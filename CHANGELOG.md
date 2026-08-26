@@ -1,3 +1,12 @@
+# v2.6.5
+- Zirkulationsleitung: Ecken wie bei den übrigen Leitungen
+- Zirkulationsleitung liegt hinter dem Warmwasserspeicher
+- Namen der Einheiten in die Behälter verschoben, mit Kontrastbox
+- Glow der Wärmepumpe grün, pulsierend, hinter dem Gehäuse
+- Glow rot bei Störung
+- Demomodus: Knopf Bereitschaft
+- Demomodus: Schieberegler zeigen wieder ihren Wert
+
 # v2.6.4
 - RL-Rohr Korrektur
 - Version aus Hauptkarte in Einstellungen verschoben
