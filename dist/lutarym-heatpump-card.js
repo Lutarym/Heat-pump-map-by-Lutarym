@@ -920,7 +920,6 @@ class LutarymHeatpumpCard extends HTMLElement {
       ["dhw_heater", "Heizstab Warmwasser"],
       ["defrost", "Abtauung"],
       ["circulation_pump", "Zirkulation Status"],
-      ["circ_switch", "Zirkulation Schalter"],
       ["dhw_force_state", "Aufheizen"],
       ["sterilization_state", "Legionellenschutz"],
     ];
@@ -1051,7 +1050,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       if (anzeige) anzeige.textContent = wert;
     });
     const schalter = ["power_state","hk1_pump","hk2_pump","room_heater","dhw_heater",
-                      "defrost","circulation_pump","circ_switch","dhw_force_state","sterilization_state"];
+                      "defrost","circulation_pump","dhw_force_state","sterilization_state"];
     schalter.forEach((feld, i) => {
       const el = this.shadowRoot.getElementById(`demo-s${i}`);
       if (!el) return;
@@ -1708,6 +1707,16 @@ class LutarymHeatpumpCard extends HTMLElement {
         <rect x="1448" y="298" width="154" height="334" rx="28" fill="url(#glass)"/>
         <text class="value-l" id="dhw-v" x="1525" y="440" text-anchor="middle">--</text>
         <text class="value-sp" id="dhw-sp" x="1525" y="468" text-anchor="middle"></text>
+        <g id="dhwforce-badge" class="badge" transform="translate(1525 536)">
+          <rect x="-56" y="-15" width="112" height="30" rx="15"
+                fill="#08243A" stroke="#3B9BE0" stroke-width="1.5"/>
+          <text class="badge-t" x="0" y="5" text-anchor="middle">Aufheizen</text>
+        </g>
+        <g id="sterilization-badge" class="badge" transform="translate(1525 570)">
+          <rect x="-56" y="-15" width="112" height="30" rx="15"
+                fill="#2B1240" stroke="#A855F7" stroke-width="1.5"/>
+          <text class="badge-t" x="0" y="5" text-anchor="middle">Legionellen</text>
+        </g>
         <g id="dhwheater-badge" class="badge" transform="translate(1525 604)">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
@@ -2080,6 +2089,9 @@ class LutarymHeatpumpCard extends HTMLElement {
     set("dhw-sp", dhwSp === null ? "" : `Ziel ${fmt(dhwSp, 0)} °C`);
     const dhwHeizt = isOn(hass, this._e("dhw_heater")) === true;
     abzeichen("dhwheater-badge", dhwHeizt);
+    // TOP2 meldet das einmalige Aufheizen, TOP69 den Legionellenschutz.
+    abzeichen("dhwforce-badge", isOn(hass, this._e("dhw_force_state")) === true);
+    abzeichen("sterilization-badge", isOn(hass, this._e("sterilization_state")) === true);
 
     /* Primärpumpe und Durchfluss */
     const pumpRpm = numState(hass, this._e("pump_speed"));
