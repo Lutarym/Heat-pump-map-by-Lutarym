@@ -1393,6 +1393,302 @@ class LutarymHeatpumpCard extends HTMLElement {
     sr.getElementById("dlg-value").textContent = `${zeigen} °C`;
   }
 
+  /* -------------------- Szene -------------------- */
+
+  _svg() {
+    const two = this._config.fan_count === 2;
+    // Luefter uebereinander, wie beim echten Aussengeraet.
+    const fans = two
+      ? `${this._fan("fan1", 190, 360, 96)}${this._fan("fan2", 190, 608, 96)}`
+      : this._fan("fan1", 190, 480, 120);
+
+    const F = L.FLOW_Y;
+    const R = L.RET_Y;
+    const SF = L.SEC_FLOW;
+    const SR = L.SEC_RET;
+    // Jede Sekundaerleitung endet an ihrem letzten Anschluss:
+    // der Vorlauf am letzten Abgang, der Ruecklauf am letzten Zulauf.
+    const SEC_VL_ENDE = this._config.hk_count === 2 ? 1160 : 870;
+    const SEC_RL_ENDE = this._config.hk_count === 2 ? 1280 : 990;
+    const T = L.TANK_TOP;
+    const B = L.TANK_BOTTOM;
+    const C = L.CAP_Y;
+    const SG = L.SG_Y;
+    const hk2 = this._config.hk_count === 2;
+
+    return `
+    <svg viewBox="0 80 ${L.W} ${L.H}" class="lhc-svg" role="img"
+         aria-label="Schema der Wärmepumpenanlage">
+      <defs>
+        <filter id="unitGlowBlur" x="-30%" y="-15%" width="160%" height="130%">
+          <feGaussianBlur stdDeviation="5" result="b"/>
+          <feMerge>
+            <feMergeNode in="b"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        <linearGradient id="casing" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#232C3A"/><stop offset="100%" stop-color="#161D28"/>
+        </linearGradient>
+        <linearGradient id="glass" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.16"/>
+          <stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+          <stop offset="100%" stop-color="#000000" stop-opacity="0.22"/>
+        </linearGradient>
+        <linearGradient id="bufferFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" id="bg-top" stop-color="${NEUTRAL}"/>
+          <stop offset="100%" id="bg-bottom" stop-color="${NEUTRAL}"/>
+        </linearGradient>
+        <linearGradient id="dhwFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" id="dhw-top" stop-color="${NEUTRAL}"/>
+          <stop offset="100%" id="dhw-bottom" stop-color="${NEUTRAL}"/>
+        </linearGradient>
+        <linearGradient id="rad1Fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" id="rad1-top" stop-color="${NEUTRAL}"/>
+          <stop offset="100%" id="rad1-bottom" stop-color="${NEUTRAL}"/>
+        </linearGradient>
+        <linearGradient id="rad2Fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" id="rad2-top" stop-color="${NEUTRAL}"/>
+          <stop offset="100%" id="rad2-bottom" stop-color="${NEUTRAL}"/>
+        </linearGradient>
+        <clipPath id="bufClip">
+          <rect x="548" y="298" width="174" height="334" rx="20"/>
+        </clipPath>
+        <clipPath id="dhwClip">
+          <rect x="1448" y="298" width="154" height="334" rx="28"/>
+        </clipPath>
+      </defs>
+
+      <!-- Sammelleitungen -->
+      <path class="pipe-shell" d="M340 ${R} H 1525"/>
+      <path class="pipe" id="pipe-return" d="M340 ${R} H 1525"/>
+      <path class="pipe-shell" d="M340 ${F} H 1525"/>
+      <path class="pipe" id="pipe-flow" d="M340 ${F} H 1525"/>
+      <!-- Zwei Abschnitte je Leitung: bis zum Ventil und dahinter.
+           Der Teil hinter dem Ventil fuehrt nur zum Warmwasserspeicher. -->
+      <path class="flowdots" id="dots-vl-a" d="M340 ${F} H 630"/>
+      <path class="flowdots" id="dots-vl-b" d="M630 ${F} H 1525"/>
+      <path class="flowdots" id="dots-rl-a" d="M630 ${R} H 340"/>
+      <path class="flowdots" id="dots-rl-b" d="M1525 ${R} H 630"/>
+
+      <path class="pipe-shell" d="M630 ${F} V ${T} M630 ${B} V ${R}"/>
+      <path class="pipe" id="pipe-buf-in" d="M630 ${F} V ${T}"/>
+      <path class="pipe" id="pipe-buf-out" d="M630 ${B} V ${R}"/>
+      <path class="flowdots" id="dots-buf" d="M630 ${F} V ${T}"/>
+      <path class="flowdots" id="dots-buf2" d="M630 ${B} V ${R}"/>
+
+      <!-- Sekundaerkreis: vom Puffer zu den Heizkreisen und zurueck -->
+      <path class="pipe-shell" d="M730 ${SF} H ${SEC_VL_ENDE} M730 ${SR} H ${SEC_RL_ENDE}"/>
+      <path class="pipe" id="pipe-sec-flow" d="M730 ${SF} H ${SEC_VL_ENDE}"/>
+      <path class="pipe" id="pipe-sec-ret" d="M730 ${SR} H ${SEC_RL_ENDE}"/>
+      <!-- Auch hier abschnittsweise: der Weg zum zweiten Heizkreis
+           fuehrt nur Wasser, wenn dessen Pumpe laeuft. -->
+      <path class="flowdots" id="dots-sf-a" d="M730 ${SF} H 870"/>
+      <path class="flowdots rev" id="dots-sr-a" d="M730 ${SR} H 990"/>
+      ${
+        hk2
+          ? `<path class="flowdots" id="dots-sf-b" d="M870 ${SF} H 1160"/>
+             <path class="flowdots rev" id="dots-sr-b" d="M990 ${SR} H 1280"/>`
+          : ""
+      }
+
+      <path class="pipe-shell" d="M1525 ${F} V ${T} M1525 ${B} V ${R}"/>
+      <path class="pipe" id="pipe-dhw-in" d="M1525 ${F} V ${T}"/>
+      <path class="pipe" id="pipe-dhw-out" d="M1525 ${B} V ${R}"/>
+      <path class="flowdots" id="dots-dhw" d="M1525 ${F} V ${T}"/>
+      <path class="flowdots" id="dots-dhw2" d="M1525 ${B} V ${R}"/>
+
+      <!-- Außengerät -->
+      <g class="unit" id="unit-group">
+        <rect id="unit-glow" x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16"
+              fill="none" stroke="#22C55E" stroke-width="10" opacity="0"
+              filter="url(#unitGlowBlur)"/>
+        <rect x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16"
+              fill="url(#casing)" stroke="#33415A" stroke-width="2"/>
+        <rect x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16" fill="url(#glass)"/>
+
+        <circle cx="66" cy="156" r="9" id="power-led" fill="#2C3646"/>
+        <text class="unit-label" x="86" y="161">Betrieb</text>
+        <g id="defrost-badge" class="badge" transform="translate(260 150)">
+          <rect x="-62" y="-16" width="124" height="32" rx="16"
+                fill="#0E2A4A" stroke="#3E9BE0" stroke-width="1.5"/>
+          <text class="badge-t" x="0" y="5" text-anchor="middle">Abtauung</text>
+        </g>
+
+        <text class="unit-label" x="115" y="200" text-anchor="middle">Außen</text>
+        <text class="unit-value" id="outside-v" x="115" y="228"
+              text-anchor="middle">--</text>
+        <text class="unit-label" x="265" y="200" text-anchor="middle">Verdichter</text>
+        <text class="unit-value" id="comp-v" x="265" y="228" text-anchor="middle">--</text>
+
+        ${fans}
+
+      </g>
+
+      <!-- SG Ready, PV Leistung, Leistung, Verbrauch - zentriert zwischen VL und RL -->
+      <g id="sg-group" opacity="0">
+        <text class="sg-label" x="445" y="${F + 60}" text-anchor="middle">SG Ready</text>
+        <g transform="translate(445 ${F + 90})">
+          <rect x="-68" y="0" width="32" height="11" rx="5.5" id="sg-seg-1" fill="#3A4658"/>
+          <rect x="-34" y="0" width="32" height="11" rx="5.5" id="sg-seg-2" fill="#3A4658"/>
+          <rect x="2" y="0" width="32" height="11" rx="5.5" id="sg-seg-3" fill="#3A4658"/>
+          <rect x="36" y="0" width="32" height="11" rx="5.5" id="sg-seg-4" fill="#3A4658"/>
+        </g>
+        <text class="sg-value" id="sg-text" x="445" y="${F + 130}"
+              text-anchor="middle">--</text>
+        <line x1="380" y1="${F + 150}" x2="510" y2="${F + 150}" stroke="#33415A" stroke-width="0.5"/>
+      </g>
+
+      <!-- PV Leistung -->
+      <g id="pv-group" opacity="0">
+        <text class="sg-label" x="445" y="${F + 190}" text-anchor="middle">PV Leistung</text>
+        <text class="pv-value" id="pv-v" x="445" y="${F + 228}"
+              text-anchor="middle">--</text>
+        <line x1="380" y1="${F + 245}" x2="510" y2="${F + 245}" stroke="#33415A" stroke-width="0.5"/>
+      </g>
+
+      <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
+      <text class="vl-value" id="unit-flow-v" x="410" y="${F - 20}"
+            text-anchor="middle">--</text>
+      <text class="rl-value" id="unit-ret-v" x="410" y="${R + 40}"
+            text-anchor="middle">--</text>
+
+      <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
+      <g id="verbrauch-group" opacity="0">
+        <text class="sg-label" x="445" y="${F + 285}" text-anchor="middle">Leistung</text>
+        <text class="verbrauch-v" id="power-now-v" x="445" y="${F + 323}"
+              text-anchor="middle">--</text>
+        <line x1="380" y1="${F + 340}" x2="510" y2="${F + 340}" stroke="#33415A" stroke-width="0.5"/>
+        <text class="sg-label" id="energy-label" x="445" y="${F + 380}"
+              text-anchor="middle">--</text>
+        <text class="unit-value" id="energy-today-v" x="445" y="${F + 420}"
+              text-anchor="middle">--</text>
+      </g>
+
+      <!-- Primärpumpe -->
+      <g>
+        <text class="value-s" id="pump-v" x="640" y="722" text-anchor="start">--</text>
+        <text class="value-s" id="flow-v" x="640" y="744" text-anchor="start">--</text>
+        <g transform="translate(580 ${R})">
+          <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+          <g class="rotor" id="pump-rotor">
+            <path d="M0 -15 L5 -4 L16 0 L5 4 L0 15 L-5 4 L-16 0 L-5 -4 Z" fill="#55637A"/>
+            <circle r="4" fill="#0D1219"/>
+          </g>
+        </g>
+        <text class="cap-s" x="580" y="${R + 40}" text-anchor="middle">Pumpe</text>
+      </g>
+
+      <!-- Heizungspuffer -->
+      <g id="buffer-group">
+        <rect x="540" y="${T}" width="190" height="350" rx="26"
+              fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+        <rect x="548" y="298" width="174" height="334" rx="20" fill="url(#bufferFill)"/>
+        <g clip-path="url(#bufClip)">${this._bubbles("buf-bubbles", 548, 298, 174, 334)}</g>
+        <rect x="548" y="298" width="174" height="334" rx="20" fill="url(#glass)"/>
+        <text class="value-l" id="buf-v" x="635" y="460" text-anchor="middle">--</text>
+        <text class="value-sp" id="buf-sp" x="635" y="488" text-anchor="middle"></text>
+        <g id="roomheater-badge" class="badge" transform="translate(635 604)">
+          <rect x="-56" y="-15" width="112" height="30" rx="15"
+                fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
+          <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
+        </g>
+        <rect x="560" y="305" width="150" height="30" rx="8" fill="#0D1219" stroke="#33415A" stroke-width="1" opacity="0.5"/>
+        <text class="cap" x="635" y="320" text-anchor="middle" dominant-baseline="middle">${escapeHtml(
+          this._config.label_buffer
+        )}</text>
+      </g>
+
+      <!-- Wasserdruck -->
+      <g id="press-group" opacity="0">
+        <text class="value-s" id="press-v" x="1390" y="660" text-anchor="middle">--</text>
+        <g transform="translate(1390 ${R})">
+          <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+          <circle r="18" fill="none" stroke="#26303F" stroke-width="3"/>
+          <line id="press-needle" x1="0" y1="0" x2="0" y2="-15"
+                stroke="${NEUTRAL}" stroke-width="3" stroke-linecap="round"/>
+          <circle r="4" fill="#55637A"/>
+        </g>
+        <text class="cap-s" x="1390" y="${R + 40}" text-anchor="middle">Druck</text>
+      </g>
+
+      ${this._circuit(1, 820, 1040, 870, 990)}
+      ${hk2 ? this._circuit(2, 1110, 1330, 1160, 1280) : ""}
+
+      <!-- Dreiwegeventil an der Abzweigung: hier teilt sich der Vorlauf
+           nach unten in den Puffer oder weiter nach rechts zum Speicher. -->
+      <g>
+        <circle cx="630" cy="${F}" r="22" fill="#0D1219"
+                stroke="#33415A" stroke-width="2"/>
+        <!-- Der Pfeil zeigt, wohin das Ventil geoeffnet ist. -->
+        <g id="valve-arrow-down" opacity="0">
+          <path id="valve-down-line" d="M630 ${F - 12} V ${F + 4}"
+                stroke="${NEUTRAL}" stroke-width="5" stroke-linecap="round" fill="none"/>
+          <path id="valve-down-head" d="M622 ${F + 2} L 630 ${F + 14} L 638 ${F + 2} Z"
+                fill="${NEUTRAL}"/>
+        </g>
+        <g id="valve-arrow-right" opacity="0">
+          <path id="valve-right-line" d="M${630 - 12} ${F} H ${630 + 4}"
+                stroke="${NEUTRAL}" stroke-width="5" stroke-linecap="round" fill="none"/>
+          <path id="valve-right-head" d="M${630 + 2} ${F - 8} L ${630 + 14} ${F} L ${630 + 2} ${F + 8} Z"
+                fill="${NEUTRAL}"/>
+        </g>
+      </g>
+
+      <!-- Warmwasserspeicher -->
+      <!-- Zirkulationskreis am Warmwasserspeicher -->
+      <g id="zirkulation-group" opacity="0">
+        <path class="pipe-shell" fill="none" d="M1440 320 H 1370 M1370 560 H 1440"/>
+        <path class="pipe" id="pipe-zirk-h1" fill="none" d="M1440 320 H 1370"/>
+        <path class="pipe" id="pipe-zirk-h2" fill="none" d="M1370 560 H 1440"/>
+        <path class="flowdots" id="dots-zirk-h1" fill="none" d="M1440 320 H 1370"/>
+        <path class="flowdots" id="dots-zirk-h2" fill="none" d="M1370 560 H 1440"/>
+        <path class="pipe-shell" fill="none" d="M1370 320 V 560"/>
+        <path class="pipe" id="pipe-zirk-v" fill="none" d="M1370 320 V 560"/>
+        <path class="flowdots" id="dots-zirk-v" fill="none" d="M1370 320 V 560"/>
+        <g transform="translate(1370 360)">
+          <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+          <g class="rotor" id="zirk-rotor">
+            <path d="M0 -13 L4 -3 L14 0 L4 3 L0 13 L-4 3 L-14 0 L-4 -3 Z" fill="#55637A"/>
+            <circle r="4" fill="#0D1219"/>
+          </g>
+        </g>
+        <text class="cap-s" x="1370" y="300" text-anchor="middle">Zirkulation</text>
+        <text class="value-s" id="zirk-v" x="1335" y="366" text-anchor="end">--</text>
+      </g>
+
+            <g id="dhw-group">
+        <rect x="1440" y="${T}" width="170" height="350" rx="34"
+              fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+        <rect x="1448" y="298" width="154" height="334" rx="28" fill="url(#dhwFill)"/>
+        <g clip-path="url(#dhwClip)">${this._bubbles("dhw-bubbles", 1448, 298, 154, 334)}</g>
+        <rect x="1448" y="298" width="154" height="334" rx="28" fill="url(#glass)"/>
+        <text class="value-l" id="dhw-v" x="1525" y="440" text-anchor="middle">--</text>
+        <text class="value-sp" id="dhw-sp" x="1525" y="468" text-anchor="middle"></text>
+        <g id="dhwforce-badge" class="badge" transform="translate(1525 536)">
+          <rect x="-56" y="-15" width="112" height="30" rx="15"
+                fill="#08243A" stroke="#3B9BE0" stroke-width="1.5"/>
+          <text class="badge-t" x="0" y="5" text-anchor="middle">Aufheizen</text>
+        </g>
+        <g id="sterilization-badge" class="badge" transform="translate(1525 570)">
+          <rect x="-56" y="-15" width="112" height="30" rx="15"
+                fill="#2B1240" stroke="#A855F7" stroke-width="1.5"/>
+          <text class="badge-t" x="0" y="5" text-anchor="middle">Legionellen</text>
+        </g>
+        <g id="dhwheater-badge" class="badge" transform="translate(1525 604)">
+          <rect x="-56" y="-15" width="112" height="30" rx="15"
+                fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
+          <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
+        </g>
+        <rect x="1458" y="305" width="134" height="30" rx="8" fill="#0D1219" stroke="#33415A" stroke-width="1" opacity="0.5"/>
+        <text class="cap" x="1525" y="320" text-anchor="middle" dominant-baseline="middle">${escapeHtml(
+          this._config.label_dhw
+        )}</text>
+      </g>
+
+
+    </svg>`;
+  }
 
   _circuit(n, x1, x2, dropX, backX) {
     const F = L.FLOW_Y;
