@@ -944,7 +944,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       </div>
       <div class="lhc-demo-reihe">
         ${schalter.map(([feld, text], i) => `<button type="button" class="lhc-demo-knopf" id="demo-s${i}" data-feld="${feld}">${escapeHtml(text)}</button>`).join("")}
-        <button type="button" class="lhc-demo-knopf" id="demo-heizbetrieb">Heizbetrieb</button>
+        <button type="button" class="lhc-demo-knopf" id="demo-bereitschaft">Bereitschaft</button>
         <button type="button" class="lhc-demo-knopf" id="demo-ventil">Ventil</button>
         <button type="button" class="lhc-demo-knopf" id="demo-sg">SG Ready</button>
         <button type="button" class="lhc-demo-knopf" id="demo-stoerung">Störung</button>
@@ -979,18 +979,27 @@ class LutarymHeatpumpCard extends HTMLElement {
     });
 
     // Spezielle Buttons (Ventil, SG, etc.)
-    // Heizbetrieb aus- und einschalten, ohne die Anlage abzuschalten.
-    // Betriebsart 4 heizt und macht Warmwasser, Betriebsart 3 nur Warmwasser.
-    this.shadowRoot.getElementById("demo-heizbetrieb").addEventListener("click", () => {
-      const heiztJetzt = parseFloat(this._demoLies("operating_mode")) !== 3;
-      if (heiztJetzt) {
-        this._demoSetze("operating_mode", 3);
-        this._demoSetze("three_way_valve", 1);
+    // Bereitschaft: die Anlage bleibt eingeschaltet, foerdert aber nichts.
+    // Weder Heizung noch Warmwasser werden bedient, die gruene LED bleibt an.
+    this.shadowRoot.getElementById("demo-bereitschaft").addEventListener("click", () => {
+      const arbeitetJetzt = parseFloat(this._demoLies("pump_flow")) > 0;
+      if (arbeitetJetzt) {
+        this._demoSetze("compressor", 0);
+        this._demoSetze("fan1_rpm", 0);
+        this._demoSetze("fan2_rpm", 0);
+        this._demoSetze("pump_speed", 0);
+        this._demoSetze("pump_flow", 0);
+        this._demoSetze("power_now", 0);
         this._demoSetze("hk1_pump", 0);
         this._demoSetze("hk2_pump", 0);
+        this._demoSetze("circulation_pump", 0);
       } else {
-        this._demoSetze("operating_mode", 4);
-        this._demoSetze("three_way_valve", 0);
+        this._demoSetze("compressor", 42);
+        this._demoSetze("fan1_rpm", 640);
+        this._demoSetze("fan2_rpm", 620);
+        this._demoSetze("pump_speed", 2400);
+        this._demoSetze("pump_flow", 18.6);
+        this._demoSetze("power_now", 1240);
         this._demoSetze("hk1_pump", 1);
         this._demoSetze("hk2_pump", 0);
       }
