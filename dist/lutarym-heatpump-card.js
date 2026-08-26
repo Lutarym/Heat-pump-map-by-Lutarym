@@ -944,6 +944,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       </div>
       <div class="lhc-demo-reihe">
         ${schalter.map(([feld, text], i) => `<button type="button" class="lhc-demo-knopf" id="demo-s${i}" data-feld="${feld}">${escapeHtml(text)}</button>`).join("")}
+        <button type="button" class="lhc-demo-knopf" id="demo-heizt">Verdichter</button>
         <button type="button" class="lhc-demo-knopf" id="demo-ventil">Ventil</button>
         <button type="button" class="lhc-demo-knopf" id="demo-sg">SG Ready</button>
         <button type="button" class="lhc-demo-knopf" id="demo-stoerung">Störung</button>
@@ -978,6 +979,24 @@ class LutarymHeatpumpCard extends HTMLElement {
     });
 
     // Spezielle Buttons (Ventil, SG, etc.)
+    // Verdichter an oder aus: bestimmt, ob die Waermepumpe wirklich heizt.
+    // Luefter und Leistungsaufnahme laufen mit, damit das Bild stimmig bleibt.
+    this.shadowRoot.getElementById("demo-heizt").addEventListener("click", () => {
+      const heiztJetzt = parseFloat(this._demoLies("compressor")) > 0;
+      if (heiztJetzt) {
+        this._demoSetze("compressor", 0);
+        this._demoSetze("fan1_rpm", 0);
+        this._demoSetze("fan2_rpm", 0);
+        this._demoSetze("power_now", 0);
+      } else {
+        this._demoSetze("compressor", 42);
+        this._demoSetze("fan1_rpm", 640);
+        this._demoSetze("fan2_rpm", 620);
+        this._demoSetze("power_now", 1240);
+      }
+      this._syncDemo();
+    });
+
     this.shadowRoot.getElementById("demo-ventil").addEventListener("click", () => {
       this._demoSetze("three_way_valve", this._demoLies("three_way_valve") === "1" ? 0 : 1);
       this._syncDemo();
@@ -1913,11 +1932,11 @@ class LutarymHeatpumpCard extends HTMLElement {
     }
 
     /* Störung */
+    const err = rawState(hass, this._e("error"));
+    const harmlos = [null, "", "OK", "ok", "0", "No error", "unknown", "unavailable"];
+    const stoerung = err !== null && !harmlos.includes(err);
     const alertEl = sr.getElementById("alert");
     if (alertEl) {
-      const err = rawState(hass, this._e("error"));
-      const harmlos = [null, "", "OK", "ok", "0", "No error", "unknown", "unavailable"];
-      const stoerung = err !== null && !harmlos.includes(err);
       alertEl.hidden = !stoerung;
       alertEl.classList.toggle("is-pulsing", stoerung && animate);
       if (stoerung) alertEl.textContent = `Störung der Wärmepumpe: ${err}`;
@@ -1964,12 +1983,16 @@ class LutarymHeatpumpCard extends HTMLElement {
     abzeichen("defrost-badge", isOn(hass, this._e("defrost")) === true);
     const glow = sr.getElementById("unit-glow");
     if (glow) {
-      const glowAn = animate && laeuft && comp !== null && comp > 0;
+      // Eine Stoerung hat Vorrang vor der Betriebsanzeige.
+      const glowStoerung = animate && stoerung;
+      const glowBetrieb = animate && laeuft && comp !== null && comp > 0;
+      const glowAn = glowStoerung || glowBetrieb;
       glow.classList.toggle("is-on", glowAn);
+      glow.setAttribute("stroke", glowStoerung ? "#EF4444" : "#22C55E");
       if (glowAn) {
         this._animState.set("unit-glow", {
           type: "pulse",
-          duration: 2.6,
+          duration: glowStoerung ? 1.2 : 2.6,
           min: 0.05,
           max: 1,
         });
