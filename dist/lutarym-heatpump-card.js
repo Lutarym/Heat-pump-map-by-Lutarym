@@ -1631,7 +1631,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <rect x="548" y="298" width="174" height="334" rx="20" fill="url(#glass)"/>
         <text class="value-l" id="buf-v" x="635" y="460" text-anchor="middle">--</text>
         <text class="value-sp" id="buf-sp" x="635" y="488" text-anchor="middle"></text>
-        <g id="roomheater-badge" class="badge" transform="translate(635 586)">
+        <g id="roomheater-badge" class="badge" transform="translate(635 604)">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
