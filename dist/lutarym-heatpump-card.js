@@ -1679,13 +1679,13 @@ class LutarymHeatpumpCard extends HTMLElement {
       <!-- Zirkulationskreis am Warmwasserspeicher -->
       <g id="zirkulation-group" opacity="0">
         <path class="pipe-shell" fill="none" d="M1440 320 H 1370"/>
-        <path class="pipe-shell" fill="none" d="M1370 330 V 550"/>
+        <path class="pipe-shell" fill="none" d="M1370 320 V 560"/>
         <path class="pipe-shell" fill="none" d="M1370 560 H 1440"/>
         <path class="pipe" id="pipe-zirk-h1" fill="none" d="M1440 320 H 1370"/>
-        <path class="pipe" id="pipe-zirk-v" fill="none" d="M1370 330 V 550"/>
+        <path class="pipe" id="pipe-zirk-v" fill="none" d="M1370 320 V 560"/>
         <path class="pipe" id="pipe-zirk-h2" fill="none" d="M1370 560 H 1440"/>
         <path class="flowdots" id="dots-zirk-h1" fill="none" d="M1440 320 H 1370"/>
-        <path class="flowdots" id="dots-zirk-v" fill="none" d="M1370 330 V 550"/>
+        <path class="flowdots" id="dots-zirk-v" fill="none" d="M1370 320 V 560"/>
         <path class="flowdots" id="dots-zirk-h2" fill="none" d="M1370 560 H 1440"/>
         <g transform="translate(1370 360)">
           <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
