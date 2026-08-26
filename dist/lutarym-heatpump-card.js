@@ -1554,11 +1554,11 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Außengerät -->
       <g class="unit" id="unit-group">
+        <rect id="unit-glow" x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16"
+              fill="none" stroke="#22C55E" stroke-width="10" opacity="0"
+              filter="url(#unitGlowBlur)"/>
         <rect x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16"
               fill="url(#casing)" stroke="#33415A" stroke-width="2"/>
-        <rect id="unit-glow" x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16"
-              fill="none" stroke="#22C55E" stroke-width="3" opacity="0"
-              filter="url(#unitGlowBlur)"/>
         <rect x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16" fill="url(#glass)"/>
 
         <circle cx="66" cy="156" r="9" id="power-led" fill="#2C3646"/>
@@ -1970,8 +1970,8 @@ class LutarymHeatpumpCard extends HTMLElement {
         this._animState.set("unit-glow", {
           type: "pulse",
           duration: 2.6,
-          min: 0.15,
-          max: 0.45,
+          min: 0.35,
+          max: 0.9,
         });
       } else {
         this._animState.delete("unit-glow");
