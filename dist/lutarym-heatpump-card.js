@@ -876,7 +876,13 @@ class LutarymHeatpumpCard extends HTMLElement {
         const el = sr.getElementById(id);
         if (!el) return;
         const cycle = (this._animTime % state.duration) / state.duration;
-        const opacity = cycle < 0.5 ? 1 - (cycle / 0.5) * 0.6 : 0.4 + ((cycle - 0.5) / 0.5) * 0.6;
+        const hoch = typeof state.max === "number" ? state.max : 1;
+        const tief = typeof state.min === "number" ? state.min : 0.4;
+        const spanne = hoch - tief;
+        const opacity =
+          cycle < 0.5
+            ? hoch - (cycle / 0.5) * spanne
+            : tief + ((cycle - 0.5) / 0.5) * spanne;
         el.setAttribute("opacity", opacity.toFixed(2));
       });
 
@@ -1469,9 +1475,8 @@ class LutarymHeatpumpCard extends HTMLElement {
          aria-label="Schema der Wärmepumpenanlage">
       <defs>
         <filter id="unitGlowBlur" x="-30%" y="-15%" width="160%" height="130%">
-          <feGaussianBlur stdDeviation="7" result="b"/>
+          <feGaussianBlur stdDeviation="5" result="b"/>
           <feMerge>
-            <feMergeNode in="b"/>
             <feMergeNode in="b"/>
             <feMergeNode in="SourceGraphic"/>
           </feMerge>
@@ -1552,7 +1557,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <rect x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16"
               fill="url(#casing)" stroke="#33415A" stroke-width="2"/>
         <rect id="unit-glow" x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16"
-              fill="none" stroke="#22C55E" stroke-width="6" opacity="0"
+              fill="none" stroke="#22C55E" stroke-width="3" opacity="0"
               filter="url(#unitGlowBlur)"/>
         <rect x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16" fill="url(#glass)"/>
 
@@ -1962,10 +1967,15 @@ class LutarymHeatpumpCard extends HTMLElement {
       const glowAn = animate && laeuft && comp !== null && comp > 0;
       glow.classList.toggle("is-on", glowAn);
       if (glowAn) {
-        this._animState.set("unit-glow", { type: "pulse", duration: 2.6 });
+        this._animState.set("unit-glow", {
+          type: "pulse",
+          duration: 2.6,
+          min: 0.15,
+          max: 0.45,
+        });
       } else {
         this._animState.delete("unit-glow");
-        glow.setAttribute("opacity", "0.12");
+        glow.setAttribute("opacity", "0");
       }
     }
 
