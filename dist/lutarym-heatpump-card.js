@@ -1468,6 +1468,14 @@ class LutarymHeatpumpCard extends HTMLElement {
     <svg viewBox="0 80 ${L.W} ${L.H}" class="lhc-svg" role="img"
          aria-label="Schema der Wärmepumpenanlage">
       <defs>
+        <filter id="unitGlowBlur" x="-30%" y="-15%" width="160%" height="130%">
+          <feGaussianBlur stdDeviation="7" result="b"/>
+          <feMerge>
+            <feMergeNode in="b"/>
+            <feMergeNode in="b"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
         <linearGradient id="casing" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="#232C3A"/><stop offset="100%" stop-color="#161D28"/>
         </linearGradient>
@@ -1544,7 +1552,8 @@ class LutarymHeatpumpCard extends HTMLElement {
         <rect x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16"
               fill="url(#casing)" stroke="#33415A" stroke-width="2"/>
         <rect id="unit-glow" x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16"
-              fill="none" stroke="#E0762E" stroke-width="2" opacity="0"/>
+              fill="none" stroke="#22C55E" stroke-width="6" opacity="0"
+              filter="url(#unitGlowBlur)"/>
         <rect x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16" fill="url(#glass)"/>
 
         <circle cx="66" cy="156" r="9" id="power-led" fill="#2C3646"/>
