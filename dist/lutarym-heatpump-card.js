@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.6.5";
+const CARD_VERSION = "2.7.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -90,8 +90,8 @@ const VALVE_LABELS = { Room: "Heizung", DHW: "Warmwasser", 0: "Heizung", 1: "War
 const SG_STATES = {
   1: { kurz: "Stopp", lang: "Sperre durch den Netzbetreiber", farbe: "#FF6B5E" },
   2: { kurz: "Normal", lang: "Normalbetrieb", farbe: "#C3D0E0" },
-  3: { kurz: "PV Überschuss 1", lang: "Einschaltempfehlung", farbe: "#FFC44D" },
-  4: { kurz: "PV Überschuss 2", lang: "Anlaufbefehl, verstärkter Betrieb", farbe: "#5BE08F" },
+  3: { kurz: "PV Überschuss Low", lang: "Einschaltempfehlung", farbe: "#FFC44D" },
+  4: { kurz: "PV Überschuss High", lang: "Anlaufbefehl, verstärkter Betrieb", farbe: "#5BE08F" },
 };
 
 /* ------------------------------------------------------------------ *
@@ -106,6 +106,40 @@ const THERMAL_STOPS = [
 ];
 
 const NEUTRAL = "#46536A";
+
+/* ------------------------------------------------------------------ *
+ *  Farbskala fuer die Verdichterlast
+ *  Gruen bei geringer, rot bei hoher Drehzahl. Die Grenzen stammen
+ *  aus der Anlage: 16 Hz ist die kleinste, 90 Hz die groesste Drehzahl.
+ * ------------------------------------------------------------------ */
+const COMP_MIN_HZ = 16;
+const COMP_MAX_HZ = 90;
+const LOAD_STOPS = [
+  { p: 0.0, c: [91, 224, 143] },
+  { p: 0.4, c: [255, 196, 77] },
+  { p: 0.7, c: [224, 118, 46] },
+  { p: 1.0, c: [255, 107, 94] },
+];
+
+function loadColor(value, min, max) {
+  // Steht der Verdichter, gibt es keine Last und damit keine Farbe.
+  if (value === null || value === undefined || Number.isNaN(value)) return NEUTRAL;
+  if (value <= 0) return NEUTRAL;
+  const span = max - min || 1;
+  const p = clamp((value - min) / span, 0, 1);
+  let a = LOAD_STOPS[0];
+  let b = LOAD_STOPS[LOAD_STOPS.length - 1];
+  for (let i = 0; i < LOAD_STOPS.length - 1; i++) {
+    if (p >= LOAD_STOPS[i].p && p <= LOAD_STOPS[i + 1].p) {
+      a = LOAD_STOPS[i];
+      b = LOAD_STOPS[i + 1];
+      break;
+    }
+  }
+  const local = (p - a.p) / ((b.p - a.p) || 1);
+  const rgb = a.c.map((ch, i) => Math.round(ch + (b.c[i] - ch) * local));
+  return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+}
 
 // Pumpen drehen bewusst langsam und immer gleich schnell. Sie sollen
 // nur zeigen, dass sie foerdern, nicht wie schnell.
@@ -1564,15 +1598,15 @@ class LutarymHeatpumpCard extends HTMLElement {
         </g>
         <text class="sg-value" id="sg-text" x="445" y="${F + 130}"
               text-anchor="middle">--</text>
-        <line x1="380" y1="${F + 150}" x2="510" y2="${F + 150}" stroke="#33415A" stroke-width="0.5"/>
+        <line x1="380" y1="${F + 150}" x2="510" y2="${F + 150}" stroke="#55657F" stroke-width="1"/>
       </g>
 
       <!-- PV Leistung -->
       <g id="pv-group" opacity="0">
-        <text class="sg-label" x="445" y="${F + 190}" text-anchor="middle">PV Leistung</text>
+        <text class="sg-label" id="pv-label" x="445" y="${F + 190}" text-anchor="middle">PV Überschuss</text>
         <text class="pv-value" id="pv-v" x="445" y="${F + 228}"
               text-anchor="middle">--</text>
-        <line x1="380" y1="${F + 245}" x2="510" y2="${F + 245}" stroke="#33415A" stroke-width="0.5"/>
+        <line x1="380" y1="${F + 245}" x2="510" y2="${F + 245}" stroke="#55657F" stroke-width="1"/>
       </g>
 
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
@@ -1586,7 +1620,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="sg-label" x="445" y="${F + 285}" text-anchor="middle">Leistung</text>
         <text class="verbrauch-v" id="power-now-v" x="445" y="${F + 323}"
               text-anchor="middle">--</text>
-        <line x1="380" y1="${F + 340}" x2="510" y2="${F + 340}" stroke="#33415A" stroke-width="0.5"/>
+        <line x1="380" y1="${F + 340}" x2="510" y2="${F + 340}" stroke="#55657F" stroke-width="1"/>
         <text class="sg-label" id="energy-label" x="445" y="${F + 380}"
               text-anchor="middle">--</text>
         <text class="unit-value" id="energy-today-v" x="445" y="${F + 420}"
@@ -1916,6 +1950,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     /* Außengerät */
     const comp = numState(hass, this._e("compressor"));
     set("comp-v", comp === null ? "--" : `${fmt(comp, 0)} Hz`);
+    const compEl = sr.getElementById("comp-v");
+    if (compEl) compEl.setAttribute("fill", loadColor(comp, COMP_MIN_HZ, COMP_MAX_HZ));
 
     // Meldet die Waermepumpe ausdruecklich aus, steht alles still.
     // Bei unbekanntem Zustand wird nichts gesperrt, sonst waere die
@@ -1978,6 +2014,10 @@ class LutarymHeatpumpCard extends HTMLElement {
           t.setAttribute("fill", farbe);
           t.style.color = farbe;
         }
+        // Die Beschriftung ueber dem Wattwert traegt dieselbe Farbe
+        // wie der SG-Ready-Zustand.
+        const pvL = sr.getElementById("pv-label");
+        if (pvL) pvL.setAttribute("fill", farbe);
         for (let i = 1; i <= 4; i++) {
           const seg = sr.getElementById(`sg-seg-${i}`);
           if (!seg) continue;
@@ -1990,6 +2030,11 @@ class LutarymHeatpumpCard extends HTMLElement {
           seg.style.color = farbe;
           seg.classList.toggle("is-active", aktiv);
         }
+      } else {
+        // Ohne SG Ready gibt es keine Statusfarbe. Dann gilt die
+        // normale Beschriftungsfarbe aus dem Stylesheet.
+        const pvL = sr.getElementById("pv-label");
+        if (pvL) pvL.removeAttribute("fill");
       }
     }
 
@@ -2456,7 +2501,9 @@ class LutarymHeatpumpCard extends HTMLElement {
         fill: #C3D0E0; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
       }
       .sg-value {
-        fill: ${NEUTRAL}; font-size: 16px; font-weight: 700;
+        /* 13px, damit auch der laengste Zustand "PV Ueberschuss High"
+           innerhalb der Trennlinie darunter bleibt. */
+        fill: ${NEUTRAL}; font-size: 13px; font-weight: 700;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums; transition: fill 400ms ease;
       }
