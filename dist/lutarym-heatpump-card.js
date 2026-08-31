@@ -2014,10 +2014,6 @@ class LutarymHeatpumpCard extends HTMLElement {
           t.style.fill = farbe;
           t.style.color = farbe;
         }
-        // Die Beschriftung ueber dem Wattwert traegt dieselbe Farbe
-        // wie der SG-Ready-Zustand.
-        const pvL = sr.getElementById("pv-label");
-        if (pvL) pvL.style.fill = farbe;
         for (let i = 1; i <= 4; i++) {
           const seg = sr.getElementById(`sg-seg-${i}`);
           if (!seg) continue;
@@ -2030,11 +2026,6 @@ class LutarymHeatpumpCard extends HTMLElement {
           seg.style.color = farbe;
           seg.classList.toggle("is-active", aktiv);
         }
-      } else {
-        // Ohne SG Ready gibt es keine Statusfarbe. Dann gilt die
-        // normale Beschriftungsfarbe aus dem Stylesheet.
-        const pvL = sr.getElementById("pv-label");
-        if (pvL) pvL.style.removeProperty("fill");
       }
     }
 
