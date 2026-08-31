@@ -1945,13 +1945,13 @@ class LutarymHeatpumpCard extends HTMLElement {
     const outColor = thermalColor(outside, oMin, oMax);
     set("outside-v", outside === null ? "--" : `${fmt(outside)} °C`);
     const aussenEl = sr.getElementById("outside-v");
-    if (aussenEl) aussenEl.setAttribute("fill", outColor);
+    if (aussenEl) aussenEl.style.fill = outColor;
 
     /* Außengerät */
     const comp = numState(hass, this._e("compressor"));
     set("comp-v", comp === null ? "--" : `${fmt(comp, 0)} Hz`);
     const compEl = sr.getElementById("comp-v");
-    if (compEl) compEl.setAttribute("fill", loadColor(comp, COMP_MIN_HZ, COMP_MAX_HZ));
+    if (compEl) compEl.style.fill = loadColor(comp, COMP_MIN_HZ, COMP_MAX_HZ);
 
     // Meldet die Waermepumpe ausdruecklich aus, steht alles still.
     // Bei unbekanntem Zustand wird nichts gesperrt, sonst waere die
@@ -2011,13 +2011,13 @@ class LutarymHeatpumpCard extends HTMLElement {
         set("sg-text", sg === null ? "unbekannt" : info.kurz);
         const t = sr.getElementById("sg-text");
         if (t) {
-          t.setAttribute("fill", farbe);
+          t.style.fill = farbe;
           t.style.color = farbe;
         }
         // Die Beschriftung ueber dem Wattwert traegt dieselbe Farbe
         // wie der SG-Ready-Zustand.
         const pvL = sr.getElementById("pv-label");
-        if (pvL) pvL.setAttribute("fill", farbe);
+        if (pvL) pvL.style.fill = farbe;
         for (let i = 1; i <= 4; i++) {
           const seg = sr.getElementById(`sg-seg-${i}`);
           if (!seg) continue;
@@ -2034,7 +2034,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         // Ohne SG Ready gibt es keine Statusfarbe. Dann gilt die
         // normale Beschriftungsfarbe aus dem Stylesheet.
         const pvL = sr.getElementById("pv-label");
-        if (pvL) pvL.removeAttribute("fill");
+        if (pvL) pvL.style.removeProperty("fill");
       }
     }
 
