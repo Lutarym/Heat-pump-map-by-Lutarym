@@ -867,21 +867,10 @@ class LutarymHeatpumpCard extends HTMLElement {
           this._bubbleCache.set(groupId, bubbles);
         }
         bubbles.forEach((bubble, idx) => {
-<<<<<<< HEAD
           // Dauer und Versatz haengen nur vom Index ab und aendern sich nie.
           // Darum einmal berechnen und merken, statt bei jedem Bild erneut.
           const dur = bubbleDauer(idx);
           const delay = idx * 0.3;
-=======
-          // Blasen-Parametern berechnen (immer gleich basierend auf Index)
-          let seed = idx + 42;
-          const rnd = () => {
-            seed = (seed * 1103515245 + 12345) % 2147483648;
-            return seed / 2147483648;
-          };
-          const dur = 4 + rnd() * 4;
-          const delay = idx * 0.3; // einfacher Delay basierend auf Index
->>>>>>> 1ad55ed456c6c2e8767f4f22d72cab8357dfb94c
 
           // Animation: Zeit seit Start
           const time = (this._animTime + delay) % dur;
@@ -2302,7 +2291,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     }
     el.classList.remove("is-still");
     const duration = festeDauer ? festeDauer : clamp(900 / rpm, 0.25, 6);
-<<<<<<< HEAD
     // Nur die Dauer anpassen. Der erreichte Winkel bleibt erhalten,
     // damit der Rotor bei einer neuen Drehzahl weiterdreht statt zu springen.
     const vorhanden = this._animState.get(rotorId);
@@ -2311,9 +2299,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     } else {
       this._animState.set(rotorId, { type: "spin", duration, winkel: 0 });
     }
-=======
-    this._animState.set(rotorId, { type: "spin", duration });
->>>>>>> 1ad55ed456c6c2e8767f4f22d72cab8357dfb94c
   }
 
   /**
