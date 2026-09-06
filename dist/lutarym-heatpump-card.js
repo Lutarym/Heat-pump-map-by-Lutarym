@@ -1215,7 +1215,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       {
         gruppe: "unit-group",
         titel: "Wärmepumpe",
-        werte: ["Außengerät", "Außenfühler", "Primärkreis", "SG Ready", "Steuerung"],
+        werte: ["Außengerät", "Außenfühler", "Primärkreis"],
         aktionen: [
           { feld: "power_state", status: "heatpump_state", typ: "schalter", an: "Läuft, ausschalten", aus: "Einschalten" },
           { feld: "force_defrost", status: "defrost", typ: "schalter", an: "Abtauen läuft, beenden", aus: "Abtauen erzwingen" },
@@ -1267,6 +1267,14 @@ class LutarymHeatpumpCard extends HTMLElement {
         ],
       },
     ];
+
+    // Alle Felder, die irgendwo bedient werden koennen. Sie werden aus
+    // den Fenstern selbst abgeleitet, damit die Liste nicht veraltet.
+    this._alleAktionsfelder = fenster.reduce((liste, f) => {
+      if (f.feld) liste.push(f.feld);
+      (f.aktionen || []).forEach((a) => liste.push(a.feld));
+      return liste;
+    }, []);
 
     fenster.forEach((f) => {
       const el = sr.getElementById(f.gruppe);
@@ -1375,10 +1383,22 @@ class LutarymHeatpumpCard extends HTMLElement {
     const gruppen = this._dialogGruppen || [];
     // Im Demomodus zeigen die Felder auf erfundene Entitaeten. Dafuer
     // gibt es in Home Assistant keinen Verlauf, darum entfaellt die Liste.
+    // Schaltbares gehoert nicht in die Verlaufsliste, dafuer gibt es
+    // oben die Schaltflaechen. Ebenso wenig statische Angaben darueber,
+    // ob ein Speicher ueberhaupt vorhanden ist.
+    const bedienbar = new Set([
+      ...(this._alleAktionsfelder || []),
+      "circ_switch",
+      "buffer_installed",
+      "dhw_installed",
+    ]);
     const felder = this._config.demo
       ? []
       : ENTITY_FIELDS.filter(
-          (f) => gruppen.includes(f.group) && this._quelle.states[this._e(f.key)]
+          (f) =>
+            gruppen.includes(f.group) &&
+            !bedienbar.has(f.key) &&
+            this._quelle.states[this._e(f.key)]
         );
     if (!felder.length) {
       host.innerHTML = "";
