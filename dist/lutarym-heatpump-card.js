@@ -849,6 +849,7 @@ class LutarymHeatpumpCard extends HTMLElement {
               </div>
             </div>
             <div id="dlg-actions"></div>
+            <div id="dlg-werte"></div>
           </div>
         </div>
       </ha-card>
@@ -1214,6 +1215,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       {
         gruppe: "unit-group",
         titel: "Wärmepumpe",
+        werte: ["Außengerät", "Außenfühler", "Primärkreis", "SG Ready", "Steuerung"],
         aktionen: [
           { feld: "power_state", status: "heatpump_state", typ: "schalter", an: "Läuft, ausschalten", aus: "Einschalten" },
           { feld: "force_defrost", status: "defrost", typ: "schalter", an: "Abtauen läuft, beenden", aus: "Abtauen erzwingen" },
@@ -1225,6 +1227,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       {
         gruppe: "buffer-group",
         beschriftung: "label_buffer",
+        werte: ["Heizungspuffer"],
         aktionen: [
           { feld: "buffer_switch", status: "buffer_installed", typ: "schalter", an: "Pufferbetrieb ist an, ausschalten", aus: "Pufferbetrieb einschalten" },
           { feld: "room_heater_switch", status: "room_heater", typ: "schalter", an: "Heizstab Heizung an, ausschalten", aus: "Heizstab Heizung einschalten" },
@@ -1234,6 +1237,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         gruppe: "dhw-group",
         feld: "dhw_setpoint",
         beschriftung: "label_dhw",
+        werte: ["Warmwasser"],
         aktionen: [
           { feld: "dhw_force", status: "dhw_force_state", typ: "schalter", an: "Aufheizen läuft, beenden", aus: "Einmalig aufheizen" },
           { feld: "force_sterilization", status: "sterilization_state", typ: "schalter", an: "Legionellenschutz läuft, beenden", aus: "Legionellenschutz starten" },
@@ -1244,6 +1248,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         gruppe: "hk1-group",
         feld: "hk1_setpoint",
         beschriftung: "label_hk1",
+        werte: ["Heizkreis 1"],
         anzeige: "hk1_water_target",
         aktionen: [
           { feld: "zones_select", typ: "zone", nummer: 1 },
@@ -1254,6 +1259,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         gruppe: "hk2-group",
         feld: "hk2_setpoint",
         beschriftung: "label_hk2",
+        werte: ["Heizkreis 2"],
         anzeige: "hk2_water_target",
         aktionen: [
           { feld: "zones_select", typ: "zone", nummer: 2 },
@@ -1268,7 +1274,14 @@ class LutarymHeatpumpCard extends HTMLElement {
       // Anklickbar, sobald es dort etwas zu bedienen gibt.
       const hatTemperatur = Boolean(f.feld && this._e(f.feld));
       const hatAktion = (f.aktionen || []).some((a) => this._e(a.feld));
-      if (!hatTemperatur && !hatAktion) return;
+      // Auch reine Anzeigewerte machen die Baugruppe anklickbar, damit
+      // man von dort in den Verlauf von Home Assistant springen kann.
+      const hatWerte =
+        !this._config.demo &&
+        (f.werte || []).some((g) =>
+          ENTITY_FIELDS.some((x) => x.group === g && this._e(x.key))
+        );
+      if (!hatTemperatur && !hatAktion && !hatWerte) return;
       el.classList.add("klickbar");
       el.addEventListener("click", () => this._oeffneDialog(f));
     });
@@ -1303,12 +1316,14 @@ class LutarymHeatpumpCard extends HTMLElement {
     this._dialogKey = tempId && this._quelle.states[tempId] ? f.feld : null;
     this._dialogAnzeige = f.anzeige || null;
     this._dialogAktionen = (f.aktionen || []).filter((a) => this._e(a.feld));
+    this._dialogGruppen = f.werte || [];
     if (this._gehalten) delete this._gehalten["dialog"];
 
     sr.getElementById("dlg-title").textContent =
       f.titel || this._config[f.beschriftung] || "Einstellen";
     sr.getElementById("dlg-temp").hidden = !this._dialogKey;
     this._baueAktionen();
+    this._baueWerte();
     sr.getElementById("dialog").hidden = false;
     this._syncDialog();
     this._syncDemo();
@@ -1337,6 +1352,62 @@ class LutarymHeatpumpCard extends HTMLElement {
   }
 
   /** Baut die Bedienelemente des offenen Fensters auf. */
+  /**
+   * Oeffnet das Verlaufsfenster von Home Assistant zu einer Entitaet.
+   * Das Frontend lauscht auf hass-more-info und erwartet die Kennung
+   * im Feld entityId. Das Ereignis muss die Schattengrenze verlassen
+   * duerfen, daher bubbles und composed.
+   */
+  _mehrInfo(entityId) {
+    if (!entityId) return;
+    const ev = new Event("hass-more-info", { bubbles: true, composed: true });
+    ev.detail = { entityId };
+    this.dispatchEvent(ev);
+  }
+
+  /**
+   * Listet unter den Schaltflaechen alle Entitaeten der Baugruppe auf.
+   * Ein Klick oeffnet den Verlauf von Home Assistant.
+   */
+  _baueWerte() {
+    const host = this.shadowRoot.getElementById("dlg-werte");
+    if (!host) return;
+    const gruppen = this._dialogGruppen || [];
+    // Im Demomodus zeigen die Felder auf erfundene Entitaeten. Dafuer
+    // gibt es in Home Assistant keinen Verlauf, darum entfaellt die Liste.
+    const felder = this._config.demo
+      ? []
+      : ENTITY_FIELDS.filter(
+          (f) => gruppen.includes(f.group) && this._quelle.states[this._e(f.key)]
+        );
+    if (!felder.length) {
+      host.innerHTML = "";
+      return;
+    }
+    host.innerHTML =
+      `<div class="lhc-field-label">Verlauf anzeigen</div>` +
+      felder
+        .map(
+          (f, i) =>
+            `<button type="button" class="lhc-wert" id="dlg-w${i}">
+               <span>${escapeHtml(f.label)}</span>
+               <b id="dlg-w${i}-v"></b>
+             </button>`
+        )
+        .join("");
+    felder.forEach((f, i) => {
+      const el = this.shadowRoot.getElementById(`dlg-w${i}`);
+      const wert = this.shadowRoot.getElementById(`dlg-w${i}-v`);
+      const id = this._e(f.key);
+      const st = this._quelle.states[id];
+      if (wert && st) {
+        const einheit = st.attributes && st.attributes.unit_of_measurement;
+        wert.textContent = einheit ? `${st.state} ${einheit}` : st.state;
+      }
+      if (el) el.addEventListener("click", () => this._mehrInfo(id));
+    });
+  }
+
   _baueAktionen() {
     const host = this.shadowRoot.getElementById("dlg-actions");
     const liste = this._dialogAktionen || [];
@@ -2598,6 +2669,20 @@ class LutarymHeatpumpCard extends HTMLElement {
       }
       .rotor .blades path { fill: #55637A; }
       .rotor.is-still .blades path, .rotor.is-still > path { fill: #3A4557; }
+
+      .lhc-wert {
+        display: flex; justify-content: space-between; align-items: center;
+        width: 100%; gap: 12px; margin-top: 6px; padding: 9px 12px;
+        background: #0D131B; color: var(--ink); font: inherit; font-size: 14px;
+        border: 1px solid var(--line); border-radius: 8px;
+        cursor: pointer; text-align: left;
+      }
+      .lhc-wert:hover { border-color: #55657F; }
+      .lhc-wert b {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-variant-numeric: tabular-nums; white-space: nowrap;
+      }
+      #dlg-werte .lhc-field-label { display: block; margin-top: 14px; }
 
       .lhc-field-label {
         font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
