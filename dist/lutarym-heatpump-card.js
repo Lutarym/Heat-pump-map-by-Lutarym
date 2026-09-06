@@ -287,12 +287,10 @@ const TOPIC_TO_FIELD = {
   top7: "buffer_target",
   top36: "hk1_water",
   top42: "hk1_water_target",
-  top56: "hk1_room",
   top124: "hk1_pump",
   top27: "hk1_setpoint",
   top37: "hk2_water",
   top43: "hk2_water_target",
-  top57: "hk2_room",
   top123: "hk2_pump",
   top34: "hk2_setpoint",
   top10: "dhw_temp",
@@ -447,14 +445,12 @@ const ENTITY_FIELDS = [
   { key: "zones_select", label: "Zonen umschalten", group: "Heizkreis 1", hint: "SetZones, gilt für beide" },
   { key: "hk1_water", label: "HK1 Wassertemperatur", group: "Heizkreis 1", hint: "TOP36" },
   { key: "hk1_water_target", label: "HK1 Wasser Sollwert", group: "Heizkreis 1", hint: "TOP42" },
-  { key: "hk1_room", label: "HK1 Raumtemperatur", group: "Heizkreis 1", hint: "TOP56" },
   { key: "hk1_pump", label: "HK1 Pumpe läuft", group: "Heizkreis 1", hint: "TOP124" },
   { key: "hk1_setpoint", label: "HK1 Sollwert einstellbar", group: "Heizkreis 1", hint: "TOP27, number" },
   { key: "hk1_switch", label: "HK1 ein und aus", group: "Heizkreis 1", hint: "eigener Schalter, optional" },
 
   { key: "hk2_water", label: "HK2 Wassertemperatur", group: "Heizkreis 2", hint: "TOP37" },
   { key: "hk2_water_target", label: "HK2 Wasser Sollwert", group: "Heizkreis 2", hint: "TOP43" },
-  { key: "hk2_room", label: "HK2 Raumtemperatur", group: "Heizkreis 2", hint: "TOP57" },
   { key: "hk2_pump", label: "HK2 Pumpe läuft", group: "Heizkreis 2", hint: "TOP123" },
   { key: "hk2_setpoint", label: "HK2 Sollwert einstellbar", group: "Heizkreis 2", hint: "TOP34, number" },
   { key: "hk2_switch", label: "HK2 ein und aus", group: "Heizkreis 2", hint: "eigener Schalter, optional" },
@@ -585,8 +581,8 @@ class LutarymHeatpumpCard extends HTMLElement {
       flow_temp: 39.2, return_temp: 33.1, pump_speed: 2400, pump_flow: 18.6,
       three_way_valve: 0, water_pressure: 1.8, defrost: 0, error: "0",
       buffer_temp: 38.4, buffer_target: 42, room_heater: 0, buffer_installed: 1,
-      hk1_water: 34.2, hk1_water_target: 36, hk1_room: 21.5, hk1_pump: 1,
-      hk1_setpoint: 36, hk2_water: 30.1, hk2_water_target: 32, hk2_room: 20.8,
+      hk1_water: 34.2, hk1_water_target: 36, hk1_pump: 1,
+      hk1_setpoint: 36, hk2_water: 30.1, hk2_water_target: 32,
       hk2_pump: 0, hk2_setpoint: 32, zones_state: 2,
       dhw_temp: 48.3, dhw_setpoint: 50, dhw_heater: 0, dhw_installed: 1,
       dhw_force_state: 0, sterilization_state: 0, circulation_pump: 0, circ_switch: "off", pv_power: 3400,
@@ -1248,7 +1244,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         gruppe: "hk1-group",
         feld: "hk1_setpoint",
         beschriftung: "label_hk1",
-        werte: ["hk1_water", "hk1_room"],
+        werte: ["hk1_water"],
         anzeige: "hk1_water_target",
         aktionen: [
           { feld: "zones_select", typ: "zone", nummer: 1 },
@@ -1259,7 +1255,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         gruppe: "hk2-group",
         feld: "hk2_setpoint",
         beschriftung: "label_hk2",
-        werte: ["hk2_water", "hk2_room"],
+        werte: ["hk2_water"],
         anzeige: "hk2_water_target",
         aktionen: [
           { feld: "zones_select", typ: "zone", nummer: 2 },
@@ -1304,10 +1300,8 @@ class LutarymHeatpumpCard extends HTMLElement {
         "dhw-v": "dhw_temp",
         "zirk-v": "circulation_pump",
         "hk1-water-v": "hk1_water",
-        "hk1-room-v": "hk1_room",
         "hk1-pump-v": "hk1_pump",
         "hk2-water-v": "hk2_water",
-        "hk2-room-v": "hk2_room",
         "hk2-pump-v": "hk2_pump",
       };
       Object.entries(anzeigen).forEach(([id, feld]) => {
@@ -1945,12 +1939,10 @@ class LutarymHeatpumpCard extends HTMLElement {
         </g>
 
         <g transform="translate(${mid} ${RT + 100})">
-          <rect x="-100" y="-42" width="200" height="84" rx="10"
+          <rect x="-100" y="-26" width="200" height="52" rx="10"
                 fill="#0B1017" opacity="0.9"/>
-          <text class="tag-l" x="-86" y="-14">Wasser</text>
-          <text class="tag-v" id="hk${n}-water-v" x="86" y="-12" text-anchor="end">--</text>
-          <text class="tag-l" x="-86" y="24">Raum</text>
-          <text class="tag-v" id="hk${n}-room-v" x="86" y="26" text-anchor="end">--</text>
+          <text class="tag-l" x="-86" y="6">Wasser</text>
+          <text class="tag-v" id="hk${n}-water-v" x="86" y="8" text-anchor="end">--</text>
         </g>
 
         <rect x="${mid - 90}" y="405" width="180" height="30" rx="8" fill="#0D1219" stroke="#33415A" stroke-width="1" opacity="0.5"/>
@@ -2437,7 +2429,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     const sr = this.shadowRoot;
     const water = numState(hass, this._e(`hk${n}_water`));
     const target = numState(hass, this._e(`hk${n}_water_target`));
-    const room = numState(hass, this._e(`hk${n}_room`));
     const pumpOn = isOn(hass, this._e(`hk${n}_pump`)) === true;
 
     const set = (id, text) => {
@@ -2457,7 +2448,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         ? "--"
         : `${fmt(water, 0)}${target === null ? "" : ` / ${fmt(target, 0)}`} °C`
     );
-    set(`hk${n}-room-v`, room === null ? "--" : `${fmt(room)} °C`);
 
     const rotor = sr.getElementById(`hk${n}-rotor`);
     if (rotor) {
