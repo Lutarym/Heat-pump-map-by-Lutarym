@@ -2751,11 +2751,16 @@ class LutarymHeatpumpCard extends HTMLElement {
       .lhc-dialog {
         position: absolute; inset: 0; z-index: 5;
         display: flex; align-items: center; justify-content: center;
-        background: rgba(6, 10, 16, 0.72);
+        padding: 12px; background: rgba(6, 10, 16, 0.72);
       }
       .lhc-dialog[hidden] { display: none; }
       .lhc-dialog-box {
-        width: min(360px, 90%); padding: 20px 22px 18px; border-radius: 16px;
+        /* Die Karte schneidet Ueberstehendes ab. Darum wird der Kasten
+           auf die Kartenhoehe begrenzt und bekommt bei Bedarf einen
+           eigenen Rollbalken. */
+        box-sizing: border-box;
+        width: min(360px, 100%); max-height: 100%; overflow-y: auto;
+        padding: 16px 18px 14px; border-radius: 16px;
         background: #161D28; border: 1px solid var(--line);
         box-shadow: 0 18px 48px rgba(0,0,0,0.55);
       }
@@ -2772,9 +2777,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       }
       .lhc-dialog-close:hover { color: var(--ink); }
       .lhc-dialog-value {
-        display: block; margin: 10px 0 18px; text-align: center;
+        display: block; margin: 6px 0 12px; text-align: center;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
-        font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums;
+        font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums;
       }
       .lhc-dialog-row { display: flex; align-items: center; gap: 14px; }
       .lhc-step {
@@ -2785,7 +2790,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       .lhc-step:hover { border-color: #3E4C61; }
       .lhc-step:focus-visible { outline: 2px solid #E0762E; outline-offset: 2px; }
       .lhc-dialog-action {
-        width: 100%; margin-top: 18px; padding: 13px 16px; border-radius: 12px;
+        width: 100%; margin-top: 10px; padding: 10px 14px; border-radius: 12px;
         font: inherit; font-size: 15px; font-weight: 500; cursor: pointer;
         background: #1B2431; border: 1px solid var(--line); color: var(--ink);
       }
@@ -2805,11 +2810,11 @@ class LutarymHeatpumpCard extends HTMLElement {
       #dlg-temp[hidden] { display: none; }
       #dlg-actions { display: flex; flex-direction: column; }
       .lhc-dialog-select {
-        display: flex; flex-direction: column; gap: 6px; margin-top: 18px;
+        display: flex; flex-direction: column; gap: 4px; margin-top: 10px;
       }
       .lhc-dialog-select select {
         background: #0D131B; color: var(--ink); font: inherit; font-size: 15px;
-        border: 1px solid var(--line); border-radius: 12px; padding: 12px 10px; width: 100%;
+        border: 1px solid var(--line); border-radius: 12px; padding: 9px 10px; width: 100%;
       }
 
       @media (prefers-reduced-motion: reduce) {
