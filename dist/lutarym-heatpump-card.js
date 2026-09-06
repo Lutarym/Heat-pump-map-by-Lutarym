@@ -1215,7 +1215,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       {
         gruppe: "unit-group",
         titel: "Wärmepumpe",
-        werte: ["outside_temp", "flow_temp", "return_temp", "power_now", "energy_today"],
+        werte: ["flow_temp", "return_temp", "power_now"],
         aktionen: [
           { feld: "power_state", status: "heatpump_state", typ: "schalter", an: "Läuft, ausschalten", aus: "Einschalten" },
           { feld: "force_defrost", status: "defrost", typ: "schalter", an: "Abtauen läuft, beenden", aus: "Abtauen erzwingen" },
@@ -1237,7 +1237,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         gruppe: "dhw-group",
         feld: "dhw_setpoint",
         beschriftung: "label_dhw",
-        werte: ["dhw_temp", "dhw_heater", "sterilization_state"],
+        werte: ["dhw_temp", "dhw_heater"],
         aktionen: [
           { feld: "dhw_force", status: "dhw_force_state", typ: "schalter", an: "Aufheizen läuft, beenden", aus: "Einmalig aufheizen" },
           { feld: "force_sterilization", status: "sterilization_state", typ: "schalter", an: "Legionellenschutz läuft, beenden", aus: "Legionellenschutz starten" },
