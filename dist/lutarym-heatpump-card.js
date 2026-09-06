@@ -2710,7 +2710,7 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       .lhc-wert {
         display: flex; justify-content: space-between; align-items: center;
-        width: 100%; gap: 12px; margin-top: 6px; padding: 9px 12px;
+        width: 100%; gap: 12px; margin-top: 4px; padding: 7px 12px;
         background: #0D131B; color: var(--ink); font: inherit; font-size: 14px;
         border: 1px solid var(--line); border-radius: 8px;
         cursor: pointer; text-align: left;
@@ -2720,7 +2720,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums; white-space: nowrap;
       }
-      #dlg-werte .lhc-field-label { display: block; margin-top: 14px; }
+      #dlg-werte .lhc-field-label { display: block; margin-top: 8px; }
 
       .lhc-field-label {
         font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
@@ -2760,7 +2760,7 @@ class LutarymHeatpumpCard extends HTMLElement {
            eigenen Rollbalken. */
         box-sizing: border-box;
         width: min(360px, 100%); max-height: 100%; overflow-y: auto;
-        padding: 16px 18px 14px; border-radius: 16px;
+        padding: 12px 16px; border-radius: 16px;
         background: #161D28; border: 1px solid var(--line);
         box-shadow: 0 18px 48px rgba(0,0,0,0.55);
       }
@@ -2790,7 +2790,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       .lhc-step:hover { border-color: #3E4C61; }
       .lhc-step:focus-visible { outline: 2px solid #E0762E; outline-offset: 2px; }
       .lhc-dialog-action {
-        width: 100%; margin-top: 10px; padding: 10px 14px; border-radius: 12px;
+        width: 100%; margin-top: 8px; padding: 8px 14px; border-radius: 12px;
         font: inherit; font-size: 15px; font-weight: 500; cursor: pointer;
         background: #1B2431; border: 1px solid var(--line); color: var(--ink);
       }
@@ -2810,11 +2810,11 @@ class LutarymHeatpumpCard extends HTMLElement {
       #dlg-temp[hidden] { display: none; }
       #dlg-actions { display: flex; flex-direction: column; }
       .lhc-dialog-select {
-        display: flex; flex-direction: column; gap: 4px; margin-top: 10px;
+        display: flex; flex-direction: column; gap: 3px; margin-top: 8px;
       }
       .lhc-dialog-select select {
         background: #0D131B; color: var(--ink); font: inherit; font-size: 15px;
-        border: 1px solid var(--line); border-radius: 12px; padding: 9px 10px; width: 100%;
+        border: 1px solid var(--line); border-radius: 12px; padding: 7px 10px; width: 100%;
       }
 
       @media (prefers-reduced-motion: reduce) {
