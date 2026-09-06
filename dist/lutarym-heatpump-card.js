@@ -1215,7 +1215,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       {
         gruppe: "unit-group",
         titel: "Wärmepumpe",
-        werte: ["Außengerät", "Außenfühler", "Primärkreis"],
+        werte: ["outside_temp", "flow_temp", "return_temp", "power_now", "energy_today"],
         aktionen: [
           { feld: "power_state", status: "heatpump_state", typ: "schalter", an: "Läuft, ausschalten", aus: "Einschalten" },
           { feld: "force_defrost", status: "defrost", typ: "schalter", an: "Abtauen läuft, beenden", aus: "Abtauen erzwingen" },
@@ -1227,7 +1227,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       {
         gruppe: "buffer-group",
         beschriftung: "label_buffer",
-        werte: ["Heizungspuffer"],
+        werte: ["buffer_temp", "room_heater"],
         aktionen: [
           { feld: "buffer_switch", status: "buffer_installed", typ: "schalter", an: "Pufferbetrieb ist an, ausschalten", aus: "Pufferbetrieb einschalten" },
           { feld: "room_heater_switch", status: "room_heater", typ: "schalter", an: "Heizstab Heizung an, ausschalten", aus: "Heizstab Heizung einschalten" },
@@ -1237,7 +1237,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         gruppe: "dhw-group",
         feld: "dhw_setpoint",
         beschriftung: "label_dhw",
-        werte: ["Warmwasser"],
+        werte: ["dhw_temp", "dhw_heater", "sterilization_state"],
         aktionen: [
           { feld: "dhw_force", status: "dhw_force_state", typ: "schalter", an: "Aufheizen läuft, beenden", aus: "Einmalig aufheizen" },
           { feld: "force_sterilization", status: "sterilization_state", typ: "schalter", an: "Legionellenschutz läuft, beenden", aus: "Legionellenschutz starten" },
@@ -1248,7 +1248,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         gruppe: "hk1-group",
         feld: "hk1_setpoint",
         beschriftung: "label_hk1",
-        werte: ["Heizkreis 1"],
+        werte: ["hk1_water", "hk1_room"],
         anzeige: "hk1_water_target",
         aktionen: [
           { feld: "zones_select", typ: "zone", nummer: 1 },
@@ -1259,7 +1259,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         gruppe: "hk2-group",
         feld: "hk2_setpoint",
         beschriftung: "label_hk2",
-        werte: ["Heizkreis 2"],
+        werte: ["hk2_water", "hk2_room"],
         anzeige: "hk2_water_target",
         aktionen: [
           { feld: "zones_select", typ: "zone", nummer: 2 },
@@ -1267,14 +1267,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         ],
       },
     ];
-
-    // Alle Felder, die irgendwo bedient werden koennen. Sie werden aus
-    // den Fenstern selbst abgeleitet, damit die Liste nicht veraltet.
-    this._alleAktionsfelder = fenster.reduce((liste, f) => {
-      if (f.feld) liste.push(f.feld);
-      (f.aktionen || []).forEach((a) => liste.push(a.feld));
-      return liste;
-    }, []);
 
     fenster.forEach((f) => {
       const el = sr.getElementById(f.gruppe);
@@ -1285,14 +1277,50 @@ class LutarymHeatpumpCard extends HTMLElement {
       // Auch reine Anzeigewerte machen die Baugruppe anklickbar, damit
       // man von dort in den Verlauf von Home Assistant springen kann.
       const hatWerte =
-        !this._config.demo &&
-        (f.werte || []).some((g) =>
-          ENTITY_FIELDS.some((x) => x.group === g && this._e(x.key))
-        );
+        !this._config.demo && (f.werte || []).some((key) => this._e(key));
       if (!hatTemperatur && !hatAktion && !hatWerte) return;
       el.classList.add("klickbar");
       el.addEventListener("click", () => this._oeffneDialog(f));
     });
+
+    // Werte in der Grafik: ein Klick oeffnet den Verlauf von Home
+    // Assistant. Im Demomodus entfaellt das, dort gibt es keinen Verlauf.
+    if (!this._config.demo) {
+      const anzeigen = {
+        "outside-v": "outside_temp",
+        "comp-v": "compressor",
+        "fan1-rpm": "fan1_rpm",
+        "fan2-rpm": "fan2_rpm",
+        "power-now-v": "power_now",
+        "energy-today-v": "energy_today",
+        "unit-flow-v": "flow_temp",
+        "unit-ret-v": "return_temp",
+        "pump-v": "pump_speed",
+        "flow-v": "pump_flow",
+        "press-v": "water_pressure",
+        "valve-v": "three_way_valve",
+        "pv-v": "pv_power",
+        "buf-v": "buffer_temp",
+        "dhw-v": "dhw_temp",
+        "zirk-v": "circulation_pump",
+        "hk1-water-v": "hk1_water",
+        "hk1-room-v": "hk1_room",
+        "hk1-pump-v": "hk1_pump",
+        "hk2-water-v": "hk2_water",
+        "hk2-room-v": "hk2_room",
+        "hk2-pump-v": "hk2_pump",
+      };
+      Object.entries(anzeigen).forEach(([id, feld]) => {
+        const el = sr.getElementById(id);
+        if (!el || !this._e(feld)) return;
+        el.classList.add("klickbar");
+        el.addEventListener("click", (ev) => {
+          // Sonst oeffnet zusaetzlich das Fenster der Baugruppe.
+          ev.stopPropagation();
+          this._mehrInfo(this._e(feld));
+        });
+      });
+    }
 
     // Zirkulations-Pumpe: Direkter Schalter ohne Dialog
     const zirkEl = sr.getElementById("zirkulation-group");
@@ -1383,23 +1411,13 @@ class LutarymHeatpumpCard extends HTMLElement {
     const gruppen = this._dialogGruppen || [];
     // Im Demomodus zeigen die Felder auf erfundene Entitaeten. Dafuer
     // gibt es in Home Assistant keinen Verlauf, darum entfaellt die Liste.
-    // Schaltbares gehoert nicht in die Verlaufsliste, dafuer gibt es
-    // oben die Schaltflaechen. Ebenso wenig statische Angaben darueber,
-    // ob ein Speicher ueberhaupt vorhanden ist.
-    const bedienbar = new Set([
-      ...(this._alleAktionsfelder || []),
-      "circ_switch",
-      "buffer_installed",
-      "dhw_installed",
-    ]);
+    // Aufgefuehrt wird nur, was zur jeweiligen Baugruppe gehoert und
+    // wovon ein Verlauf etwas aussagt. Die Reihenfolge folgt der Liste.
     const felder = this._config.demo
       ? []
-      : ENTITY_FIELDS.filter(
-          (f) =>
-            gruppen.includes(f.group) &&
-            !bedienbar.has(f.key) &&
-            this._quelle.states[this._e(f.key)]
-        );
+      : gruppen
+          .map((key) => ENTITY_FIELDS.find((f) => f.key === key))
+          .filter((f) => f && this._quelle.states[this._e(f.key)]);
     if (!felder.length) {
       host.innerHTML = "";
       return;
