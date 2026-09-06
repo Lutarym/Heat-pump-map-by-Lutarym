@@ -112,6 +112,10 @@ const NEUTRAL = "#46536A";
  *  Gruen bei geringer, rot bei hoher Drehzahl. Die Grenzen stammen
  *  aus der Anlage: 16 Hz ist die kleinste, 90 Hz die groesste Drehzahl.
  * ------------------------------------------------------------------ */
+// Normalbereich des Wasserdrucks laut Panasonic fuer Aquarea.
+const DRUCK_MIN = 0.5;
+const DRUCK_MAX = 3.0;
+
 const COMP_MIN_HZ = 16;
 const COMP_MAX_HZ = 90;
 const LOAD_STOPS = [
@@ -872,6 +876,18 @@ class LutarymHeatpumpCard extends HTMLElement {
     return el;
   }
 
+  /**
+   * Faerbt das Fluegelrad einer Pumpe in der Farbe des gefoerderten
+   * Wassers. Steht die Pumpe, gilt wieder die Farbe aus dem Stylesheet.
+   * Inline, weil eine CSS-Regel das fill-Attribut sonst ueberschreibt.
+   */
+  _blattFarbe(id, farbe, laeuft) {
+    const el = this.shadowRoot && this.shadowRoot.getElementById(id);
+    if (!el) return;
+    if (laeuft && farbe) el.style.fill = farbe;
+    else el.style.removeProperty("fill");
+  }
+
   _startAnimationLoop() {
     let lastTime = performance.now();
 
@@ -948,7 +964,9 @@ class LutarymHeatpumpCard extends HTMLElement {
           cycle < 0.5
             ? hoch - (cycle / 0.5) * spanne
             : tief + ((cycle - 0.5) / 0.5) * spanne;
-        el.setAttribute("opacity", opacity.toFixed(2));
+        // Sicherheitshalber begrenzen. Deckkraft ausserhalb 0 bis 1
+        // waere ungueltig, falls die Zeitstempel je springen.
+        el.setAttribute("opacity", clamp(opacity, 0, 1).toFixed(2));
       });
 
       // Spin animieren (rotate)
@@ -1645,7 +1663,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <g transform="translate(580 ${R})">
           <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <g class="rotor" id="pump-rotor">
-            <path d="M0 -15 L5 -4 L16 0 L5 4 L0 15 L-5 4 L-16 0 L-5 -4 Z" fill="#55637A"/>
+            <path id="pump-blade" d="M0 -15 L5 -4 L16 0 L5 4 L0 15 L-5 4 L-16 0 L-5 -4 Z" fill="#55637A"/>
             <circle r="4" fill="#0D1219"/>
           </g>
         </g>
@@ -1675,6 +1693,13 @@ class LutarymHeatpumpCard extends HTMLElement {
       <!-- Wasserdruck -->
       <g id="press-group" opacity="0">
         <text class="value-s" id="press-v" x="1390" y="660" text-anchor="middle">--</text>
+        <!-- Warndreieck bei zu niedrigem Wasserdruck. -->
+        <g id="press-warn" opacity="0" transform="translate(1330 653)">
+          <path d="M0 -13 L13 10 L-13 10 Z" fill="#3A0E0E"
+                stroke="#D62B2B" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M0 -6 V 3" stroke="#FF6B5E" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cy="7" r="1.6" fill="#FF6B5E"/>
+        </g>
         <g transform="translate(1390 ${R})">
           <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <circle r="18" fill="none" stroke="#26303F" stroke-width="3"/>
@@ -1724,7 +1749,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <g transform="translate(1370 360)">
           <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <g class="rotor" id="zirk-rotor">
-            <path d="M0 -13 L4 -3 L14 0 L4 3 L0 13 L-4 3 L-14 0 L-4 -3 Z" fill="#55637A"/>
+            <path id="zirk-blade" d="M0 -13 L4 -3 L14 0 L4 3 L0 13 L-4 3 L-14 0 L-4 -3 Z" fill="#55637A"/>
             <circle r="4" fill="#0D1219"/>
           </g>
         </g>
@@ -1796,7 +1821,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <g transform="translate(${dropX} ${pumpY})">
           <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <g class="rotor" id="hk${n}-rotor">
-            <path d="M0 -13 L4 -3 L14 0 L4 3 L0 13 L-4 3 L-14 0 L-4 -3 Z" fill="#55637A"/>
+            <path id="hk${n}-blade" d="M0 -13 L4 -3 L14 0 L4 3 L0 13 L-4 3 L-14 0 L-4 -3 Z" fill="#55637A"/>
             <circle r="4" fill="#0D1219"/>
           </g>
         </g>
@@ -2141,6 +2166,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     const pumpRpm = numState(hass, this._e("pump_speed"));
     const flowRate = numState(hass, this._e("pump_flow"));
     this._spin("pump-rotor", pumpRpm, "pump-v", "U/min", PUMP_SECONDS, laeuft);
+    this._blattFarbe("pump-blade", col(flow), laeuft && pumpRpm !== null && pumpRpm > 0);
     set("flow-v", flowRate === null ? "--" : `${fmt(flowRate)} l/min`);
 
     /* Wasserdruck, nur bei vorhandenem Wert */
@@ -2148,10 +2174,31 @@ class LutarymHeatpumpCard extends HTMLElement {
     zeige("press-group", bar !== null);
     if (bar !== null) {
       set("press-v", `${fmt(bar)} bar`);
+      // Panasonic nennt fuer Aquarea 0,5 bis 3 bar als Normalbereich.
+      const druckOk = bar >= DRUCK_MIN && bar <= DRUCK_MAX;
+      const druckfarbe = druckOk ? "#46C07A" : "#D62B2B";
       const needle = sr.getElementById("press-needle");
       if (needle) {
         needle.setAttribute("transform", `rotate(${-120 + 240 * clamp(bar / 4, 0, 1)})`);
-        needle.setAttribute("stroke", bar < 0.8 || bar > 2.8 ? "#D62B2B" : "#9BAAC0");
+        needle.setAttribute("stroke", druckfarbe);
+      }
+      const druckText = sr.getElementById("press-v");
+      if (druckText) druckText.style.fill = druckfarbe;
+      // Unter dem Mindestdruck blinken Wert und Warndreieck.
+      const zuNiedrig = bar < DRUCK_MIN;
+      const warn = sr.getElementById("press-warn");
+      if (warn) warn.setAttribute("opacity", zuNiedrig ? "1" : "0");
+      if (zuNiedrig && animate) {
+        this._animState.set("press-v", {
+          type: "pulse", duration: 1.1, min: 0.15, max: 1,
+        });
+        this._animState.set("press-warn", {
+          type: "pulse", duration: 1.1, min: 0.15, max: 1,
+        });
+      } else {
+        this._animState.delete("press-v");
+        this._animState.delete("press-warn");
+        if (druckText) druckText.setAttribute("opacity", "1");
       }
     }
 
@@ -2251,6 +2298,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     stroemt(["dots-dhw"], primaer && zuWarmwasser, col(flow));
     stroemt(["dots-dhw2"], primaer && zuWarmwasser, col(ret));
     stroemt(["dots-zirk-h1", "dots-zirk-v", "dots-zirk-h2"], zirkAn, col(dhw));
+    // Erst hier steht die Warmwassertemperatur fest.
+    this._blattFarbe("zirk-blade", col(dhw), zirkAn && laeuft);
 
     // Blasen: je waermer der Speicher, desto mehr steigen auf.
     const blasen = (id, wert) => {
@@ -2307,6 +2356,8 @@ class LutarymHeatpumpCard extends HTMLElement {
       // Pumpe und Rohre behalten ihr normales Aussehen, sie sind
       // schliesslich weiterhin vorhanden.
       rotor.classList.remove("is-still");
+      // Die Heizkreise foerdern Pufferwasser, also dessen Farbe.
+      this._blattFarbe(`hk${n}-blade`, col(buf), pumpOn && laeuft);
       const rotorId = `hk${n}-rotor`;
       if (pumpOn && animate && laeuft) {
         // Ebenso hier: den erreichten Winkel nicht verwerfen.
