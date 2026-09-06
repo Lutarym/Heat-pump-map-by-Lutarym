@@ -1771,11 +1771,14 @@ class LutarymHeatpumpCard extends HTMLElement {
     const RB = L.RAD_BOTTOM;
     const mid = (x1 + x2) / 2;
     // Die Heizkreise haengen am Puffer, nicht an der Waermepumpe.
-    const drop = `M${dropX} ${L.SEC_FLOW} V ${RT}`;
+    // Neun Einheiten vor dem Heizkoerper enden lassen. Die runde Kappe
+    // der 18 breiten Rohrschale reicht dann genau bis an dessen Kante
+    // und ragt nicht mehr hinein.
+    const drop = `M${dropX} ${L.SEC_FLOW} V ${RT - 9}`;
     // Die Pumpe sitzt in der Mitte der Stichleitung, rechnerisch aus
     // Vorlauf und Heizkoerper. So verrutscht sie bei Rasteraenderungen nicht.
     const pumpY = Math.round((L.SEC_FLOW + RT) / 2);
-    const back = `M${backX} ${RB} V ${L.SEC_RET}`;
+    const back = `M${backX} ${RB + 9} V ${L.SEC_RET}`;
 
     let fins = "";
     for (let x = x1 + 26; x < x2 - 10; x += 30) {
