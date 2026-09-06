@@ -1,0 +1,9 @@
+# Zeilenenden festlegen, damit sie auf jedem Rechner gleich bleiben.
+# Ohne diese Datei entscheidet die oertliche Git-Einstellung und Windows
+# wandelt beim Auschecken in CRLF um. Das meldet GitHub als Warnung.
+* text=auto eol=lf
+
+# Binaerdateien bleiben unangetastet.
+*.png binary
+*.jpg binary
+*.zip binary
