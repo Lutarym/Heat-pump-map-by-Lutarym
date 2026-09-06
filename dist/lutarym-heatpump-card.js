@@ -510,6 +510,17 @@ class LutarymHeatpumpCard extends HTMLElement {
 
   disconnectedCallback() {
     if (this._animLoop) cancelAnimationFrame(this._animLoop);
+    this._animLoop = null;
+  }
+
+  /**
+   * Home Assistant haengt die Karte beim Speichern der Konfiguration
+   * kurz ab und wieder an. Ohne diesen Rueckruf bliebe die im
+   * disconnectedCallback beendete Animation bis zum Neuladen der Seite
+   * stehen.
+   */
+  connectedCallback() {
+    if (this._built && !this._animLoop) this._startAnimationLoop();
   }
 
   static getConfigElement() {
@@ -1695,6 +1706,8 @@ class LutarymHeatpumpCard extends HTMLElement {
           <path id="valve-right-head" d="M${630 + 2} ${F - 8} L ${630 + 14} ${F} L ${630 + 2} ${F + 8} Z"
                 fill="${NEUTRAL}"/>
         </g>
+        <text class="value-s" id="valve-v" x="630" y="${F - 34}"
+              text-anchor="middle">--</text>
       </g>
 
       <!-- Warmwasserspeicher -->
