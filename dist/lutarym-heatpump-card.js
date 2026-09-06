@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.6.5";
+const CARD_VERSION = "2.7.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -90,8 +90,8 @@ const VALVE_LABELS = { Room: "Heizung", DHW: "Warmwasser", 0: "Heizung", 1: "War
 const SG_STATES = {
   1: { kurz: "Stopp", lang: "Sperre durch den Netzbetreiber", farbe: "#FF6B5E" },
   2: { kurz: "Normal", lang: "Normalbetrieb", farbe: "#C3D0E0" },
-  3: { kurz: "PV Überschuss 1", lang: "Einschaltempfehlung", farbe: "#FFC44D" },
-  4: { kurz: "PV Überschuss 2", lang: "Anlaufbefehl, verstärkter Betrieb", farbe: "#5BE08F" },
+  3: { kurz: "PV Überschuss Low", lang: "Einschaltempfehlung", farbe: "#FFC44D" },
+  4: { kurz: "PV Überschuss High", lang: "Anlaufbefehl, verstärkter Betrieb", farbe: "#5BE08F" },
 };
 
 /* ------------------------------------------------------------------ *
@@ -107,6 +107,40 @@ const THERMAL_STOPS = [
 
 const NEUTRAL = "#46536A";
 
+/* ------------------------------------------------------------------ *
+ *  Farbskala fuer die Verdichterlast
+ *  Gruen bei geringer, rot bei hoher Drehzahl. Die Grenzen stammen
+ *  aus der Anlage: 16 Hz ist die kleinste, 90 Hz die groesste Drehzahl.
+ * ------------------------------------------------------------------ */
+const COMP_MIN_HZ = 16;
+const COMP_MAX_HZ = 90;
+const LOAD_STOPS = [
+  { p: 0.0, c: [91, 224, 143] },
+  { p: 0.4, c: [255, 196, 77] },
+  { p: 0.7, c: [224, 118, 46] },
+  { p: 1.0, c: [255, 107, 94] },
+];
+
+function loadColor(value, min, max) {
+  // Steht der Verdichter, gibt es keine Last und damit keine Farbe.
+  if (value === null || value === undefined || Number.isNaN(value)) return NEUTRAL;
+  if (value <= 0) return NEUTRAL;
+  const span = max - min || 1;
+  const p = clamp((value - min) / span, 0, 1);
+  let a = LOAD_STOPS[0];
+  let b = LOAD_STOPS[LOAD_STOPS.length - 1];
+  for (let i = 0; i < LOAD_STOPS.length - 1; i++) {
+    if (p >= LOAD_STOPS[i].p && p <= LOAD_STOPS[i + 1].p) {
+      a = LOAD_STOPS[i];
+      b = LOAD_STOPS[i + 1];
+      break;
+    }
+  }
+  const local = (p - a.p) / ((b.p - a.p) || 1);
+  const rgb = a.c.map((ch, i) => Math.round(ch + (b.c[i] - ch) * local));
+  return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+}
+
 // Pumpen drehen bewusst langsam und immer gleich schnell. Sie sollen
 // nur zeigen, dass sie foerdern, nicht wie schnell.
 const PUMP_SECONDS = 3;
@@ -116,6 +150,18 @@ const HOLD_MS = 12000;
 
 // Vorrat an Blasen je Speicher. Sichtbar ist ein Anteil davon.
 const BUBBLE_COUNT = 14;
+
+// Die Steigdauer einer Blase haengt allein von ihrem Index ab. Sie wird
+// beim ersten Zugriff berechnet und danach nur noch nachgeschlagen.
+const BUBBLE_DAUER = [];
+function bubbleDauer(idx) {
+  if (BUBBLE_DAUER[idx] === undefined) {
+    let seed = idx + 42;
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    BUBBLE_DAUER[idx] = 4 + (seed / 2147483648) * 4;
+  }
+  return BUBBLE_DAUER[idx];
+}
 
 // Im Demomodus gehoeren Schaltbefehl und Rueckmeldetopic zusammen.
 // Wird das eine gesetzt, folgt das andere.
@@ -799,6 +845,22 @@ class LutarymHeatpumpCard extends HTMLElement {
     this._startAnimationLoop();
   }
 
+  /**
+   * Nachschlagen eines Elements mit Zwischenspeicher.
+   * Die Animationsschleife sucht sonst bei jedem Bild erneut im DOM.
+   * Wird die Karte neu aufgebaut, sind die alten Knoten nicht mehr
+   * verbunden. Das faellt hier auf und der Eintrag wird erneuert.
+   */
+  _animEl(id) {
+    if (!this._elCache) this._elCache = new Map();
+    let el = this._elCache.get(id);
+    if (el && el.isConnected) return el;
+    el = this.shadowRoot ? this.shadowRoot.getElementById(id) : null;
+    if (el) this._elCache.set(id, el);
+    else this._elCache.delete(id);
+    return el;
+  }
+
   _startAnimationLoop() {
     let lastTime = performance.now();
 
@@ -818,7 +880,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       // Flowdots animieren (stroke-dashoffset)
       this._animState.forEach((state, id) => {
         if (!state || state.type !== "flow") return;
-        const el = sr.getElementById(id);
+        const el = this._animEl(id);
         if (!el) return;
         const cycle = this._animTime % 1.2;
         const progress = cycle / 1.2;
@@ -829,18 +891,20 @@ class LutarymHeatpumpCard extends HTMLElement {
       // Bubbles animieren - neu vereinfacht
       const bubbleGroups = ["buf-bubbles", "dhw-bubbles"];
       bubbleGroups.forEach(groupId => {
-        const group = sr.getElementById(groupId);
+        const group = this._animEl(groupId);
         if (!group) return;
-        const bubbles = group.querySelectorAll("circle");
+        // Die Kreise einer Gruppe wechseln nicht, darum einmal merken.
+        if (!this._bubbleCache) this._bubbleCache = new Map();
+        let bubbles = this._bubbleCache.get(groupId);
+        if (!bubbles || !bubbles.length || !bubbles[0].isConnected) {
+          bubbles = Array.from(group.querySelectorAll("circle"));
+          this._bubbleCache.set(groupId, bubbles);
+        }
         bubbles.forEach((bubble, idx) => {
-          // Blasen-Parametern berechnen (immer gleich basierend auf Index)
-          let seed = idx + 42;
-          const rnd = () => {
-            seed = (seed * 1103515245 + 12345) % 2147483648;
-            return seed / 2147483648;
-          };
-          const dur = 4 + rnd() * 4;
-          const delay = idx * 0.3; // einfacher Delay basierend auf Index
+          // Dauer und Versatz haengen nur vom Index ab und aendern sich nie.
+          // Darum einmal berechnen und merken, statt bei jedem Bild erneut.
+          const dur = bubbleDauer(idx);
+          const delay = idx * 0.3;
 
           // Animation: Zeit seit Start
           const time = (this._animTime + delay) % dur;
@@ -863,7 +927,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       // Pulse/Glow animieren (opacity)
       this._animState.forEach((state, id) => {
         if (!state || state.type !== "pulse") return;
-        const el = sr.getElementById(id);
+        const el = this._animEl(id);
         if (!el) return;
         const cycle = (this._animTime % state.duration) / state.duration;
         const hoch = typeof state.max === "number" ? state.max : 1;
@@ -877,13 +941,17 @@ class LutarymHeatpumpCard extends HTMLElement {
       });
 
       // Spin animieren (rotate)
+      // Der Winkel laeuft fortlaufend weiter und wird nicht aus der
+      // absoluten Zeit berechnet. Sonst springt der Rotor bei jeder
+      // Drehzahlaenderung, weil derselbe Zeitpunkt mit neuer Dauer
+      // einen ganz anderen Winkel ergibt.
       this._animState.forEach((state, id) => {
         if (!state || state.type !== "spin") return;
-        const el = sr.getElementById(id);
+        const el = this._animEl(id);
         if (!el) return;
-        const elapsed = this._animTime % state.duration;
-        const progress = (elapsed / state.duration) * 360;
-        el.setAttribute("transform", `rotate(${progress.toFixed(2)} 0 0)`);
+        if (typeof state.winkel !== "number") state.winkel = 0;
+        state.winkel = (state.winkel + (deltaTime / state.duration) * 360 + 360) % 360;
+        el.setAttribute("transform", `rotate(${state.winkel.toFixed(2)} 0 0)`);
       });
 
       this._animLoop = requestAnimationFrame(tick);
@@ -1530,15 +1598,15 @@ class LutarymHeatpumpCard extends HTMLElement {
         </g>
         <text class="sg-value" id="sg-text" x="445" y="${F + 130}"
               text-anchor="middle">--</text>
-        <line x1="380" y1="${F + 150}" x2="510" y2="${F + 150}" stroke="#33415A" stroke-width="0.5"/>
+        <line x1="380" y1="${F + 150}" x2="510" y2="${F + 150}" stroke="#55657F" stroke-width="1"/>
       </g>
 
       <!-- PV Leistung -->
       <g id="pv-group" opacity="0">
-        <text class="sg-label" x="445" y="${F + 190}" text-anchor="middle">PV Leistung</text>
+        <text class="sg-label" id="pv-label" x="445" y="${F + 190}" text-anchor="middle">PV Überschuss</text>
         <text class="pv-value" id="pv-v" x="445" y="${F + 228}"
               text-anchor="middle">--</text>
-        <line x1="380" y1="${F + 245}" x2="510" y2="${F + 245}" stroke="#33415A" stroke-width="0.5"/>
+        <line x1="380" y1="${F + 245}" x2="510" y2="${F + 245}" stroke="#55657F" stroke-width="1"/>
       </g>
 
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
@@ -1552,7 +1620,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="sg-label" x="445" y="${F + 285}" text-anchor="middle">Leistung</text>
         <text class="verbrauch-v" id="power-now-v" x="445" y="${F + 323}"
               text-anchor="middle">--</text>
-        <line x1="380" y1="${F + 340}" x2="510" y2="${F + 340}" stroke="#33415A" stroke-width="0.5"/>
+        <line x1="380" y1="${F + 340}" x2="510" y2="${F + 340}" stroke="#55657F" stroke-width="1"/>
         <text class="sg-label" id="energy-label" x="445" y="${F + 380}"
               text-anchor="middle">--</text>
         <text class="unit-value" id="energy-today-v" x="445" y="${F + 420}"
@@ -1719,10 +1787,12 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="value-s" id="hk${n}-pump-v" x="${dropX + 34}" y="${pumpY + 6}"
               text-anchor="start">--</text>
 
-        <rect x="${x1}" y="${RT}" width="${x2 - x1}" height="${RB - RT}" rx="10"
-              fill="url(#rad${n}Fill)" stroke="#33415A" stroke-width="2"/>
-        <g stroke="#0D1219" stroke-width="7" opacity="0.5">${fins}</g>
-        <rect x="${x1}" y="${RT}" width="${x2 - x1}" height="${RB - RT}" rx="10" fill="url(#glass)"/>
+        <g id="hk${n}-rad">
+          <rect x="${x1}" y="${RT}" width="${x2 - x1}" height="${RB - RT}" rx="10"
+                fill="url(#rad${n}Fill)" stroke="#33415A" stroke-width="2"/>
+          <g stroke="#0D1219" stroke-width="7" opacity="0.5">${fins}</g>
+          <rect x="${x1}" y="${RT}" width="${x2 - x1}" height="${RB - RT}" rx="10" fill="url(#glass)"/>
+        </g>
 
         <g transform="translate(${mid} ${RT + 100})">
           <rect x="-100" y="-42" width="200" height="84" rx="10"
@@ -1877,11 +1947,13 @@ class LutarymHeatpumpCard extends HTMLElement {
     const outColor = thermalColor(outside, oMin, oMax);
     set("outside-v", outside === null ? "--" : `${fmt(outside)} °C`);
     const aussenEl = sr.getElementById("outside-v");
-    if (aussenEl) aussenEl.setAttribute("fill", outColor);
+    if (aussenEl) aussenEl.style.fill = outColor;
 
     /* Außengerät */
     const comp = numState(hass, this._e("compressor"));
     set("comp-v", comp === null ? "--" : `${fmt(comp, 0)} Hz`);
+    const compEl = sr.getElementById("comp-v");
+    if (compEl) compEl.style.fill = loadColor(comp, COMP_MIN_HZ, COMP_MAX_HZ);
 
     // Meldet die Waermepumpe ausdruecklich aus, steht alles still.
     // Bei unbekanntem Zustand wird nichts gesperrt, sonst waere die
@@ -1941,7 +2013,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         set("sg-text", sg === null ? "unbekannt" : info.kurz);
         const t = sr.getElementById("sg-text");
         if (t) {
-          t.setAttribute("fill", farbe);
+          t.style.fill = farbe;
           t.style.color = farbe;
         }
         for (let i = 1; i <= 4; i++) {
@@ -1997,7 +2069,12 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (zirkRotor) {
       zirkRotor.classList.toggle("is-still", !zirkAn);
       if (zirkAn && animate && laeuft) {
-        this._animState.set("zirk-rotor", { type: "spin", duration: PUMP_SECONDS });
+        // Vorhandenen Eintrag behalten, sonst faengt der Winkel bei jedem
+        // Zustandsabgleich wieder bei null an und der Rotor ruckelt.
+        const da = this._animState.get("zirk-rotor");
+        if (da && da.type === "spin") da.duration = PUMP_SECONDS;
+        else this._animState.set("zirk-rotor",
+          { type: "spin", duration: PUMP_SECONDS, winkel: 0 });
       } else {
         this._animState.delete("zirk-rotor");
       }
@@ -2116,8 +2193,10 @@ class LutarymHeatpumpCard extends HTMLElement {
       const el = sr.getElementById(id);
       if (el) el.classList.toggle("is-inaktiv", !aktiv);
     };
-    blende("hk1-group", zone1);
-    blende("hk2-group", zone2);
+    // Nur der Heizkoerper wird blasser, wenn die Zone nicht freigegeben
+    // ist. Rohre und Pumpe sind weiterhin vorhanden und bleiben normal.
+    blende("hk1-rad", zone1);
+    blende("hk2-rad", zone2);
     blende("buffer-group", pufferDa);
     blende("dhw-group", wasserDa);
 
@@ -2208,10 +2287,17 @@ class LutarymHeatpumpCard extends HTMLElement {
 
     const rotor = sr.getElementById(`hk${n}-rotor`);
     if (rotor) {
-      rotor.classList.toggle("is-still", !pumpOn);
+      // Nur der Heizkoerper wird blasser, wenn der Kreis steht.
+      // Pumpe und Rohre behalten ihr normales Aussehen, sie sind
+      // schliesslich weiterhin vorhanden.
+      rotor.classList.remove("is-still");
       const rotorId = `hk${n}-rotor`;
       if (pumpOn && animate && laeuft) {
-        this._animState.set(rotorId, { type: "spin", duration: PUMP_SECONDS });
+        // Ebenso hier: den erreichten Winkel nicht verwerfen.
+        const da = this._animState.get(rotorId);
+        if (da && da.type === "spin") da.duration = PUMP_SECONDS;
+        else this._animState.set(rotorId,
+          { type: "spin", duration: PUMP_SECONDS, winkel: 0 });
       } else {
         this._animState.delete(rotorId);
       }
@@ -2257,7 +2343,14 @@ class LutarymHeatpumpCard extends HTMLElement {
     }
     el.classList.remove("is-still");
     const duration = festeDauer ? festeDauer : clamp(900 / rpm, 0.25, 6);
-    this._animState.set(rotorId, { type: "spin", duration });
+    // Nur die Dauer anpassen. Der erreichte Winkel bleibt erhalten,
+    // damit der Rotor bei einer neuen Drehzahl weiterdreht statt zu springen.
+    const vorhanden = this._animState.get(rotorId);
+    if (vorhanden && vorhanden.type === "spin") {
+      vorhanden.duration = duration;
+    } else {
+      this._animState.set(rotorId, { type: "spin", duration, winkel: 0 });
+    }
   }
 
   /**
@@ -2415,7 +2508,9 @@ class LutarymHeatpumpCard extends HTMLElement {
         fill: #C3D0E0; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
       }
       .sg-value {
-        fill: ${NEUTRAL}; font-size: 16px; font-weight: 700;
+        /* 13px, damit auch der laengste Zustand "PV Ueberschuss High"
+           innerhalb der Trennlinie darunter bleibt. */
+        fill: ${NEUTRAL}; font-size: 13px; font-weight: 700;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums; transition: fill 400ms ease;
       }
