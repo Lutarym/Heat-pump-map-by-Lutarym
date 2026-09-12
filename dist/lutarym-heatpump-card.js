@@ -1797,10 +1797,10 @@ class LutarymHeatpumpCard extends HTMLElement {
       </g>
 
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
-      <text class="cap-s" x="410" y="${F - 46}" text-anchor="middle">Vorlauf</text>
+      <text class="cap-s" x="800" y="${F + 31}" text-anchor="middle">Vorlauf</text>
       <text class="vl-value" id="unit-flow-v" x="410" y="${F - 20}"
             text-anchor="middle">--</text>
-      <text class="cap-s" x="410" y="${R + 40}" text-anchor="middle">Rücklauf</text>
+      <text class="cap-s" x="800" y="${R - 24}" text-anchor="middle">Rücklauf</text>
       <text class="rl-value" id="unit-ret-v" x="410" y="${R + 66}"
             text-anchor="middle">--</text>
 
