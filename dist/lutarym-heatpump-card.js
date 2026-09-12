@@ -1433,8 +1433,17 @@ class LutarymHeatpumpCard extends HTMLElement {
       const id = this._e(f.key);
       const st = this._quelle.states[id];
       if (wert && st) {
-        const einheit = st.attributes && st.attributes.unit_of_measurement;
-        wert.textContent = einheit ? `${st.state} ${einheit}` : st.state;
+        const einheit = (st.attributes && st.attributes.unit_of_measurement) || "";
+        const zahl = parseFloat(st.state);
+        let text = st.state;
+        if (!Number.isNaN(zahl) && /^[-\d.,\s]+$/.test(st.state)) {
+          // Temperatur und Druck mit einer Nachkommastelle, alles andere
+          // ohne. Sonst erscheint etwa 26.788 W, was im Deutschen wie
+          // 26788 W gelesen wird.
+          const stellen = ["°C", "bar"].includes(einheit) ? 1 : 0;
+          text = zahl.toFixed(stellen);
+        }
+        wert.textContent = einheit ? `${text} ${einheit}` : text;
       }
       if (el) el.addEventListener("click", () => this._mehrInfo(id));
     });
@@ -1755,11 +1764,11 @@ class LutarymHeatpumpCard extends HTMLElement {
           </g>
         </g>
 
-        <text class="unit-label" x="115" y="202" text-anchor="middle">Außentemperatur</text>
-        <text class="unit-value-s" id="outside-v" x="115" y="228"
+        <text class="unit-label" x="129" y="202" text-anchor="middle">Außentemperatur</text>
+        <text class="unit-value-s" id="outside-v" x="129" y="228"
               text-anchor="middle">--</text>
-        <text class="unit-label" x="265" y="202" text-anchor="middle">Verdichter</text>
-        <text class="unit-value-s" id="comp-v" x="265" y="228" text-anchor="middle">--</text>
+        <text class="unit-label" x="273" y="202" text-anchor="middle">Verdichter</text>
+        <text class="unit-value-s" id="comp-v" x="273" y="228" text-anchor="middle">--</text>
 
         ${fans}
 
