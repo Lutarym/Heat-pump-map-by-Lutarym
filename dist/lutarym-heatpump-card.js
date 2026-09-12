@@ -1707,13 +1707,13 @@ class LutarymHeatpumpCard extends HTMLElement {
              umfasst, hell wenn sie es umfasst, blinkend wenn die Anlage
              gerade genau das tut. -->
         <g id="modus-icons">
-          <g class="modus" id="modus-heizen" transform="translate(176 150)">
+          <g class="modus" id="modus-heizen" transform="translate(176 190)">
             <title>Heizen</title>
             <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
             <path d="M0 -8 C 5 -3, 6 2, 2 7 C 6 5, 8 0, 6 -5 C 4 -8, 1 -10, 0 -8 Z
                      M-1 -5 C -5 -1, -5 4, 0 8 C -6 6, -8 0, -5 -4 Z" fill="currentColor"/>
           </g>
-          <g class="modus" id="modus-kuehlen" transform="translate(210 150)">
+          <g class="modus" id="modus-kuehlen" transform="translate(210 190)">
             <title>Kühlen</title>
             <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
             <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
@@ -1721,18 +1721,18 @@ class LutarymHeatpumpCard extends HTMLElement {
               <path d="M-2.5 -6 L0 -8 L2.5 -6 M-2.5 6 L0 8 L2.5 6"/>
             </g>
           </g>
-          <g class="modus" id="modus-ww" transform="translate(244 150)">
+          <g class="modus" id="modus-ww" transform="translate(244 190)">
             <title>Warmwasser</title>
             <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
             <path d="M0 -8 C 5 -1, 7 2, 7 4 A 7 7 0 0 1 -7 4 C -7 2, -5 -1, 0 -8 Z"
                   fill="currentColor"/>
           </g>
-          <g class="modus" id="modus-auto" transform="translate(278 150)">
+          <g class="modus" id="modus-auto" transform="translate(278 190)">
             <title>Automatik</title>
             <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
             <text class="modus-t" x="0" y="5" text-anchor="middle" fill="currentColor">A</text>
           </g>
-          <g class="modus" id="modus-abtauen" transform="translate(312 150)">
+          <g class="modus" id="modus-abtauen" transform="translate(312 190)">
             <title>Abtauen</title>
             <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
             <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none">
@@ -1743,11 +1743,11 @@ class LutarymHeatpumpCard extends HTMLElement {
           </g>
         </g>
 
-        <text class="unit-label" x="115" y="200" text-anchor="middle">Außen</text>
-        <text class="unit-value" id="outside-v" x="115" y="228"
+        <text class="unit-label" x="115" y="222" text-anchor="middle">Außentemperatur</text>
+        <text class="unit-value-s" id="outside-v" x="115" y="246"
               text-anchor="middle">--</text>
-        <text class="unit-label" x="265" y="200" text-anchor="middle">Verdichter</text>
-        <text class="unit-value" id="comp-v" x="265" y="228" text-anchor="middle">--</text>
+        <text class="unit-label" x="265" y="222" text-anchor="middle">Verdichter</text>
+        <text class="unit-value-s" id="comp-v" x="265" y="246" text-anchor="middle">--</text>
 
         ${fans}
 
@@ -2683,7 +2683,17 @@ class LutarymHeatpumpCard extends HTMLElement {
       .flowdots.is-on { opacity: 0.9; }
 
       .unit-label {
-        fill: #7E8CA0; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
+        /* 11px mit engerer Sperrung, sonst passt "Außentemperatur"
+           nicht in die halbe Gehaeusebreite. */
+        fill: #7E8CA0; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      }
+      /* Eigene Groesse fuer die beiden Werte im Gehaeuse. Die gemeinsame
+         Klasse wird auch ausserhalb verwendet und bleibt unveraendert. */
+      .unit-value-s {
+        fill: #E8EDF4; font-size: 22px; font-weight: 700;
+        transition: fill 600ms ease;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-variant-numeric: tabular-nums;
       }
       .verbrauch-v {
         fill: #E0762E; font-size: 26px; font-weight: 700;
