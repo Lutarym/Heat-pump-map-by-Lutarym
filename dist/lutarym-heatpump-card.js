@@ -1701,19 +1701,17 @@ class LutarymHeatpumpCard extends HTMLElement {
               fill="url(#casing)" stroke="#33415A" stroke-width="2"/>
         <rect x="40" y="${L.UNIT_TOP}" width="300" height="640" rx="16" fill="url(#glass)"/>
 
-        <circle cx="66" cy="156" r="9" id="power-led" fill="#2C3646"/>
-        <text class="unit-label" x="86" y="161">Betrieb</text>
         <!-- Zustand der Waermepumpe. Blass wenn die Betriebsart es nicht
              umfasst, hell wenn sie es umfasst, blinkend wenn die Anlage
              gerade genau das tut. -->
         <g id="modus-icons">
-          <g class="modus" id="modus-heizen" transform="translate(176 190)">
+          <g class="modus" id="modus-heizen" transform="translate(122 190)">
             <title>Heizen</title>
             <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
             <path d="M0 -8 C 5 -3, 6 2, 2 7 C 6 5, 8 0, 6 -5 C 4 -8, 1 -10, 0 -8 Z
                      M-1 -5 C -5 -1, -5 4, 0 8 C -6 6, -8 0, -5 -4 Z" fill="currentColor"/>
           </g>
-          <g class="modus" id="modus-kuehlen" transform="translate(210 190)">
+          <g class="modus" id="modus-kuehlen" transform="translate(156 190)">
             <title>Kühlen</title>
             <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
             <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
@@ -1721,18 +1719,18 @@ class LutarymHeatpumpCard extends HTMLElement {
               <path d="M-2.5 -6 L0 -8 L2.5 -6 M-2.5 6 L0 8 L2.5 6"/>
             </g>
           </g>
-          <g class="modus" id="modus-ww" transform="translate(244 190)">
+          <g class="modus" id="modus-ww" transform="translate(190 190)">
             <title>Warmwasser</title>
             <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
             <path d="M0 -8 C 5 -1, 7 2, 7 4 A 7 7 0 0 1 -7 4 C -7 2, -5 -1, 0 -8 Z"
                   fill="currentColor"/>
           </g>
-          <g class="modus" id="modus-auto" transform="translate(278 190)">
+          <g class="modus" id="modus-auto" transform="translate(224 190)">
             <title>Automatik</title>
             <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
             <text class="modus-t" x="0" y="5" text-anchor="middle" fill="currentColor">A</text>
           </g>
-          <g class="modus" id="modus-abtauen" transform="translate(312 190)">
+          <g class="modus" id="modus-abtauen" transform="translate(258 190)">
             <title>Abtauen</title>
             <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
             <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none">
@@ -2146,11 +2144,6 @@ class LutarymHeatpumpCard extends HTMLElement {
       return ausTopic !== null ? ausTopic : ausStatus("power_state");
     })();
     const laeuft = anAus !== false;
-    const led = sr.getElementById("power-led");
-    if (led) {
-      led.setAttribute("fill", anAus === true ? "#46C07A" : "#2C3646");
-      led.classList.toggle("is-on", anAus === true);
-    }
 
     this._spin("fan1", numState(hass, this._e("fan1_rpm")), "fan1-rpm", "U/min", 0, laeuft);
     if (this._config.fan_count === 2) {
@@ -2770,8 +2763,6 @@ class LutarymHeatpumpCard extends HTMLElement {
       #sg-group rect { transition: all 400ms ease; }
       /* Der aktive Balken leuchtet, damit er sich klar abhebt. */
       #sg-group rect.is-active { filter: drop-shadow(0 0 5px currentColor); }
-      #power-led { transition: fill 400ms ease; }
-      #power-led.is-on { filter: drop-shadow(0 0 6px rgba(70,192,122,0.9)); }
       #unit-glow { transition: none; }
       #press-group { transition: opacity 300ms ease; }
       #press-needle { transition: all 900ms ease; }
