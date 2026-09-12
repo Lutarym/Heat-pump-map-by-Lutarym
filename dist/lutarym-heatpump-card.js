@@ -1797,9 +1797,11 @@ class LutarymHeatpumpCard extends HTMLElement {
       </g>
 
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
+      <text class="cap-s" x="410" y="${F - 46}" text-anchor="middle">Vorlauf</text>
       <text class="vl-value" id="unit-flow-v" x="410" y="${F - 20}"
             text-anchor="middle">--</text>
-      <text class="rl-value" id="unit-ret-v" x="410" y="${R + 40}"
+      <text class="cap-s" x="410" y="${R + 40}" text-anchor="middle">Rücklauf</text>
+      <text class="rl-value" id="unit-ret-v" x="410" y="${R + 66}"
             text-anchor="middle">--</text>
 
       <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
@@ -1816,8 +1818,9 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Primärpumpe -->
       <g>
-        <text class="value-s" id="pump-v" x="640" y="722" text-anchor="start">--</text>
-        <text class="value-s" id="flow-v" x="640" y="744" text-anchor="start">--</text>
+        <text class="cap-s" x="580" y="662" text-anchor="middle">Pumpe</text>
+        <text class="value-s" id="pump-v" x="580" y="749" text-anchor="middle">--</text>
+        <text class="value-s" id="flow-v" x="580" y="769" text-anchor="middle">--</text>
         <g transform="translate(580 ${R})">
           <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <g class="rotor" id="pump-rotor">
@@ -1825,7 +1828,6 @@ class LutarymHeatpumpCard extends HTMLElement {
             <circle r="4" fill="#0D1219"/>
           </g>
         </g>
-        <text class="cap-s" x="580" y="${R + 40}" text-anchor="middle">Pumpe</text>
       </g>
 
       <!-- Heizungspuffer -->
@@ -1850,9 +1852,9 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Wasserdruck -->
       <g id="press-group" opacity="0">
-        <text class="value-s" id="press-v" x="1390" y="660" text-anchor="middle">--</text>
+        <text class="cap-s" x="1390" y="662" text-anchor="middle">Druck</text>
         <!-- Warndreieck bei zu niedrigem Wasserdruck. -->
-        <g id="press-warn" opacity="0" transform="translate(1330 653)">
+        <g id="press-warn" opacity="0" transform="translate(1330 742)">
           <path d="M0 -13 L13 10 L-13 10 Z" fill="#3A0E0E"
                 stroke="#D62B2B" stroke-width="2" stroke-linejoin="round"/>
           <path d="M0 -6 V 3" stroke="#FF6B5E" stroke-width="2.5" stroke-linecap="round"/>
@@ -1865,7 +1867,7 @@ class LutarymHeatpumpCard extends HTMLElement {
                 stroke="${NEUTRAL}" stroke-width="3" stroke-linecap="round"/>
           <circle r="4" fill="#55637A"/>
         </g>
-        <text class="cap-s" x="1390" y="${R + 40}" text-anchor="middle">Druck</text>
+        <text class="value-s" id="press-v" x="1390" y="749" text-anchor="middle">--</text>
       </g>
 
       ${this._circuit(1, 820, 1040, 870, 990)}
