@@ -1705,47 +1705,61 @@ class LutarymHeatpumpCard extends HTMLElement {
              umfasst, hell wenn sie es umfasst, blinkend wenn die Anlage
              gerade genau das tut. -->
         <g id="modus-icons">
-          <g class="modus" id="modus-heizen" transform="translate(122 190)">
-            <title>Heizen</title>
-            <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
-            <path d="M0 -8 C 5 -3, 6 2, 2 7 C 6 5, 8 0, 6 -5 C 4 -8, 1 -10, 0 -8 Z
-                     M-1 -5 C -5 -1, -5 4, 0 8 C -6 6, -8 0, -5 -4 Z" fill="currentColor"/>
-          </g>
-          <g class="modus" id="modus-kuehlen" transform="translate(156 190)">
-            <title>Kühlen</title>
-            <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
-            <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-              <path d="M0 -8 V 8 M-7 -4 L 7 4 M-7 4 L 7 -4"/>
-              <path d="M-2.5 -6 L0 -8 L2.5 -6 M-2.5 6 L0 8 L2.5 6"/>
+          <g class="modus" id="modus-betrieb" transform="translate(80 158)">
+            <title>Betrieb</title>
+            <circle r="18" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
+            <g stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none">
+              <path d="M0 -10 V -1"/>
+              <path d="M-6.4 -6.4 A 9 9 0 1 0 6.4 -6.4"/>
             </g>
           </g>
-          <g class="modus" id="modus-ww" transform="translate(190 190)">
+          <g class="modus" id="modus-heizen" transform="translate(124 158)">
+            <title>Heizen</title>
+            <circle r="18" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
+            <path d="M0 -11 C 6 -4, 8 0, 8 3 A 8 8 0 1 1 -8 3 C -8 -1, -3 -4, 0 -11 Z"
+                  fill="currentColor"/>
+            <path d="M0 -2 C 3 1, 4 3, 4 4.5 A 4 4 0 1 1 -4 4.5 C -4 3, -2 1.5, 0 -2 Z"
+                  fill="#0D1219"/>
+          </g>
+          <g class="modus" id="modus-kuehlen" transform="translate(168 158)">
+            <title>Kühlen</title>
+            <circle r="18" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
+            <g stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none">
+              <path d="M0 -11 V 11 M-9.5 -5.5 L 9.5 5.5 M-9.5 5.5 L 9.5 -5.5"/>
+              <path d="M-3 -8 L0 -11 L3 -8 M-3 8 L0 11 L3 8"/>
+              <path d="M-9.5 -5.5 L -9 -1.5 M-9.5 -5.5 L -5.5 -6 M9.5 5.5 L 9 1.5 M9.5 5.5 L 5.5 6"/>
+              <path d="M-9.5 5.5 L -9 1.5 M-9.5 5.5 L -5.5 6 M9.5 -5.5 L 9 -1.5 M9.5 -5.5 L 5.5 -6"/>
+            </g>
+          </g>
+          <g class="modus" id="modus-ww" transform="translate(212 158)">
             <title>Warmwasser</title>
-            <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
-            <path d="M0 -8 C 5 -1, 7 2, 7 4 A 7 7 0 0 1 -7 4 C -7 2, -5 -1, 0 -8 Z"
+            <circle r="18" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
+            <path d="M0 -11 C 6 -2, 9 2, 9 5 A 9 9 0 0 1 -9 5 C -9 2, -6 -2, 0 -11 Z"
                   fill="currentColor"/>
           </g>
-          <g class="modus" id="modus-auto" transform="translate(224 190)">
+          <g class="modus" id="modus-auto" transform="translate(256 158)">
             <title>Automatik</title>
-            <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
-            <text class="modus-t" x="0" y="5" text-anchor="middle" fill="currentColor">A</text>
+            <circle r="18" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
+            <text class="modus-t" x="0" y="7" text-anchor="middle" fill="currentColor">A</text>
           </g>
-          <g class="modus" id="modus-abtauen" transform="translate(258 190)">
+          <g class="modus" id="modus-abtauen" transform="translate(300 158)">
             <title>Abtauen</title>
-            <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
-            <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none">
-              <path d="M0 -8 V 2 M-6 -5 L 6 1 M-6 1 L 6 -5"/>
+            <circle r="18" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
+            <g stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none">
+              <path d="M0 -12 V 1 M-7 -8 L 7 0 M-7 0 L 7 -8"/>
+              <path d="M-2.6 -9.5 L0 -12 L2.6 -9.5"/>
             </g>
-            <path d="M-4 6 a 2.4 2.4 0 1 0 0.1 0 Z M4 6 a 2.4 2.4 0 1 0 0.1 0 Z"
+            <path d="M-5 5 C -2.6 8, -2.6 11, -5 11 C -7.4 11, -7.4 8, -5 5 Z
+                     M5 5 C 7.4 8, 7.4 11, 5 11 C 2.6 11, 2.6 8, 5 5 Z"
                   fill="currentColor"/>
           </g>
         </g>
 
-        <text class="unit-label" x="115" y="222" text-anchor="middle">Außentemperatur</text>
-        <text class="unit-value-s" id="outside-v" x="115" y="246"
+        <text class="unit-label" x="115" y="202" text-anchor="middle">Außentemperatur</text>
+        <text class="unit-value-s" id="outside-v" x="115" y="228"
               text-anchor="middle">--</text>
-        <text class="unit-label" x="265" y="222" text-anchor="middle">Verdichter</text>
-        <text class="unit-value-s" id="comp-v" x="265" y="246" text-anchor="middle">--</text>
+        <text class="unit-label" x="265" y="202" text-anchor="middle">Verdichter</text>
+        <text class="unit-value-s" id="comp-v" x="265" y="228" text-anchor="middle">--</text>
 
         ${fans}
 
@@ -2357,6 +2371,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     };
     const arbeitet = laeuft && comp !== null && comp > 0;
     const blinkt = {
+      betrieb: false,
       heizen: arbeitet && !zuWarmwasser && !umfasst.kuehlen && !abtaut,
       kuehlen: arbeitet && !zuWarmwasser && umfasst.kuehlen && !abtaut,
       ww: arbeitet && zuWarmwasser && !abtaut,
@@ -2364,6 +2379,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       abtauen: abtaut,
     };
     const modusFarben = {
+      // Das Betriebssymbol zeigt nur, ob die Anlage eingeschaltet ist.
+      // Es blinkt nie, was sie gerade tut sagen die uebrigen Symbole.
+      betrieb: "#46C07A",
       heizen: "#E0762E",
       kuehlen: "#06A6C7",
       ww: "#F2B233",
@@ -2373,7 +2391,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     Object.keys(modusFarben).forEach((k) => {
       const el = sr.getElementById(`modus-${k}`);
       if (!el) return;
-      const dabei = k === "abtauen" ? abtaut : umfasst[k];
+      const dabei =
+        k === "betrieb" ? anAus === true : k === "abtauen" ? abtaut : umfasst[k];
       el.style.color = dabei ? modusFarben[k] : "#2E3847";
       if (blinkt[k] && animate) {
         this._animState.set(`modus-${k}`, {
@@ -2738,7 +2757,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         font-variant-numeric: tabular-nums;
       }
       .badge-t { fill: #E8EDF4; font-size: 13px; }
-      .modus-t { font-size: 15px; font-weight: 700; }
+      .modus-t { font-size: 22px; font-weight: 700; }
       .modus { transition: color 400ms ease; }
       .badge { opacity: 0; transition: opacity 300ms ease; }
       .badge.is-on { opacity: 1; }
