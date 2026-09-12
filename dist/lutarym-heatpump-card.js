@@ -1703,10 +1703,44 @@ class LutarymHeatpumpCard extends HTMLElement {
 
         <circle cx="66" cy="156" r="9" id="power-led" fill="#2C3646"/>
         <text class="unit-label" x="86" y="161">Betrieb</text>
-        <g id="defrost-badge" class="badge" transform="translate(260 150)">
-          <rect x="-62" y="-16" width="124" height="32" rx="16"
-                fill="#0E2A4A" stroke="#3E9BE0" stroke-width="1.5"/>
-          <text class="badge-t" x="0" y="5" text-anchor="middle">Abtauung</text>
+        <!-- Zustand der Waermepumpe. Blass wenn die Betriebsart es nicht
+             umfasst, hell wenn sie es umfasst, blinkend wenn die Anlage
+             gerade genau das tut. -->
+        <g id="modus-icons">
+          <g class="modus" id="modus-heizen" transform="translate(176 150)">
+            <title>Heizen</title>
+            <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
+            <path d="M0 -8 C 5 -3, 6 2, 2 7 C 6 5, 8 0, 6 -5 C 4 -8, 1 -10, 0 -8 Z
+                     M-1 -5 C -5 -1, -5 4, 0 8 C -6 6, -8 0, -5 -4 Z" fill="currentColor"/>
+          </g>
+          <g class="modus" id="modus-kuehlen" transform="translate(210 150)">
+            <title>Kühlen</title>
+            <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
+            <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M0 -8 V 8 M-7 -4 L 7 4 M-7 4 L 7 -4"/>
+              <path d="M-2.5 -6 L0 -8 L2.5 -6 M-2.5 6 L0 8 L2.5 6"/>
+            </g>
+          </g>
+          <g class="modus" id="modus-ww" transform="translate(244 150)">
+            <title>Warmwasser</title>
+            <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
+            <path d="M0 -8 C 5 -1, 7 2, 7 4 A 7 7 0 0 1 -7 4 C -7 2, -5 -1, 0 -8 Z"
+                  fill="currentColor"/>
+          </g>
+          <g class="modus" id="modus-auto" transform="translate(278 150)">
+            <title>Automatik</title>
+            <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
+            <text class="modus-t" x="0" y="5" text-anchor="middle" fill="currentColor">A</text>
+          </g>
+          <g class="modus" id="modus-abtauen" transform="translate(312 150)">
+            <title>Abtauen</title>
+            <circle r="14" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
+            <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none">
+              <path d="M0 -8 V 2 M-6 -5 L 6 1 M-6 1 L 6 -5"/>
+            </g>
+            <path d="M-4 6 a 2.4 2.4 0 1 0 0.1 0 Z M4 6 a 2.4 2.4 0 1 0 0.1 0 Z"
+                  fill="currentColor"/>
+          </g>
         </g>
 
         <text class="unit-label" x="115" y="200" text-anchor="middle">Außen</text>
@@ -2122,7 +2156,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     if (this._config.fan_count === 2) {
       this._spin("fan2", numState(hass, this._e("fan2_rpm")), "fan2-rpm", "U/min", 0, laeuft);
     }
-    abzeichen("defrost-badge", isOn(hass, this._e("defrost")) === true);
     const glow = sr.getElementById("unit-glow");
     if (glow) {
       // Eine Stoerung hat Vorrang vor der Betriebsanzeige.
@@ -2318,6 +2351,47 @@ class LutarymHeatpumpCard extends HTMLElement {
       const betriebsart = numState(hass, this._e("operating_mode"));
       zuWarmwasser = betriebsart === 3;
     }
+    /* Zustandssymbole oben rechts in der Waermepumpe */
+    const abtaut = isOn(hass, this._e("defrost")) === true;
+    const art = numState(hass, this._e("operating_mode"));
+    // Welche Betriebsart welche Zustaende umfasst, nach TOP4.
+    // Ohne bekannte Betriebsart gelten Heizen und Warmwasser als moeglich.
+    const umfasst = {
+      heizen: art === null ? true : [0, 2, 4, 6].includes(art),
+      kuehlen: art === null ? false : [1, 5, 7, 8].includes(art),
+      ww: art === null ? true : [3, 4, 5, 6, 8].includes(art),
+      auto: art === null ? false : [2, 6, 7, 8].includes(art),
+    };
+    const arbeitet = laeuft && comp !== null && comp > 0;
+    const blinkt = {
+      heizen: arbeitet && !zuWarmwasser && !umfasst.kuehlen && !abtaut,
+      kuehlen: arbeitet && !zuWarmwasser && umfasst.kuehlen && !abtaut,
+      ww: arbeitet && zuWarmwasser && !abtaut,
+      auto: false,
+      abtauen: abtaut,
+    };
+    const modusFarben = {
+      heizen: "#E0762E",
+      kuehlen: "#06A6C7",
+      ww: "#F2B233",
+      auto: "#C3D0E0",
+      abtauen: "#3E9BE0",
+    };
+    Object.keys(modusFarben).forEach((k) => {
+      const el = sr.getElementById(`modus-${k}`);
+      if (!el) return;
+      const dabei = k === "abtauen" ? abtaut : umfasst[k];
+      el.style.color = dabei ? modusFarben[k] : "#2E3847";
+      if (blinkt[k] && animate) {
+        this._animState.set(`modus-${k}`, {
+          type: "pulse", duration: 1.4, min: 0.3, max: 1,
+        });
+      } else {
+        this._animState.delete(`modus-${k}`);
+        el.setAttribute("opacity", "1");
+      }
+    });
+
     let valveText = "--";
     if (valveRoh !== null && VALVE_LABELS[valveRoh] !== undefined) {
       valveText = VALVE_LABELS[valveRoh];
@@ -2661,6 +2735,8 @@ class LutarymHeatpumpCard extends HTMLElement {
         font-variant-numeric: tabular-nums;
       }
       .badge-t { fill: #E8EDF4; font-size: 13px; }
+      .modus-t { font-size: 15px; font-weight: 700; }
+      .modus { transition: color 400ms ease; }
       .badge { opacity: 0; transition: opacity 300ms ease; }
       .badge.is-on { opacity: 1; }
 
