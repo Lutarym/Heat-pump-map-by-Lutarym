@@ -1804,7 +1804,7 @@ class LutarymHeatpumpCard extends HTMLElement {
               fill="#0D1219" stroke="#33415A" stroke-width="1"/>
         <text class="cap-s" x="410" y="${F + 5}" text-anchor="middle">Vorlauf</text>
       </g>
-      <text class="vl-value" id="unit-flow-v" x="410" y="${F - 29}"
+      <text class="vl-value" id="unit-flow-v" x="410" y="${F - 24}"
             text-anchor="middle">--</text>
       <g id="rl-schild">
         <rect x="370" y="${R - 13}" width="80" height="26" rx="8"
