@@ -1621,6 +1621,9 @@ class LutarymHeatpumpCard extends HTMLElement {
     const SR = L.SEC_RET;
     // Jede Sekundaerleitung endet an ihrem letzten Anschluss:
     // der Vorlauf am letzten Abgang, der Ruecklauf am letzten Zulauf.
+    // Fehlt der zweite Heizkreis, ruecken alle Baugruppen rechts davon
+    // nach links auf dessen Platz. Sonst klafft dort eine Luecke.
+    const DX = this._config.hk_count === 2 ? 0 : 260;
     const SEC_VL_ENDE = this._config.hk_count === 2 ? 1160 : 870;
     const SEC_RL_ENDE = this._config.hk_count === 2 ? 1280 : 990;
     const T = L.TANK_TOP;
@@ -1630,7 +1633,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     const hk2 = this._config.hk_count === 2;
 
     return `
-    <svg viewBox="0 80 ${L.W} ${L.H}" class="lhc-svg" role="img"
+    <svg viewBox="0 80 ${L.W - DX} ${L.H}" class="lhc-svg" role="img"
          aria-label="Schema der Wärmepumpenanlage">
       <defs>
         <filter id="unitGlowBlur" x="-30%" y="-15%" width="160%" height="130%">
@@ -1673,16 +1676,16 @@ class LutarymHeatpumpCard extends HTMLElement {
       </defs>
 
       <!-- Sammelleitungen -->
-      <path class="pipe-shell" d="M340 ${R} H 1525"/>
-      <path class="pipe" id="pipe-return" d="M340 ${R} H 1525"/>
-      <path class="pipe-shell" d="M340 ${F} H 1525"/>
-      <path class="pipe" id="pipe-flow" d="M340 ${F} H 1525"/>
+      <path class="pipe-shell" d="M340 ${R} H ${1525 - DX}"/>
+      <path class="pipe" id="pipe-return" d="M340 ${R} H ${1525 - DX}"/>
+      <path class="pipe-shell" d="M340 ${F} H ${1525 - DX}"/>
+      <path class="pipe" id="pipe-flow" d="M340 ${F} H ${1525 - DX}"/>
       <!-- Zwei Abschnitte je Leitung: bis zum Ventil und dahinter.
            Der Teil hinter dem Ventil fuehrt nur zum Warmwasserspeicher. -->
       <path class="flowdots" id="dots-vl-a" d="M340 ${F} H 630"/>
-      <path class="flowdots" id="dots-vl-b" d="M630 ${F} H 1525"/>
+      <path class="flowdots" id="dots-vl-b" d="M630 ${F} H ${1525 - DX}"/>
       <path class="flowdots" id="dots-rl-a" d="M630 ${R} H 340"/>
-      <path class="flowdots" id="dots-rl-b" d="M1525 ${R} H 630"/>
+      <path class="flowdots" id="dots-rl-b" d="M${1525 - DX} ${R} H 630"/>
 
       <path class="pipe-shell" d="M630 ${F} V ${T} M630 ${B} V ${R}"/>
       <path class="pipe" id="pipe-buf-in" d="M630 ${F} V ${T}"/>
@@ -1705,11 +1708,11 @@ class LutarymHeatpumpCard extends HTMLElement {
           : ""
       }
 
-      <path class="pipe-shell" d="M1525 ${F} V ${T} M1525 ${B} V ${R}"/>
-      <path class="pipe" id="pipe-dhw-in" d="M1525 ${F} V ${T}"/>
-      <path class="pipe" id="pipe-dhw-out" d="M1525 ${B} V ${R}"/>
-      <path class="flowdots" id="dots-dhw" d="M1525 ${F} V ${T}"/>
-      <path class="flowdots" id="dots-dhw2" d="M1525 ${B} V ${R}"/>
+      <path class="pipe-shell" d="M${1525 - DX} ${F} V ${T} M${1525 - DX} ${B} V ${R}"/>
+      <path class="pipe" id="pipe-dhw-in" d="M${1525 - DX} ${F} V ${T}"/>
+      <path class="pipe" id="pipe-dhw-out" d="M${1525 - DX} ${B} V ${R}"/>
+      <path class="flowdots" id="dots-dhw" d="M${1525 - DX} ${F} V ${T}"/>
+      <path class="flowdots" id="dots-dhw2" d="M${1525 - DX} ${B} V ${R}"/>
 
       <!-- Außengerät -->
       <g class="unit" id="unit-group">
@@ -1873,7 +1876,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       </g>
 
       <!-- Wasserdruck -->
-      <g id="press-group" opacity="0">
+      <g id="press-group" opacity="0" transform="translate(${-DX} 0)">
         <text class="cap-s" x="1390" y="662" text-anchor="middle">Druck</text>
         <!-- Warndreieck bei zu niedrigem Wasserdruck. -->
         <g id="press-warn" opacity="0" transform="translate(1330 742)">
@@ -1919,7 +1922,7 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Warmwasserspeicher -->
       <!-- Zirkulationskreis am Warmwasserspeicher -->
-      <g id="zirkulation-group" opacity="0">
+      <g id="zirkulation-group" opacity="0" transform="translate(${-DX} 0)">
         <path class="pipe-shell" fill="none" d="M1440 320 H 1370 M1370 560 H 1440"/>
         <path class="pipe" id="pipe-zirk-h1" fill="none" d="M1440 320 H 1370"/>
         <path class="pipe" id="pipe-zirk-h2" fill="none" d="M1370 560 H 1440"/>
@@ -1939,7 +1942,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="value-s" id="zirk-v" x="1335" y="366" text-anchor="end">--</text>
       </g>
 
-            <g id="dhw-group">
+            <g id="dhw-group" transform="translate(${-DX} 0)">
         <rect x="1440" y="${T}" width="170" height="350" rx="34"
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
         <rect x="1448" y="298" width="154" height="334" rx="28" fill="url(#dhwFill)"/>
