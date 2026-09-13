@@ -1797,11 +1797,21 @@ class LutarymHeatpumpCard extends HTMLElement {
       </g>
 
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
-      <text class="cap-s" x="800" y="${F + 31}" text-anchor="middle">Vorlauf</text>
-      <text class="vl-value" id="unit-flow-v" x="410" y="${F - 20}"
+      <!-- Die Beschriftung liegt auf der Leitung und unterbricht sie,
+           damit sie ohne Suchen der Leitung zugeordnet werden kann. -->
+      <g id="vl-schild">
+        <rect x="370" y="${F - 13}" width="80" height="26" rx="8"
+              fill="#0D1219" stroke="#33415A" stroke-width="1"/>
+        <text class="cap-s" x="410" y="${F + 5}" text-anchor="middle">Vorlauf</text>
+      </g>
+      <text class="vl-value" id="unit-flow-v" x="410" y="${F - 34}"
             text-anchor="middle">--</text>
-      <text class="cap-s" x="800" y="${R - 24}" text-anchor="middle">Rücklauf</text>
-      <text class="rl-value" id="unit-ret-v" x="410" y="${R + 66}"
+      <g id="rl-schild">
+        <rect x="370" y="${R - 13}" width="80" height="26" rx="8"
+              fill="#0D1219" stroke="#33415A" stroke-width="1"/>
+        <text class="cap-s" x="410" y="${R + 5}" text-anchor="middle">Rücklauf</text>
+      </g>
+      <text class="rl-value" id="unit-ret-v" x="410" y="${R + 40}"
             text-anchor="middle">--</text>
 
       <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
