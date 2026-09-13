@@ -1722,7 +1722,7 @@ class LutarymHeatpumpCard extends HTMLElement {
               <path d="M-6.4 -6.4 A 9 9 0 1 0 6.4 -6.4"/>
             </g>
           </g>
-          <g class="modus" id="modus-heizen" transform="translate(124 158)">
+          <g class="modus" id="modus-heizen" transform="translate(212 158)">
             <title>Heizen</title>
             <circle r="18" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
             <path d="M0 -11 C 6 -4, 8 0, 8 3 A 8 8 0 1 1 -8 3 C -8 -1, -3 -4, 0 -11 Z"
@@ -1730,7 +1730,7 @@ class LutarymHeatpumpCard extends HTMLElement {
             <path d="M0 -2 C 3 1, 4 3, 4 4.5 A 4 4 0 1 1 -4 4.5 C -4 3, -2 1.5, 0 -2 Z"
                   fill="#0D1219"/>
           </g>
-          <g class="modus" id="modus-kuehlen" transform="translate(168 158)">
+          <g class="modus" id="modus-kuehlen" transform="translate(300 158)">
             <title>Kühlen</title>
             <circle r="18" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
             <g stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none">
@@ -1740,18 +1740,18 @@ class LutarymHeatpumpCard extends HTMLElement {
               <path d="M-9.5 5.5 L -9 1.5 M-9.5 5.5 L -5.5 6 M9.5 -5.5 L 9 -1.5 M9.5 -5.5 L 5.5 -6"/>
             </g>
           </g>
-          <g class="modus" id="modus-ww" transform="translate(212 158)">
+          <g class="modus" id="modus-ww" transform="translate(256 158)">
             <title>Warmwasser</title>
             <circle r="18" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
             <path d="M0 -11 C 6 -2, 9 2, 9 5 A 9 9 0 0 1 -9 5 C -9 2, -6 -2, 0 -11 Z"
                   fill="currentColor"/>
           </g>
-          <g class="modus" id="modus-auto" transform="translate(256 158)">
+          <g class="modus" id="modus-auto" transform="translate(168 158)">
             <title>Automatik</title>
             <circle r="18" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
             <text class="modus-t" x="0" y="7" text-anchor="middle" fill="currentColor">A</text>
           </g>
-          <g class="modus" id="modus-abtauen" transform="translate(300 158)">
+          <g class="modus" id="modus-abtauen" transform="translate(124 158)">
             <title>Abtauen</title>
             <circle r="18" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>
             <g stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none">
