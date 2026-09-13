@@ -27,6 +27,26 @@ const L = {
   UNIT_BOTTOM: 760,
   CAP_Y: 768,
   SG_Y: 104,
+
+  /* Waagerechte Ankerpunkte der Baugruppen. Sie legen fest, wo die
+     Einheiten nebeneinander stehen, und sind die Stellschrauben, wenn
+     die Karte einmal ein anderes Seitenverhaeltnis bekommen soll. */
+  X_PIPE_L: 340,
+  X_COL: 445,
+  X_BUF: 540,
+  X_BUF_C: 635,
+  X_HK1_A: 820,
+  X_HK1_B: 1040,
+  X_HK1_DROP: 870,
+  X_HK1_BACK: 990,
+  X_HK2_A: 1110,
+  X_HK2_B: 1330,
+  X_HK2_DROP: 1160,
+  X_HK2_BACK: 1280,
+  X_ZIRK: 1370,
+  X_PRESS: 1390,
+  X_DHW: 1440,
+  X_DHW_C: 1525,
 }
 
 /* ------------------------------------------------------------------ *
@@ -1624,8 +1644,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     // Fehlt der zweite Heizkreis, ruecken alle Baugruppen rechts davon
     // nach links auf dessen Platz. Sonst klafft dort eine Luecke.
     const DX = this._config.hk_count === 2 ? 0 : 260;
-    const SEC_VL_ENDE = this._config.hk_count === 2 ? 1160 : 870;
-    const SEC_RL_ENDE = this._config.hk_count === 2 ? 1280 : 990;
+    const SEC_VL_ENDE = this._config.hk_count === 2 ? L.X_HK2_DROP : L.X_HK1_DROP;
+    const SEC_RL_ENDE = this._config.hk_count === 2 ? L.X_HK2_BACK : L.X_HK1_BACK;
     const T = L.TANK_TOP;
     const B = L.TANK_BOTTOM;
     const C = L.CAP_Y;
@@ -1676,16 +1696,16 @@ class LutarymHeatpumpCard extends HTMLElement {
       </defs>
 
       <!-- Sammelleitungen -->
-      <path class="pipe-shell" d="M340 ${R} H ${1525 - DX}"/>
-      <path class="pipe" id="pipe-return" d="M340 ${R} H ${1525 - DX}"/>
-      <path class="pipe-shell" d="M340 ${F} H ${1525 - DX}"/>
-      <path class="pipe" id="pipe-flow" d="M340 ${F} H ${1525 - DX}"/>
+      <path class="pipe-shell" d="M${L.X_PIPE_L} ${R} H ${L.X_DHW_C - DX}"/>
+      <path class="pipe" id="pipe-return" d="M${L.X_PIPE_L} ${R} H ${L.X_DHW_C - DX}"/>
+      <path class="pipe-shell" d="M${L.X_PIPE_L} ${F} H ${L.X_DHW_C - DX}"/>
+      <path class="pipe" id="pipe-flow" d="M${L.X_PIPE_L} ${F} H ${L.X_DHW_C - DX}"/>
       <!-- Zwei Abschnitte je Leitung: bis zum Ventil und dahinter.
            Der Teil hinter dem Ventil fuehrt nur zum Warmwasserspeicher. -->
-      <path class="flowdots" id="dots-vl-a" d="M340 ${F} H 630"/>
-      <path class="flowdots" id="dots-vl-b" d="M630 ${F} H ${1525 - DX}"/>
-      <path class="flowdots" id="dots-rl-a" d="M630 ${R} H 340"/>
-      <path class="flowdots" id="dots-rl-b" d="M${1525 - DX} ${R} H 630"/>
+      <path class="flowdots" id="dots-vl-a" d="M${L.X_PIPE_L} ${F} H 630"/>
+      <path class="flowdots" id="dots-vl-b" d="M630 ${F} H ${L.X_DHW_C - DX}"/>
+      <path class="flowdots" id="dots-rl-a" d="M630 ${R} H ${L.X_PIPE_L}"/>
+      <path class="flowdots" id="dots-rl-b" d="M${L.X_DHW_C - DX} ${R} H 630"/>
 
       <path class="pipe-shell" d="M630 ${F} V ${T} M630 ${B} V ${R}"/>
       <path class="pipe" id="pipe-buf-in" d="M630 ${F} V ${T}"/>
@@ -1699,20 +1719,20 @@ class LutarymHeatpumpCard extends HTMLElement {
       <path class="pipe" id="pipe-sec-ret" d="M730 ${SR} H ${SEC_RL_ENDE}"/>
       <!-- Auch hier abschnittsweise: der Weg zum zweiten Heizkreis
            fuehrt nur Wasser, wenn dessen Pumpe laeuft. -->
-      <path class="flowdots" id="dots-sf-a" d="M730 ${SF} H 870"/>
-      <path class="flowdots rev" id="dots-sr-a" d="M730 ${SR} H 990"/>
+      <path class="flowdots" id="dots-sf-a" d="M730 ${SF} H ${L.X_HK1_DROP}"/>
+      <path class="flowdots rev" id="dots-sr-a" d="M730 ${SR} H ${L.X_HK1_BACK}"/>
       ${
         hk2
-          ? `<path class="flowdots" id="dots-sf-b" d="M870 ${SF} H 1160"/>
-             <path class="flowdots rev" id="dots-sr-b" d="M990 ${SR} H 1280"/>`
+          ? `<path class="flowdots" id="dots-sf-b" d="M${L.X_HK1_DROP} ${SF} H ${L.X_HK2_DROP}"/>
+             <path class="flowdots rev" id="dots-sr-b" d="M${L.X_HK1_BACK} ${SR} H ${L.X_HK2_BACK}"/>`
           : ""
       }
 
-      <path class="pipe-shell" d="M${1525 - DX} ${F} V ${T} M${1525 - DX} ${B} V ${R}"/>
-      <path class="pipe" id="pipe-dhw-in" d="M${1525 - DX} ${F} V ${T}"/>
-      <path class="pipe" id="pipe-dhw-out" d="M${1525 - DX} ${B} V ${R}"/>
-      <path class="flowdots" id="dots-dhw" d="M${1525 - DX} ${F} V ${T}"/>
-      <path class="flowdots" id="dots-dhw2" d="M${1525 - DX} ${B} V ${R}"/>
+      <path class="pipe-shell" d="M${L.X_DHW_C - DX} ${F} V ${T} M${L.X_DHW_C - DX} ${B} V ${R}"/>
+      <path class="pipe" id="pipe-dhw-in" d="M${L.X_DHW_C - DX} ${F} V ${T}"/>
+      <path class="pipe" id="pipe-dhw-out" d="M${L.X_DHW_C - DX} ${B} V ${R}"/>
+      <path class="flowdots" id="dots-dhw" d="M${L.X_DHW_C - DX} ${F} V ${T}"/>
+      <path class="flowdots" id="dots-dhw2" d="M${L.X_DHW_C - DX} ${B} V ${R}"/>
 
       <!-- Außengerät -->
       <g class="unit" id="unit-group">
@@ -1789,22 +1809,22 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- SG Ready, PV Leistung, Leistung, Verbrauch - zentriert zwischen VL und RL -->
       <g id="sg-group" opacity="0">
-        <text class="sg-label" x="445" y="${F + 60}" text-anchor="middle">SG Ready</text>
-        <g transform="translate(445 ${F + 90})">
+        <text class="sg-label" x="${L.X_COL}" y="${F + 60}" text-anchor="middle">SG Ready</text>
+        <g transform="translate(${L.X_COL} ${F + 90})">
           <rect x="-68" y="0" width="32" height="11" rx="5.5" id="sg-seg-1" fill="#3A4658"/>
           <rect x="-34" y="0" width="32" height="11" rx="5.5" id="sg-seg-2" fill="#3A4658"/>
           <rect x="2" y="0" width="32" height="11" rx="5.5" id="sg-seg-3" fill="#3A4658"/>
           <rect x="36" y="0" width="32" height="11" rx="5.5" id="sg-seg-4" fill="#3A4658"/>
         </g>
-        <text class="sg-value" id="sg-text" x="445" y="${F + 130}"
+        <text class="sg-value" id="sg-text" x="${L.X_COL}" y="${F + 130}"
               text-anchor="middle">--</text>
         <line x1="380" y1="${F + 150}" x2="510" y2="${F + 150}" stroke="#55657F" stroke-width="1"/>
       </g>
 
       <!-- PV Leistung -->
       <g id="pv-group" opacity="0">
-        <text class="sg-label" id="pv-label" x="445" y="${F + 190}" text-anchor="middle">PV Überschuss</text>
-        <text class="pv-value" id="pv-v" x="445" y="${F + 228}"
+        <text class="sg-label" id="pv-label" x="${L.X_COL}" y="${F + 190}" text-anchor="middle">PV Überschuss</text>
+        <text class="pv-value" id="pv-v" x="${L.X_COL}" y="${F + 228}"
               text-anchor="middle">--</text>
         <line x1="380" y1="${F + 245}" x2="510" y2="${F + 245}" stroke="#55657F" stroke-width="1"/>
       </g>
@@ -1829,13 +1849,13 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
       <g id="verbrauch-group" opacity="0">
-        <text class="sg-label" x="445" y="${F + 285}" text-anchor="middle">Leistung</text>
-        <text class="verbrauch-v" id="power-now-v" x="445" y="${F + 323}"
+        <text class="sg-label" x="${L.X_COL}" y="${F + 285}" text-anchor="middle">Leistung</text>
+        <text class="verbrauch-v" id="power-now-v" x="${L.X_COL}" y="${F + 323}"
               text-anchor="middle">--</text>
         <line x1="380" y1="${F + 340}" x2="510" y2="${F + 340}" stroke="#55657F" stroke-width="1"/>
-        <text class="sg-label" id="energy-label" x="445" y="${F + 380}"
+        <text class="sg-label" id="energy-label" x="${L.X_COL}" y="${F + 380}"
               text-anchor="middle">--</text>
-        <text class="unit-value" id="energy-today-v" x="445" y="${F + 420}"
+        <text class="unit-value" id="energy-today-v" x="${L.X_COL}" y="${F + 420}"
               text-anchor="middle">--</text>
       </g>
 
@@ -1855,48 +1875,48 @@ class LutarymHeatpumpCard extends HTMLElement {
 
       <!-- Heizungspuffer -->
       <g id="buffer-group">
-        <rect x="540" y="${T}" width="190" height="350" rx="26"
+        <rect x="${L.X_BUF}" y="${T}" width="190" height="350" rx="26"
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
         <rect x="548" y="298" width="174" height="334" rx="20" fill="url(#bufferFill)"/>
         <g clip-path="url(#bufClip)">${this._bubbles("buf-bubbles", 548, 298, 174, 334)}</g>
         <rect x="548" y="298" width="174" height="334" rx="20" fill="url(#glass)"/>
-        <text class="value-l" id="buf-v" x="635" y="460" text-anchor="middle">--</text>
-        <text class="value-sp" id="buf-sp" x="635" y="488" text-anchor="middle"></text>
-        <g id="roomheater-badge" class="badge" transform="translate(635 604)">
+        <text class="value-l" id="buf-v" x="${L.X_BUF_C}" y="460" text-anchor="middle">--</text>
+        <text class="value-sp" id="buf-sp" x="${L.X_BUF_C}" y="488" text-anchor="middle"></text>
+        <g id="roomheater-badge" class="badge" transform="translate(${L.X_BUF_C} 604)">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
-        <rect x="${635 - schildBreite(this._config.label_buffer, 150) / 2}" y="305"
+        <rect x="${L.X_BUF_C - schildBreite(this._config.label_buffer, 150) / 2}" y="305"
               width="${schildBreite(this._config.label_buffer, 150)}" height="30" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="1" opacity="0.5"/>
-        <text class="cap" x="635" y="320" text-anchor="middle" dominant-baseline="middle">${escapeHtml(
+        <text class="cap" x="${L.X_BUF_C}" y="320" text-anchor="middle" dominant-baseline="middle">${escapeHtml(
           this._config.label_buffer
         )}</text>
       </g>
 
       <!-- Wasserdruck -->
       <g id="press-group" opacity="0" transform="translate(${-DX} 0)">
-        <text class="cap-s" x="1390" y="662" text-anchor="middle">Druck</text>
+        <text class="cap-s" x="${L.X_PRESS}" y="662" text-anchor="middle">Druck</text>
         <!-- Warndreieck bei zu niedrigem Wasserdruck. -->
-        <g id="press-warn" opacity="0" transform="translate(1330 742)">
+        <g id="press-warn" opacity="0" transform="translate(${L.X_HK2_B} 742)">
           <path d="M0 -13 L13 10 L-13 10 Z" fill="#3A0E0E"
                 stroke="#D62B2B" stroke-width="2" stroke-linejoin="round"/>
           <path d="M0 -6 V 3" stroke="#FF6B5E" stroke-width="2.5" stroke-linecap="round"/>
           <circle cy="7" r="1.6" fill="#FF6B5E"/>
         </g>
-        <g transform="translate(1390 ${R})">
+        <g transform="translate(${L.X_PRESS} ${R})">
           <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <circle r="18" fill="none" stroke="#26303F" stroke-width="3"/>
           <line id="press-needle" x1="0" y1="0" x2="0" y2="-15"
                 stroke="${NEUTRAL}" stroke-width="3" stroke-linecap="round"/>
           <circle r="4" fill="#55637A"/>
         </g>
-        <text class="value-s" id="press-v" x="1390" y="749" text-anchor="middle">--</text>
+        <text class="value-s" id="press-v" x="${L.X_PRESS}" y="749" text-anchor="middle">--</text>
       </g>
 
-      ${this._circuit(1, 820, 1040, 870, 990)}
-      ${hk2 ? this._circuit(2, 1110, 1330, 1160, 1280) : ""}
+      ${this._circuit(1, L.X_HK1_A, L.X_HK1_B, L.X_HK1_DROP, L.X_HK1_BACK)}
+      ${hk2 ? this._circuit(2, L.X_HK2_A, L.X_HK2_B, L.X_HK2_DROP, L.X_HK2_BACK) : ""}
 
       <!-- Dreiwegeventil an der Abzweigung: hier teilt sich der Vorlauf
            nach unten in den Puffer oder weiter nach rechts zum Speicher. -->
@@ -1923,52 +1943,52 @@ class LutarymHeatpumpCard extends HTMLElement {
       <!-- Warmwasserspeicher -->
       <!-- Zirkulationskreis am Warmwasserspeicher -->
       <g id="zirkulation-group" opacity="0" transform="translate(${-DX} 0)">
-        <path class="pipe-shell" fill="none" d="M1440 320 H 1370 M1370 560 H 1440"/>
-        <path class="pipe" id="pipe-zirk-h1" fill="none" d="M1440 320 H 1370"/>
-        <path class="pipe" id="pipe-zirk-h2" fill="none" d="M1370 560 H 1440"/>
-        <path class="flowdots" id="dots-zirk-h1" fill="none" d="M1440 320 H 1370"/>
-        <path class="flowdots" id="dots-zirk-h2" fill="none" d="M1370 560 H 1440"/>
-        <path class="pipe-shell" fill="none" d="M1370 320 V 560"/>
-        <path class="pipe" id="pipe-zirk-v" fill="none" d="M1370 320 V 560"/>
-        <path class="flowdots" id="dots-zirk-v" fill="none" d="M1370 320 V 560"/>
-        <g transform="translate(1370 360)">
+        <path class="pipe-shell" fill="none" d="M${L.X_DHW} 320 H ${L.X_ZIRK} M${L.X_ZIRK} 560 H ${L.X_DHW}"/>
+        <path class="pipe" id="pipe-zirk-h1" fill="none" d="M${L.X_DHW} 320 H ${L.X_ZIRK}"/>
+        <path class="pipe" id="pipe-zirk-h2" fill="none" d="M${L.X_ZIRK} 560 H ${L.X_DHW}"/>
+        <path class="flowdots" id="dots-zirk-h1" fill="none" d="M${L.X_DHW} 320 H ${L.X_ZIRK}"/>
+        <path class="flowdots" id="dots-zirk-h2" fill="none" d="M${L.X_ZIRK} 560 H ${L.X_DHW}"/>
+        <path class="pipe-shell" fill="none" d="M${L.X_ZIRK} 320 V 560"/>
+        <path class="pipe" id="pipe-zirk-v" fill="none" d="M${L.X_ZIRK} 320 V 560"/>
+        <path class="flowdots" id="dots-zirk-v" fill="none" d="M${L.X_ZIRK} 320 V 560"/>
+        <g transform="translate(${L.X_ZIRK} 360)">
           <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <g class="rotor" id="zirk-rotor">
             <path id="zirk-blade" d="M0 -13 L4 -3 L14 0 L4 3 L0 13 L-4 3 L-14 0 L-4 -3 Z" fill="#55637A"/>
             <circle r="4" fill="#0D1219"/>
           </g>
         </g>
-        <text class="cap-s" x="1370" y="300" text-anchor="middle">Zirkulation</text>
+        <text class="cap-s" x="${L.X_ZIRK}" y="300" text-anchor="middle">Zirkulation</text>
         <text class="value-s" id="zirk-v" x="1335" y="366" text-anchor="end">--</text>
       </g>
 
             <g id="dhw-group" transform="translate(${-DX} 0)">
-        <rect x="1440" y="${T}" width="170" height="350" rx="34"
+        <rect x="${L.X_DHW}" y="${T}" width="170" height="350" rx="34"
               fill="#0D1219" stroke="#33415A" stroke-width="2"/>
         <rect x="1448" y="298" width="154" height="334" rx="28" fill="url(#dhwFill)"/>
         <g clip-path="url(#dhwClip)">${this._bubbles("dhw-bubbles", 1448, 298, 154, 334)}</g>
         <rect x="1448" y="298" width="154" height="334" rx="28" fill="url(#glass)"/>
-        <text class="value-l" id="dhw-v" x="1525" y="440" text-anchor="middle">--</text>
-        <text class="value-sp" id="dhw-sp" x="1525" y="468" text-anchor="middle"></text>
-        <g id="dhwforce-badge" class="badge" transform="translate(1525 536)">
+        <text class="value-l" id="dhw-v" x="${L.X_DHW_C}" y="440" text-anchor="middle">--</text>
+        <text class="value-sp" id="dhw-sp" x="${L.X_DHW_C}" y="468" text-anchor="middle"></text>
+        <g id="dhwforce-badge" class="badge" transform="translate(${L.X_DHW_C} 536)">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
                 fill="#08243A" stroke="#3B9BE0" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Aufheizen</text>
         </g>
-        <g id="sterilization-badge" class="badge" transform="translate(1525 570)">
+        <g id="sterilization-badge" class="badge" transform="translate(${L.X_DHW_C} 570)">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
                 fill="#2B1240" stroke="#A855F7" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Legionellen</text>
         </g>
-        <g id="dhwheater-badge" class="badge" transform="translate(1525 604)">
+        <g id="dhwheater-badge" class="badge" transform="translate(${L.X_DHW_C} 604)">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
-        <rect x="${1525 - schildBreite(this._config.label_dhw, 134) / 2}" y="305"
+        <rect x="${L.X_DHW_C - schildBreite(this._config.label_dhw, 134) / 2}" y="305"
               width="${schildBreite(this._config.label_dhw, 134)}" height="30" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="1" opacity="0.5"/>
-        <text class="cap" x="1525" y="320" text-anchor="middle" dominant-baseline="middle">${escapeHtml(
+        <text class="cap" x="${L.X_DHW_C}" y="320" text-anchor="middle" dominant-baseline="middle">${escapeHtml(
           this._config.label_dhw
         )}</text>
       </g>
