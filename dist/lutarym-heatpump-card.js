@@ -1676,9 +1676,16 @@ class LutarymHeatpumpCard extends HTMLElement {
     const hoehe = vb ? parseFloat(vb[2]) : L.H;
 
     // Baugruppen, die aufrecht bleiben sollen, samt Drehpunkt.
-    // Drehpunkt so gewaehlt, dass der Block nach der Drehung vollstaendig
-    // im Bild liegt. Nachgerechnet: x 40 bis 340, y 20 bis 660.
-    const aufrecht = [["unit-group", 340, 440]];
+    // Waermepumpe und Kennzahlen werden aufgerichtet und stehen im
+    // Hochformat nebeneinander am Kopf. Die Drehpunkte sind so gewaehlt,
+    // dass sie sich nicht ueberlappen: Waermepumpe x 40 bis 340,
+    // Kennzahlen x 380 bis 510, beide oben.
+    const aufrecht = [
+      ["unit-group", 340, 440],
+      ["kennzahlen", 230, 550],
+    ];
+    // Alles Uebrige rueckt nach, damit es unter dem Kopf beginnt.
+    const NACH = 160;
     const teile = [];
     let rest = rumpf;
     aufrecht.forEach(([id, cx, cy], i) => {
@@ -1697,10 +1704,12 @@ class LutarymHeatpumpCard extends HTMLElement {
           ? m
           : `<text${a1}x="${x}"${a2}y="${y}"${a3} transform="rotate(-90 ${x} ${y})">`
     );
-    teile.forEach((t) => { rest = rest.replace(t.platz, t.inhalt); });
+    // Der Rest wird nachgerueckt, die aufgerichteten Bloecke bleiben stehen.
+    rest = `<g transform="translate(${NACH} 0)">${rest}</g>`;
+    teile.forEach((t) => { rest = rest.replace(t.platz, `</g>${t.inhalt}<g transform="translate(${NACH} 0)">`); });
 
     return `
-    <svg viewBox="0 0 ${hoehe} ${breite}" class="lhc-svg" role="img"
+    <svg viewBox="0 0 ${hoehe} ${breite + NACH}" class="lhc-svg" role="img"
          preserveAspectRatio="xMidYMid meet">
       <g transform="translate(${hoehe + 80} 0) rotate(90)">${rest}</g>
     </svg>`;
@@ -1876,7 +1885,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         </g>
 
         <line x1="70" y1="185" x2="310" y2="185" stroke="#55657F" stroke-width="1"/>
-
         <text class="unit-label" x="129" y="202" text-anchor="middle">Außentemperatur</text>
         <text class="unit-value-s" id="outside-v" x="129" y="228"
               text-anchor="middle">--</text>
@@ -1888,6 +1896,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       </g>
 
       <!-- SG Ready, PV Leistung, Leistung, Verbrauch - zentriert zwischen VL und RL -->
+      <!-- Als Gruppe zusammengefasst, damit sie im Hochformat als Ganzes
+           neben die Waermepumpe gestellt werden kann. -->
+      <g id="kennzahlen">
       <g id="sg-group" opacity="0">
         <text class="sg-label" x="${L.X_COL}" y="${F + 60}" text-anchor="middle">SG Ready</text>
         <g transform="translate(${L.X_COL} ${F + 90})">
@@ -1916,7 +1927,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         <rect x="370" y="${F - 13}" width="80" height="26" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="1"/>
         <text class="cap-s vl-cap" x="410" y="${F + 5}" text-anchor="middle">Vorlauf</text>
-
       </g>
       <text class="vl-value" id="unit-flow-v" x="410" y="${F - 24}"
             text-anchor="middle">--</text>
@@ -1924,7 +1934,6 @@ class LutarymHeatpumpCard extends HTMLElement {
         <rect x="370" y="${R - 13}" width="80" height="26" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="1"/>
         <text class="cap-s rl-cap" x="410" y="${R + 5}" text-anchor="middle">Rücklauf</text>
-
       </g>
       <text class="rl-value" id="unit-ret-v" x="410" y="${R + 40}"
             text-anchor="middle">--</text>
@@ -1939,6 +1948,7 @@ class LutarymHeatpumpCard extends HTMLElement {
               text-anchor="middle">--</text>
         <text class="unit-value" id="energy-today-v" x="${L.X_COL}" y="${F + 420}"
               text-anchor="middle">--</text>
+      </g>
       </g>
 
       <!-- Primärpumpe -->

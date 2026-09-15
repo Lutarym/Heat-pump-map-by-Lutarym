@@ -32,7 +32,8 @@
 - Trennlinie im Gehäuse zwischen Symbolreihe und den Werten
 - Schilder Vorlauf und Rücklauf in der Farbe des zugehörigen Wertes
 - Hochformat: dieselbe Zeichnung um 90 Grad gedreht, Texte bleiben
-  waagerecht, die Wärmepumpe steht aufrecht. Umschaltung im
+  waagerecht. Wärmepumpe und Kennzahlen stehen aufrecht nebeneinander
+  am Kopf, alles Weitere rückt darunter nach. Umschaltung im
   Einstellungsdialog unter Anordnung
 
 # v2.6.4
