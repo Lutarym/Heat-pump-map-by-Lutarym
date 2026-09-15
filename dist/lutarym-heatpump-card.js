@@ -1661,129 +1661,340 @@ class LutarymHeatpumpCard extends HTMLElement {
   }
 
   /**
-   * Hochformat: dieselbe Zeichnung, um 90 Grad nach rechts gedreht.
-   * Damit bleiben alle Kennungen und die gesamte Aktualisierungslogik
-   * unveraendert. Texte werden einzeln zurueckgedreht, damit sie
-   * waagerecht lesbar bleiben. Der Block aus Waermepumpe und Kennzahlen
-   * wird als Ganzes zurueckgedreht und steht dadurch aufrecht.
+   * Hochformat als eigene Anordnung, nicht als Drehung.
+   * Oben Waermepumpe und Kennzahlen nebeneinander, darunter senkrecht
+   * der Vorlauf rechts und der Ruecklauf links. Dazwischen haengen
+   * Puffer, Heizkreise und Warmwasser. Alle Kennungen sind dieselben
+   * wie im Querformat, damit die Aktualisierung unveraendert arbeitet.
    */
   _svgHoch() {
-    const quer = this._svgQuer();
-    const kopf = quer.slice(0, quer.indexOf(">") + 1);
-    const rumpf = quer.slice(quer.indexOf(">") + 1, quer.lastIndexOf("</svg>"));
-    const vb = /viewBox="0 80 ([\d.]+) ([\d.]+)"/.exec(kopf);
-    const breite = vb ? parseFloat(vb[1]) : L.W;
-    const hoehe = vb ? parseFloat(vb[2]) : L.H;
+    const hk2 = this._config.hk_count === 2;
+    const P = {
+      W: 760,
+      X_RL: 140, X_VL: 700,      // Primaerkreis
+      S_RL: 190, S_VL: 640,      // Sekundaerkreis vom Puffer
+      U1: 240, U2: 600,          // Kanten der liegenden Baugruppen
+      OBEN: 740,
+    };
+    const UM = (P.U1 + P.U2) / 2;
 
-    // Baugruppen, die aufrecht bleiben sollen, samt Drehpunkt.
-    // Waermepumpe und Kennzahlen werden aufgerichtet und stehen im
-    // Hochformat nebeneinander am Kopf. Die Drehpunkte sind so gewaehlt,
-    // dass sie sich nicht ueberlappen: Waermepumpe x 40 bis 340,
-    // Kennzahlen x 380 bis 510, beide oben.
-    const aufrecht = [
-      ["unit-group", 340, 440],
-      ["kennzahlen", 230, 550],
-    ];
-    // Alles Uebrige rueckt nach, damit es unter dem Kopf beginnt.
-    const NACH = 160;
+    // Senkrechte Aufteilung. Ohne zweiten Heizkreis ruecken die
+    // darunterliegenden Baugruppen nach.
+    const PUF = [860, 1080];
+    const HK1 = [1140, 1340];
+    const HK2 = [1380, 1580];
+    const WW = hk2 ? [1620, 1820] : [1380, 1580];
+    const UNTEN = WW[1] + 40;
+    const HOEHE = UNTEN + 100;
 
-    // Etiketten und Abzeichen bestehen aus Kasten und Text. Sie muessen
-    // als Ganzes aufgerichtet werden, sonst dreht der Kasten mit und der
-    // Text steht quer darin. Gedreht wird um die eigene Mitte, die Lage
-    // bleibt dadurch unveraendert.
-    const mid1 = (L.X_HK1_A + L.X_HK1_B) / 2;
-    const mid2 = (L.X_HK2_A + L.X_HK2_B) / 2;
-    const anOrt = [
-      ["buf-name", L.X_BUF_C, 320],
-      ["dhw-name", L.X_DHW_C, 320],
-      ["hk1-name", mid1, 420],
-      ["hk2-name", mid2, 420],
-      ["hk1-rad", mid1, (L.RAD_TOP + L.RAD_BOTTOM) / 2],
-      ["hk2-rad", mid2, (L.RAD_TOP + L.RAD_BOTTOM) / 2],
-      ["hk1-tag", mid1, L.RAD_TOP + 100],
-      ["hk2-tag", mid2, L.RAD_TOP + 100],
-      ["vl-schild", 410, L.FLOW_Y],
-      ["rl-schild", 410, L.RET_Y],
-      ["roomheater-badge", L.X_BUF_C, 604],
-      ["dhwheater-badge", L.X_DHW_C, 604],
-      ["dhwforce-badge", L.X_DHW_C, 536],
-      ["sterilization-badge", L.X_DHW_C, 570],
-      ["press-warn", 1330, 742],
-    ];
-    const teile = [];
-    let rest = rumpf;
-    aufrecht.forEach(([id, cx, cy], i) => {
-      const block = schneideGruppe(rest, id);
-      if (!block) return;
-      teile.push({ platz: `<!--G${i}-->`, inhalt:
-        `<g transform="rotate(-90 ${cx} ${cy})">${block.inhalt}</g>` });
-      rest = block.rest.replace(block.inhalt, `<!--G${i}-->`);
-    });
+    const rohr = (d) =>
+      `<path class="pipe-shell" d="${d}"/><path class="pipe" d="${d}"/>`;
 
-    // Etiketten an Ort und Stelle aufrichten, ihre Texte bleiben dabei
-    // unberuehrt und werden nicht zusaetzlich gedreht.
-    const ortTeile = [];
-    anOrt.forEach(([id, cx, cy], i) => {
-      const block = schneideGruppe(rest, id);
-      if (!block) return;
-      const platz = `<!--O${i}-->`;
-      const gedreht = block.inhalt.replace(
-        /^<g/,
-        `<g transform="rotate(-90 ${cx} ${cy})"`
+    // Waagerechter Stutzen von einer senkrechten Leitung zur Baugruppe
+    const stutzenVL = (x, y) => rohr(`M${x} ${y} H ${P.U2 + 9}`);
+    const stutzenRL = (x, y) => rohr(`M${P.U1 - 9} ${y} H ${x}`);
+
+    /* ---------------- Kopf: Waermepumpe ---------------- */
+    const symbole = ["betrieb", "abtauen", "auto", "heizen", "ww", "kuehlen"]
+      .map((k, i) => {
+        const glyph = {
+          betrieb: `<g stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round">
+                      <path d="M0 -10 V -1"/><path d="M-6.4 -6.4 A 9 9 0 1 0 6.4 -6.4"/></g>`,
+          abtauen: `<g stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round">
+                      <path d="M0 -12 V 1 M-7 -8 L 7 0 M-7 0 L 7 -8"/>
+                      <path d="M-2.6 -9.5 L0 -12 L2.6 -9.5"/></g>
+                    <path d="M-5 5 C -2.6 8, -2.6 11, -5 11 C -7.4 11, -7.4 8, -5 5 Z
+                             M5 5 C 7.4 8, 7.4 11, 5 11 C 2.6 11, 2.6 8, 5 5 Z" fill="currentColor"/>`,
+          auto: `<text class="modus-t" x="0" y="7" text-anchor="middle" fill="currentColor">A</text>`,
+          heizen: `<path d="M0 -11 C 6 -4, 8 0, 8 3 A 8 8 0 1 1 -8 3 C -8 -1, -3 -4, 0 -11 Z" fill="currentColor"/>
+                   <path d="M0 -2 C 3 1, 4 3, 4 4.5 A 4 4 0 1 1 -4 4.5 C -4 3, -2 1.5, 0 -2 Z" fill="#0D1219"/>`,
+          ww: `<path d="M0 -11 C 6 -2, 9 2, 9 5 A 9 9 0 0 1 -9 5 C -9 2, -6 -2, 0 -11 Z" fill="currentColor"/>`,
+          kuehlen: `<g stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none">
+                      <path d="M0 -11 V 11 M-9.5 -5.5 L 9.5 5.5 M-9.5 5.5 L 9.5 -5.5"/>
+                      <path d="M-3 -8 L0 -11 L3 -8 M-3 8 L0 11 L3 8"/></g>`,
+        }[k];
+        return `<g class="modus" id="modus-${k}" transform="translate(${
+          190 + (i - 2.5) * 46
+        } 118)">
+          <circle r="18" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>${glyph}</g>`;
+      })
+      .join("");
+
+    const fans =
+      this._config.fan_count === 2
+        ? `${this._fan("fan1", 190, 380, 84)}${this._fan("fan2", 190, 580, 84)}`
+        : this._fan("fan1", 190, 470, 110);
+
+    const kopf = `
+      <g class="unit" id="unit-group">
+        <rect id="unit-glow" x="40" y="40" width="300" height="640" rx="16"
+              fill="none" stroke="#22C55E" stroke-width="10" opacity="0"
+              filter="url(#unitGlowBlur)"/>
+        <rect x="40" y="40" width="300" height="640" rx="16"
+              fill="url(#casing)" stroke="#33415A" stroke-width="2"/>
+        <rect x="40" y="40" width="300" height="640" rx="16" fill="url(#glass)"/>
+        ${symbole}
+        <line x1="70" y1="146" x2="310" y2="146" stroke="#55657F" stroke-width="1"/>
+        <text class="unit-label"   x="129" y="170" text-anchor="middle">Außentemperatur</text>
+        <text class="unit-value-s" id="outside-v" x="129" y="196" text-anchor="middle">--</text>
+        <text class="unit-label"   x="273" y="170" text-anchor="middle">Verdichter</text>
+        <text class="unit-value-s" id="comp-v" x="273" y="196" text-anchor="middle">--</text>
+        ${fans}
+      </g>`;
+
+    /* ---------------- Kopf: Kennzahlen ---------------- */
+    const kennzahlen = `
+      <g id="kennzahlen">
+        <g id="sg-group" opacity="0">
+          <text class="sg-label" x="390" y="80">SG Ready</text>
+          <text class="sg-value" id="sg-text" x="390" y="112">--</text>
+          <g transform="translate(390 128)">
+            ${[0, 1, 2, 3]
+              .map(
+                (i) =>
+                  `<rect x="${i * 36}" y="0" width="32" height="11" rx="5.5" id="sg-seg-${
+                    i + 1
+                  }" fill="#3A4658"/>`
+              )
+              .join("")}
+          </g>
+        </g>
+        <line x1="384" y1="176" x2="716" y2="176" stroke="#55657F" stroke-width="1"/>
+        <g id="pv-group" opacity="0">
+          <text class="sg-label" x="390" y="222">PV Überschuss</text>
+          <text class="pv-value" id="pv-v" x="390" y="252">--</text>
+        </g>
+        <line x1="384" y1="288" x2="716" y2="288" stroke="#55657F" stroke-width="1"/>
+        <g id="verbrauch-group" opacity="0">
+          <text class="sg-label" x="390" y="334">Verbrauch</text>
+          <text class="verbrauch-v" id="power-now-v" x="390" y="364">--</text>
+        </g>
+        <line x1="384" y1="400" x2="716" y2="400" stroke="#55657F" stroke-width="1"/>
+        <text class="sg-label" id="energy-label" x="390" y="446">--</text>
+        <text class="unit-value" id="energy-today-v" x="390" y="482">--</text>
+      </g>`;
+
+    /* ---------------- Hauptleitungen ---------------- */
+    const leitungen = `
+      ${rohr(`M260 680 V ${P.OBEN} H ${P.X_VL} V ${UNTEN}`)}
+      ${rohr(`M${P.X_RL} ${UNTEN} V 680`)}
+      ${rohr(`M${P.X_RL} ${UNTEN} H ${P.X_VL}`)}
+      <path class="flowdots" id="dots-vl-a" d="M260 680 V ${P.OBEN} H ${P.X_VL}"/>
+      <path class="flowdots" id="dots-vl-b" d="M${P.X_VL} ${P.OBEN} V ${UNTEN}"/>
+      <path class="flowdots rev" id="dots-rl-a" d="M${P.X_RL} ${UNTEN} V 680"/>
+      <path class="flowdots rev" id="dots-rl-b" d="M${P.X_VL} ${UNTEN} H ${P.X_RL}"/>
+
+      <g id="vl-schild">
+        <rect x="${P.X_VL - 46}" y="${P.OBEN + 40}" width="92" height="28" rx="8"
+              fill="#0D1219" stroke="#33415A" stroke-width="1"/>
+        <text class="cap-s vl-cap" x="${P.X_VL}" y="${P.OBEN + 59}" text-anchor="middle">Vorlauf</text>
+      </g>
+      <text class="vl-value" id="unit-flow-v" x="${P.X_VL - 34}" y="${P.OBEN + 30}"
+            text-anchor="end">--</text>
+      <g id="rl-schild">
+        <rect x="${P.X_RL - 52}" y="${P.OBEN + 40}" width="104" height="28" rx="8"
+              fill="#0D1219" stroke="#33415A" stroke-width="1"/>
+        <text class="cap-s rl-cap" x="${P.X_RL}" y="${P.OBEN + 59}" text-anchor="middle">Rücklauf</text>
+      </g>
+      <text class="rl-value" id="unit-ret-v" x="${P.X_RL + 34}" y="${P.OBEN + 30}"
+            text-anchor="start">--</text>
+
+      <g id="ventil" transform="translate(${P.X_VL} 830)">
+        <circle r="22" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+        <g id="valve-arrow-down" opacity="1">
+          <path id="valve-down-line" d="M0 -12 V 4" stroke="${NEUTRAL}" stroke-width="3" stroke-linecap="round" fill="none"/>
+          <path id="valve-down-head" d="M-8 2 L 0 14 L 8 2 Z" fill="${NEUTRAL}"/>
+        </g>
+        <g id="valve-arrow-right" opacity="0">
+          <path id="valve-right-line" d="M-12 0 H 4" stroke="${NEUTRAL}" stroke-width="3" stroke-linecap="round" fill="none"/>
+          <path id="valve-right-head" d="M2 -8 L 14 0 L 2 8 Z" fill="${NEUTRAL}"/>
+        </g>
+      </g>
+      <text class="cap-s" id="valve-v" x="${P.X_VL - 34}" y="835" text-anchor="end">--</text>
+
+      <g transform="translate(${P.X_RL} 960)">
+        <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+        <g class="rotor" id="pump-rotor">
+          <path id="pump-blade" d="M0 -15 L5 -4 L16 0 L5 4 L0 15 L-5 4 L-16 0 L-5 -4 Z" fill="#55637A"/>
+          <circle r="4" fill="#0D1219"/>
+        </g>
+      </g>
+      <text class="cap-s"   x="${P.X_RL - 42}" y="942" text-anchor="end">Pumpe</text>
+      <text class="value-s" id="pump-v" x="${P.X_RL - 42}" y="966" text-anchor="end">--</text>
+      <text class="value-s" id="flow-v" x="${P.X_RL - 42}" y="988" text-anchor="end">--</text>
+
+      <g id="press-group" opacity="0">
+        <g transform="translate(${P.X_RL} ${UNTEN - 120})">
+          <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+          <circle r="18" fill="none" stroke="#26303F" stroke-width="3"/>
+          <line id="press-needle" x1="0" y1="0" x2="0" y2="-15"
+                stroke="${NEUTRAL}" stroke-width="3" stroke-linecap="round"/>
+          <circle r="4" fill="#55637A"/>
+        </g>
+        <text class="cap-s"   x="${P.X_RL - 42}" y="${UNTEN - 126}" text-anchor="end">Druck</text>
+        <text class="value-s" id="press-v" x="${P.X_RL - 42}" y="${UNTEN - 102}" text-anchor="end">--</text>
+        <g id="press-warn" opacity="0" transform="translate(${P.X_RL - 150} ${UNTEN - 114})">
+          <path d="M0 -13 L13 10 L-13 10 Z" fill="#3A0E0E"
+                stroke="#D62B2B" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M0 -6 V 3" stroke="#FF6B5E" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cy="7" r="1.6" fill="#FF6B5E"/>
+        </g>
+      </g>`;
+
+    /* ---------------- Liegender Speicher ---------------- */
+    const speicher = (id, y1, y2, name, fuell, mindest, labelKey, badges) => {
+      const h = y2 - y1;
+      const breite = schildBreite(this._config[labelKey], mindest);
+      return `
+        <g class="unit klickbar" id="${id}">
+          <rect x="${P.U1}" y="${y1}" width="${P.U2 - P.U1}" height="${h}" rx="26"
+                fill="#0E1620" stroke="#33415A" stroke-width="2"/>
+          <rect x="${P.U1 + 8}" y="${y1 + 8}" width="${P.U2 - P.U1 - 16}" height="${h - 16}" rx="20"
+                fill="url(#${fuell})"/>
+          ${this._bubbles(`${name}-bubbles`, P.U1 + 8, y1 + 8, P.U2 - P.U1 - 16, h - 16)}
+          <rect x="${P.U1 + 8}" y="${y1 + 8}" width="${P.U2 - P.U1 - 16}" height="${h - 16}" rx="20"
+                fill="url(#glass)"/>
+          <g id="${name}-name">
+            <rect x="${UM - breite / 2}" y="${y1 + 12}" width="${breite}" height="30" rx="8"
+                  fill="#0D1219" stroke="#33415A" stroke-width="1" opacity="0.5"/>
+            <text class="cap" x="${UM}" y="${y1 + 27}" text-anchor="middle"
+                  dominant-baseline="middle">${escapeHtml(this._config[labelKey])}</text>
+          </g>
+          <text class="value-l"  id="${name}-v"  x="${UM}" y="${y1 + h / 2 + 24}" text-anchor="middle">--</text>
+          <text class="value-sp" id="${name}-sp" x="${UM}" y="${y1 + h / 2 + 48}" text-anchor="middle"></text>
+          ${badges || ""}
+        </g>`;
+    };
+
+    const puffer =
+      stutzenVL(P.X_VL, PUF[0] + 60) +
+      stutzenRL(P.X_RL, PUF[1] - 60) +
+      `<path class="flowdots" id="dots-buf" d="M${P.X_VL} ${PUF[0] + 60} H ${P.U2 + 9}"/>
+       <path class="flowdots rev" id="dots-buf2" d="M${P.U1 - 9} ${PUF[1] - 60} H ${P.X_RL}"/>` +
+      speicher("buffer-group", PUF[0], PUF[1], "buf", "bufferFill", 150, "label_buffer", `
+        <g id="roomheater-badge" class="badge" transform="translate(${UM} ${PUF[1] - 48})">
+          <rect x="-56" y="-15" width="112" height="30" rx="15"
+                fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
+          <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
+        </g>`);
+
+    const warmwasser =
+      stutzenVL(P.X_VL, WW[0] + 44) +
+      stutzenRL(P.X_RL, WW[1] - 44) +
+      `<path class="flowdots" id="dots-dhw" d="M${P.X_VL} ${WW[0] + 44} H ${P.U2 + 9}"/>
+       <path class="flowdots rev" id="dots-dhw2" d="M${P.U1 - 9} ${WW[1] - 44} H ${P.X_RL}"/>` +
+      speicher("dhw-group", WW[0], WW[1], "dhw", "dhwFill", 134, "label_dhw", `
+        <g id="dhwforce-badge" class="badge" transform="translate(${UM - 120} ${WW[0] + 70})">
+          <rect x="-56" y="-15" width="112" height="30" rx="15"
+                fill="#08243A" stroke="#3B9BE0" stroke-width="1.5"/>
+          <text class="badge-t" x="0" y="5" text-anchor="middle">Aufheizen</text>
+        </g>
+        <g id="sterilization-badge" class="badge" transform="translate(${UM} ${WW[0] + 70})">
+          <rect x="-56" y="-15" width="112" height="30" rx="15"
+                fill="#2B1240" stroke="#A855F7" stroke-width="1.5"/>
+          <text class="badge-t" x="0" y="5" text-anchor="middle">Legionellen</text>
+        </g>
+        <g id="dhwheater-badge" class="badge" transform="translate(${UM + 120} ${WW[0] + 70})">
+          <rect x="-56" y="-15" width="112" height="30" rx="15"
+                fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
+          <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
+        </g>`);
+
+    /* ---------------- Sekundaerkreis und Heizkreise ---------------- */
+    const sekEnde = hk2 ? HK2[1] - 60 : HK1[1] - 60;
+    const sekundaer = `
+      ${rohr(`M${P.U2} ${PUF[1] - 20} H ${P.S_VL} V ${hk2 ? HK2[0] + 60 : HK1[0] + 60}`)}
+      ${rohr(`M${P.U1} ${PUF[1] - 20} H ${P.S_RL} V ${sekEnde}`)}
+      <path class="flowdots" id="dots-sf-a" d="M${P.U2} ${PUF[1] - 20} H ${P.S_VL} V ${HK1[0] + 60}"/>
+      <path class="flowdots" id="dots-sf-b" d="M${P.S_VL} ${HK1[0] + 60} V ${hk2 ? HK2[0] + 60 : HK1[0] + 60}"/>
+      <path class="flowdots rev" id="dots-sr-a" d="M${P.S_RL} ${HK1[1] - 60} V ${PUF[1] - 20} H ${P.U1}"/>
+      <path class="flowdots rev" id="dots-sr-b" d="M${P.S_RL} ${sekEnde} V ${HK1[1] - 60}"/>`;
+
+    const heizkreis = (n, y1, y2) => {
+      const h = y2 - y1;
+      const breite = schildBreite(
+        this._config[`label_hk${n}`] || `Heizkreis ${n}`,
+        180
       );
-      ortTeile.push({ platz, inhalt: gedreht });
-      rest = rest.replace(block.inhalt, platz);
-    });
+      let rippen = "";
+      for (let x = P.U1 + 34; x < P.U2 - 20; x += 34) {
+        rippen += `<line x1="${x}" y1="${y1 + 14}" x2="${x}" y2="${y2 - 14}"/>`;
+      }
+      return `
+        ${rohr(`M${P.S_VL} ${y1 + 60} H ${P.U2 + 9}`)}
+        ${rohr(`M${P.U1 - 9} ${y2 - 60} H ${P.S_RL}`)}
+        <path class="flowdots" id="dots-hk${n}" d="M${P.S_VL} ${y1 + 60} H ${P.U2 + 9}"/>
+        <path class="flowdots rev" id="dots-hk${n}b" d="M${P.U1 - 9} ${y2 - 60} H ${P.S_RL}"/>
+        <g class="circuit klickbar" id="hk${n}-group">
+          <g id="hk${n}-rad">
+            <rect x="${P.U1}" y="${y1}" width="${P.U2 - P.U1}" height="${h}" rx="18"
+                  fill="url(#rad${n}Fill)" stroke="#33415A" stroke-width="2"/>
+            <g stroke="#0D1219" stroke-width="7" opacity="0.5">${rippen}</g>
+            <rect x="${P.U1}" y="${y1}" width="${P.U2 - P.U1}" height="${h}" rx="18" fill="url(#glass)"/>
+          </g>
+          <g id="hk${n}-name">
+            <rect x="${UM - breite / 2}" y="${y1 + 10}" width="${breite}" height="30" rx="8"
+                  fill="#0D1219" stroke="#33415A" stroke-width="1" opacity="0.5"/>
+            <text class="cap" x="${UM}" y="${y1 + 25}" text-anchor="middle"
+                  dominant-baseline="middle">${escapeHtml(
+                    this._config[`label_hk${n}`] || `Heizkreis ${n}`
+                  )}</text>
+          </g>
+          <g id="hk${n}-tag" transform="translate(${UM} ${y1 + h / 2 + 18})">
+            <rect x="-100" y="-26" width="200" height="52" rx="10" fill="#0B1017" opacity="0.9"/>
+            <text class="tag-l" x="-86" y="6">Wasser</text>
+            <text class="tag-v" id="hk${n}-water-v" x="86" y="8" text-anchor="end">--</text>
+          </g>
+          <g transform="translate(${P.U1 - 50} ${y1 + 60})">
+            <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+            <g class="rotor" id="hk${n}-rotor">
+              <path id="hk${n}-blade" d="M0 -13 L4 -3 L14 0 L4 3 L0 13 L-4 3 L-14 0 L-4 -3 Z" fill="#55637A"/>
+              <circle r="3.5" fill="#0D1219"/>
+            </g>
+          </g>
+          <text class="value-s" id="hk${n}-pump-v" x="${P.U1 - 50}" y="${y1 + 104}"
+                text-anchor="middle">--</text>
+        </g>`;
+    };
 
-    // Alle uebrigen Texte einzeln zurueckdrehen.
-    rest = rest.replace(
-      /<text([^>]*?)x="([^"]+)"([^>]*?)y="([^"]+)"([^>]*?)>/g,
-      (m, a1, x, a2, y, a3) =>
-        /transform=/.test(m)
-          ? m
-          : `<text${a1}x="${x}"${a2}y="${y}"${a3} transform="rotate(-90 ${x} ${y})">`
-    );
-    ortTeile.forEach((t) => { rest = rest.replace(t.platz, t.inhalt); });
-
-    // Der Rest wird nachgerueckt, die aufgerichteten Bloecke bleiben stehen.
-    rest = `<g transform="translate(${NACH} 0)">${rest}</g>`;
-    teile.forEach((t) => { rest = rest.replace(t.platz, `</g>${t.inhalt}<g transform="translate(${NACH} 0)">`); });
+    /* ---------------- Zirkulation ---------------- */
+    const zirk = `
+      <g id="zirkulation-group" opacity="0">
+        ${rohr(`M${P.U2} ${WW[0] + 84} H ${P.U2 + 60} M${P.U2 + 60} ${WW[0] + 84} V ${WW[1] - 84} M${P.U2 + 60} ${WW[1] - 84} H ${P.U2}`)}
+        <path class="flowdots" id="dots-zirk-h1" d="M${P.U2} ${WW[0] + 84} H ${P.U2 + 60}"/>
+        <path class="flowdots" id="dots-zirk-v" d="M${P.U2 + 60} ${WW[0] + 84} V ${WW[1] - 84}"/>
+        <path class="flowdots" id="dots-zirk-h2" d="M${P.U2 + 60} ${WW[1] - 84} H ${P.U2}"/>
+        <g transform="translate(${P.U2 + 60} ${(WW[0] + WW[1]) / 2})">
+          <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
+          <g class="rotor" id="zirk-rotor">
+            <path id="zirk-blade" d="M0 -13 L4 -3 L14 0 L4 3 L0 13 L-4 3 L-14 0 L-4 -3 Z" fill="#55637A"/>
+            <circle r="3.5" fill="#0D1219"/>
+          </g>
+        </g>
+        <text class="cap-s" x="${P.U2 + 60}" y="${WW[0] + 60}" text-anchor="middle">Zirkulation</text>
+        <text class="value-s" id="zirk-v" x="${P.U2 + 60}" y="${(WW[0] + WW[1]) / 2 + 46}"
+              text-anchor="middle">--</text>
+      </g>`;
 
     return `
-    <svg viewBox="0 0 ${hoehe} ${breite + NACH}" class="lhc-svg" role="img"
+    <svg viewBox="0 0 ${P.W} ${HOEHE}" class="lhc-svg" role="img"
          preserveAspectRatio="xMidYMid meet">
-      <g transform="translate(${hoehe + 80} 0) rotate(90)">${rest}</g>
+      ${this._defs()}
+      ${kopf}
+      ${kennzahlen}
+      ${leitungen}
+      ${puffer}
+      ${sekundaer}
+      ${heizkreis(1, HK1[0], HK1[1])}
+      ${hk2 ? heizkreis(2, HK2[0], HK2[1]) : ""}
+      ${warmwasser}
+      ${zirk}
     </svg>`;
   }
 
-  _svgQuer() {
-    const two = this._config.fan_count === 2;
-    // Luefter uebereinander, wie beim echten Aussengeraet.
-    const fans = two
-      ? `${this._fan("fan1", 190, 360, 96)}${this._fan("fan2", 190, 608, 96)}`
-      : this._fan("fan1", 190, 480, 120);
-
-    const F = L.FLOW_Y;
-    const R = L.RET_Y;
-    const SF = L.SEC_FLOW;
-    const SR = L.SEC_RET;
-    // Jede Sekundaerleitung endet an ihrem letzten Anschluss:
-    // der Vorlauf am letzten Abgang, der Ruecklauf am letzten Zulauf.
-    // Fehlt der zweite Heizkreis, ruecken alle Baugruppen rechts davon
-    // nach links auf dessen Platz. Sonst klafft dort eine Luecke.
-    const DX = this._config.hk_count === 2 ? 0 : 260;
-    const SEC_VL_ENDE = this._config.hk_count === 2 ? L.X_HK2_DROP : L.X_HK1_DROP;
-    const SEC_RL_ENDE = this._config.hk_count === 2 ? L.X_HK2_BACK : L.X_HK1_BACK;
-    const T = L.TANK_TOP;
-    const B = L.TANK_BOTTOM;
-    const C = L.CAP_Y;
-    const SG = L.SG_Y;
-    const hk2 = this._config.hk_count === 2;
-
-    return `
-    <svg viewBox="0 80 ${L.W - DX} ${L.H}" class="lhc-svg" role="img"
-         aria-label="Schema der Wärmepumpenanlage">
-      <defs>
+  /** Farbverlaeufe und Filter, von beiden Anordnungen genutzt. */
+  _defs() {
+    return `      <defs>
         <filter id="unitGlowBlur" x="-30%" y="-15%" width="160%" height="130%">
           <feGaussianBlur stdDeviation="5" result="b"/>
           <feMerge>
@@ -1821,7 +2032,37 @@ class LutarymHeatpumpCard extends HTMLElement {
         <clipPath id="dhwClip">
           <rect x="1448" y="298" width="154" height="334" rx="28"/>
         </clipPath>
-      </defs>
+      </defs>`;
+  }
+
+  _svgQuer() {
+    const two = this._config.fan_count === 2;
+    // Luefter uebereinander, wie beim echten Aussengeraet.
+    const fans = two
+      ? `${this._fan("fan1", 190, 360, 96)}${this._fan("fan2", 190, 608, 96)}`
+      : this._fan("fan1", 190, 480, 120);
+
+    const F = L.FLOW_Y;
+    const R = L.RET_Y;
+    const SF = L.SEC_FLOW;
+    const SR = L.SEC_RET;
+    // Jede Sekundaerleitung endet an ihrem letzten Anschluss:
+    // der Vorlauf am letzten Abgang, der Ruecklauf am letzten Zulauf.
+    // Fehlt der zweite Heizkreis, ruecken alle Baugruppen rechts davon
+    // nach links auf dessen Platz. Sonst klafft dort eine Luecke.
+    const DX = this._config.hk_count === 2 ? 0 : 260;
+    const SEC_VL_ENDE = this._config.hk_count === 2 ? L.X_HK2_DROP : L.X_HK1_DROP;
+    const SEC_RL_ENDE = this._config.hk_count === 2 ? L.X_HK2_BACK : L.X_HK1_BACK;
+    const T = L.TANK_TOP;
+    const B = L.TANK_BOTTOM;
+    const C = L.CAP_Y;
+    const SG = L.SG_Y;
+    const hk2 = this._config.hk_count === 2;
+
+    return `
+    <svg viewBox="0 80 ${L.W - DX} ${L.H}" class="lhc-svg" role="img"
+         aria-label="Schema der Wärmepumpenanlage">
+${this._defs()}
 
       <!-- Sammelleitungen -->
       <path class="pipe-shell" d="M${L.X_PIPE_L} ${R} H ${L.X_DHW_C - DX}"/>

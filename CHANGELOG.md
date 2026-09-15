@@ -29,11 +29,13 @@
 - Animation läuft nach dem Wiederanhängen der Karte weiter
 - Ventilbeschriftung ergänzt, sie hatte kein Ziel im SVG
 - Waagerechte Ankerpunkte in benannte Konstanten überführt
+- Hochformat als eigene Anordnung: Wärmepumpe und Kennzahlen oben
+  nebeneinander, darunter senkrecht Vorlauf rechts und Rücklauf links,
+  liegende Speicher, Heizkörper mit senkrechten Rippen, eigener
+  Sekundärkreis. Umschaltung im Einstellungsdialog unter Anordnung
 - Trennlinie im Gehäuse zwischen Symbolreihe und den Werten
 - Schilder Vorlauf und Rücklauf in der Farbe des zugehörigen Wertes
-- Hochformat: Etiketten und Abzeichen werden als Ganzes aufgerichtet,
   dadurch passen Kasten und Text wieder zusammen
-- Hochformat: dieselbe Zeichnung um 90 Grad gedreht, Texte bleiben
   waagerecht. Wärmepumpe und Kennzahlen stehen aufrecht nebeneinander
   am Kopf, alles Weitere rückt darunter nach. Umschaltung im
   Einstellungsdialog unter Anordnung
