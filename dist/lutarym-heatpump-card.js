@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.7.0";
+const CARD_VERSION = "2.8.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -528,6 +528,8 @@ const DEFAULT_CONFIG = {
   fan_count: 2,
   hk_count: 2,
   layout: "quer",
+  card_width: 0,
+  card_height: 0,
   scale_min: 20,
   scale_max: 60,
   outdoor_min: -15,
@@ -860,7 +862,31 @@ class LutarymHeatpumpCard extends HTMLElement {
       this._build();
       this._built = true;
     }
+    this._groesse();
     this._update();
+  }
+
+  /**
+   * Breite und Hoehe aus der Konfiguration anwenden.
+   * Null bedeutet automatisch, dann fuellt die Karte ihre Spalte und
+   * behaelt ihr Seitenverhaeltnis.
+   */
+  _groesse() {
+    const karte = this.shadowRoot && this.shadowRoot.querySelector("ha-card");
+    const svg = this.shadowRoot && this.shadowRoot.querySelector("svg");
+    if (!karte || !svg) return;
+    const b = Number(this._config.card_width) || 0;
+    const h = Number(this._config.card_height) || 0;
+    karte.style.maxWidth = b > 0 ? `${b}px` : "";
+    karte.style.marginInline = b > 0 ? "auto" : "";
+    if (h > 0) {
+      // Feste Hoehe: das Bild passt sich an und bleibt vollstaendig sichtbar.
+      svg.style.height = `${h}px`;
+      svg.style.width = "100%";
+    } else {
+      svg.style.height = "";
+      svg.style.width = "";
+    }
   }
 
   /* -------------------- Aufbau -------------------- */
@@ -3447,6 +3473,14 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
             </select>
           </label>
           <label class="ed-row">
+            <span>Breite<em>Pixel, 0 heißt automatisch</em></span>
+            <input type="number" id="opt-breite" min="0" step="10">
+          </label>
+          <label class="ed-row">
+            <span>Höhe<em>Pixel, 0 heißt automatisch</em></span>
+            <input type="number" id="opt-hoehe" min="0" step="10">
+          </label>
+          <label class="ed-row">
             <span>Anzahl Heizkreise</span>
             <select id="opt-hk"><option value="1">1 Heizkreis</option><option value="2">2 Heizkreise</option></select>
           </label>
@@ -3535,6 +3569,8 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     };
     bind("opt-fans", (el) => put({ fan_count: parseInt(el.value, 10) }));
     bind("opt-layout", (el) => put({ layout: el.value }));
+    bind("opt-breite", (el) => put({ card_width: parseInt(el.value, 10) || 0 }));
+    bind("opt-hoehe", (el) => put({ card_height: parseInt(el.value, 10) || 0 }));
     bind("opt-hk", (el) => put({ hk_count: parseInt(el.value, 10) }));
     bind("opt-min", (el) => put({ scale_min: parseFloat(el.value) }));
     bind("opt-max", (el) => put({ scale_max: parseFloat(el.value) }));
@@ -3593,6 +3629,8 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     };
     put("opt-fans", String(this._config.fan_count));
     put("opt-layout", this._config.layout || "quer");
+    put("opt-breite", String(this._config.card_width || 0));
+    put("opt-hoehe", String(this._config.card_height || 0));
     put("opt-hk", String(this._config.hk_count));
     put("opt-min", this._config.scale_min);
     put("opt-max", this._config.scale_max);

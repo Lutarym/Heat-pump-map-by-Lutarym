@@ -1,3 +1,13 @@
+# v2.8.0
+- Hochformat als eigene Anordnung: Wärmepumpe und Kennzahlen oben
+  nebeneinander, darunter senkrecht Vorlauf rechts und Rücklauf links,
+  liegende Speicher, Heizkörper mit senkrechten Rippen, eigener
+  Sekundärkreis
+- Umschaltung Quer- und Hochformat im Einstellungsdialog
+- Breite und Höhe der Karte im Einstellungsdialog einstellbar
+- Trennlinie im Gehäuse zwischen Symbolreihe und den Werten
+- Schilder Vorlauf und Rücklauf in der Farbe des zugehörigen Wertes
+
 # v2.7.0
 - Zirkulationsleitung: Ecken wie bei den übrigen Leitungen
 - Zirkulationsleitung liegt hinter dem Warmwasserspeicher
@@ -29,12 +39,6 @@
 - Animation läuft nach dem Wiederanhängen der Karte weiter
 - Ventilbeschriftung ergänzt, sie hatte kein Ziel im SVG
 - Waagerechte Ankerpunkte in benannte Konstanten überführt
-- Hochformat als eigene Anordnung: Wärmepumpe und Kennzahlen oben
-  nebeneinander, darunter senkrecht Vorlauf rechts und Rücklauf links,
-  liegende Speicher, Heizkörper mit senkrechten Rippen, eigener
-  Sekundärkreis. Umschaltung im Einstellungsdialog unter Anordnung
-- Trennlinie im Gehäuse zwischen Symbolreihe und den Werten
-- Schilder Vorlauf und Rücklauf in der Farbe des zugehörigen Wertes
   dadurch passen Kasten und Text wieder zusammen
   waagerecht. Wärmepumpe und Kennzahlen stehen aufrecht nebeneinander
   am Kopf, alles Weitere rückt darunter nach. Umschaltung im
