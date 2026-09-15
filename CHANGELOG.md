@@ -31,6 +31,8 @@
 - Waagerechte Ankerpunkte in benannte Konstanten überführt
 - Trennlinie im Gehäuse zwischen Symbolreihe und den Werten
 - Schilder Vorlauf und Rücklauf in der Farbe des zugehörigen Wertes
+- Hochformat: Etiketten und Abzeichen werden als Ganzes aufgerichtet,
+  dadurch passen Kasten und Text wieder zusammen
 - Hochformat: dieselbe Zeichnung um 90 Grad gedreht, Texte bleiben
   waagerecht. Wärmepumpe und Kennzahlen stehen aufrecht nebeneinander
   am Kopf, alles Weitere rückt darunter nach. Umschaltung im

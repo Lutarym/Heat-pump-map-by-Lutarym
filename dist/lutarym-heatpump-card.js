@@ -1686,6 +1686,28 @@ class LutarymHeatpumpCard extends HTMLElement {
     ];
     // Alles Uebrige rueckt nach, damit es unter dem Kopf beginnt.
     const NACH = 160;
+
+    // Etiketten und Abzeichen bestehen aus Kasten und Text. Sie muessen
+    // als Ganzes aufgerichtet werden, sonst dreht der Kasten mit und der
+    // Text steht quer darin. Gedreht wird um die eigene Mitte, die Lage
+    // bleibt dadurch unveraendert.
+    const mid1 = (L.X_HK1_A + L.X_HK1_B) / 2;
+    const mid2 = (L.X_HK2_A + L.X_HK2_B) / 2;
+    const anOrt = [
+      ["buf-name", L.X_BUF_C, 320],
+      ["dhw-name", L.X_DHW_C, 320],
+      ["hk1-name", mid1, 420],
+      ["hk2-name", mid2, 420],
+      ["hk1-tag", mid1, L.RAD_TOP + 100],
+      ["hk2-tag", mid2, L.RAD_TOP + 100],
+      ["vl-schild", 410, L.FLOW_Y],
+      ["rl-schild", 410, L.RET_Y],
+      ["roomheater-badge", L.X_BUF_C, 604],
+      ["dhwheater-badge", L.X_DHW_C, 604],
+      ["dhwforce-badge", L.X_DHW_C, 536],
+      ["sterilization-badge", L.X_DHW_C, 570],
+      ["press-warn", 1330, 742],
+    ];
     const teile = [];
     let rest = rumpf;
     aufrecht.forEach(([id, cx, cy], i) => {
@@ -1696,6 +1718,21 @@ class LutarymHeatpumpCard extends HTMLElement {
       rest = block.rest.replace(block.inhalt, `<!--G${i}-->`);
     });
 
+    // Etiketten an Ort und Stelle aufrichten, ihre Texte bleiben dabei
+    // unberuehrt und werden nicht zusaetzlich gedreht.
+    const ortTeile = [];
+    anOrt.forEach(([id, cx, cy], i) => {
+      const block = schneideGruppe(rest, id);
+      if (!block) return;
+      const platz = `<!--O${i}-->`;
+      const gedreht = block.inhalt.replace(
+        /^<g/,
+        `<g transform="rotate(-90 ${cx} ${cy})"`
+      );
+      ortTeile.push({ platz, inhalt: gedreht });
+      rest = rest.replace(block.inhalt, platz);
+    });
+
     // Alle uebrigen Texte einzeln zurueckdrehen.
     rest = rest.replace(
       /<text([^>]*?)x="([^"]+)"([^>]*?)y="([^"]+)"([^>]*?)>/g,
@@ -1704,6 +1741,8 @@ class LutarymHeatpumpCard extends HTMLElement {
           ? m
           : `<text${a1}x="${x}"${a2}y="${y}"${a3} transform="rotate(-90 ${x} ${y})">`
     );
+    ortTeile.forEach((t) => { rest = rest.replace(t.platz, t.inhalt); });
+
     // Der Rest wird nachgerueckt, die aufgerichteten Bloecke bleiben stehen.
     rest = `<g transform="translate(${NACH} 0)">${rest}</g>`;
     teile.forEach((t) => { rest = rest.replace(t.platz, `</g>${t.inhalt}<g transform="translate(${NACH} 0)">`); });
@@ -1919,6 +1958,17 @@ class LutarymHeatpumpCard extends HTMLElement {
               text-anchor="middle">--</text>
         <line x1="380" y1="${F + 245}" x2="510" y2="${F + 245}" stroke="#55657F" stroke-width="1"/>
       </g>
+      <g id="verbrauch-group" opacity="0">
+        <text class="sg-label" x="${L.X_COL}" y="${F + 285}" text-anchor="middle">Leistung</text>
+        <text class="verbrauch-v" id="power-now-v" x="${L.X_COL}" y="${F + 323}"
+              text-anchor="middle">--</text>
+        <line x1="380" y1="${F + 340}" x2="510" y2="${F + 340}" stroke="#55657F" stroke-width="1"/>
+        <text class="sg-label" id="energy-label" x="${L.X_COL}" y="${F + 380}"
+              text-anchor="middle">--</text>
+        <text class="unit-value" id="energy-today-v" x="${L.X_COL}" y="${F + 420}"
+              text-anchor="middle">--</text>
+      </g>
+      </g>
 
       <!-- Vorlauf am Ausgang, Rücklauf am Eingang -->
       <!-- Die Beschriftung liegt auf der Leitung und unterbricht sie,
@@ -1939,17 +1989,8 @@ class LutarymHeatpumpCard extends HTMLElement {
             text-anchor="middle">--</text>
 
       <!-- Stromverbrauch der Wärmepumpe, aus dem Shelly PM -->
-      <g id="verbrauch-group" opacity="0">
-        <text class="sg-label" x="${L.X_COL}" y="${F + 285}" text-anchor="middle">Leistung</text>
-        <text class="verbrauch-v" id="power-now-v" x="${L.X_COL}" y="${F + 323}"
-              text-anchor="middle">--</text>
-        <line x1="380" y1="${F + 340}" x2="510" y2="${F + 340}" stroke="#55657F" stroke-width="1"/>
-        <text class="sg-label" id="energy-label" x="${L.X_COL}" y="${F + 380}"
-              text-anchor="middle">--</text>
-        <text class="unit-value" id="energy-today-v" x="${L.X_COL}" y="${F + 420}"
-              text-anchor="middle">--</text>
-      </g>
-      </g>
+      
+      
 
       <!-- Primärpumpe -->
       <g>
@@ -1979,12 +2020,12 @@ class LutarymHeatpumpCard extends HTMLElement {
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
-        <rect x="${L.X_BUF_C - schildBreite(this._config.label_buffer, 150) / 2}" y="305"
+        <g id="buf-name"><rect x="${L.X_BUF_C - schildBreite(this._config.label_buffer, 150) / 2}" y="305"
               width="${schildBreite(this._config.label_buffer, 150)}" height="30" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="1" opacity="0.5"/>
         <text class="cap" x="${L.X_BUF_C}" y="320" text-anchor="middle" dominant-baseline="middle">${escapeHtml(
           this._config.label_buffer
-        )}</text>
+        )}</text></g>
       </g>
 
       <!-- Wasserdruck -->
@@ -2077,12 +2118,12 @@ class LutarymHeatpumpCard extends HTMLElement {
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
-        <rect x="${L.X_DHW_C - schildBreite(this._config.label_dhw, 134) / 2}" y="305"
+        <g id="dhw-name"><rect x="${L.X_DHW_C - schildBreite(this._config.label_dhw, 134) / 2}" y="305"
               width="${schildBreite(this._config.label_dhw, 134)}" height="30" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="1" opacity="0.5"/>
         <text class="cap" x="${L.X_DHW_C}" y="320" text-anchor="middle" dominant-baseline="middle">${escapeHtml(
           this._config.label_dhw
-        )}</text>
+        )}</text></g>
       </g>
 
     </svg>`;
@@ -2134,19 +2175,19 @@ class LutarymHeatpumpCard extends HTMLElement {
           <rect x="${x1}" y="${RT}" width="${x2 - x1}" height="${RB - RT}" rx="10" fill="url(#glass)"/>
         </g>
 
-        <g transform="translate(${mid} ${RT + 100})">
+        <g id="hk${n}-tag" transform="translate(${mid} ${RT + 100})">
           <rect x="-100" y="-26" width="200" height="52" rx="10"
                 fill="#0B1017" opacity="0.9"/>
           <text class="tag-l" x="-86" y="6">Wasser</text>
           <text class="tag-v" id="hk${n}-water-v" x="86" y="8" text-anchor="end">--</text>
         </g>
 
-        <rect x="${mid - schildBreite(this._config[`label_hk${n}`] || `Heizkreis ${n}`, 180) / 2}" y="405"
+        <g id="hk${n}-name"><rect x="${mid - schildBreite(this._config[`label_hk${n}`] || `Heizkreis ${n}`, 180) / 2}" y="405"
               width="${schildBreite(this._config[`label_hk${n}`] || `Heizkreis ${n}`, 180)}" height="30" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="1" opacity="0.5"/>
         <text class="cap" x="${mid}" y="420" text-anchor="middle" dominant-baseline="middle">${escapeHtml(
           this._config[`label_hk${n}`] || `Heizkreis ${n}`
-        )}</text>
+        )}</text></g>
       </g>`;
   }
 
