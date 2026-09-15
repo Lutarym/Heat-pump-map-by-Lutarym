@@ -1,3 +1,20 @@
+# v2.9.0
+- Delta für Puffer und Warmwasser: ab welcher Abweichung nachgeheizt wird.
+  Heizung über TOP23 Heat_Delta, Warmwasser über TOP22 DHW_Heat_Delta
+- Hochformat: Vorlauf und Rücklauf sind unten nicht mehr direkt verbunden,
+  der Kreis schließt sich über die Speicher
+- Hochformat: Zirkulationskreis vergrößert
+- Hochformat: Warmwasserspeicher höher, Heizstab im Puffer nach oben
+
+# v2.8.1
+- Hochformat: Fließrichtung der Animation korrigiert, Rückläufe liefen
+  verkehrt herum
+- Hochformat: Pumpe der Heizkreise und Zirkulationskreis versetzt, ihre
+  Beschriftungen lagen auf Leitungen
+- Hochformat: Symbolreihe, Trennlinie, Werte und Lüfter auf dieselben
+  Abstände wie im Querformat gebracht
+- Hochformat: Pumpen- und Druckbeschriftung ragte aus der Karte
+
 # v2.8.0
 - Hochformat als eigene Anordnung: Wärmepumpe und Kennzahlen oben
   nebeneinander, darunter senkrecht Vorlauf rechts und Rücklauf links,

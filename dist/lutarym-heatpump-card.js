@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.8.0";
+const CARD_VERSION = "2.9.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -317,6 +317,8 @@ const INTEGRATION_DOMAIN = "heishamon_lutarym";
 
 const TOPIC_TO_FIELD = {
   top0: "heatpump_state",
+  top22: "dhw_heat_delta",
+  top23: "heat_delta",
   top2: "dhw_force_state",
   top69: "sterilization_state",
   top14: "outside_temp",
@@ -490,6 +492,7 @@ const ENTITY_FIELDS = [
   { key: "buffer_temp", label: "Puffertemperatur", group: "Heizungspuffer", hint: "TOP46" },
   { key: "buffer_installed", label: "Puffer vorhanden", group: "Heizungspuffer", hint: "TOP99" },
   { key: "buffer_switch", label: "Pufferbetrieb ein und aus", group: "Heizungspuffer", hint: "SetBuffer, switch" },
+  { key: "heat_delta", label: "Heizung Delta", group: "Heizungspuffer", hint: "TOP23" },
   { key: "buffer_target", label: "Puffer Zieltemperatur", group: "Heizungspuffer", hint: "TOP7, Soll Vorlauf" },
   { key: "room_heater", label: "Heizstab Heizung", group: "Heizungspuffer", hint: "TOP59" },
   { key: "room_heater_switch", label: "Heizstab Heizung schalten", group: "Heizungspuffer", hint: "SetRoomHeaterState, switch" },
@@ -510,6 +513,7 @@ const ENTITY_FIELDS = [
 
   { key: "dhw_installed", label: "Warmwasser vorhanden", group: "Warmwasser", hint: "TOP100" },
   { key: "dhw_temp", label: "Warmwasser Isttemperatur", group: "Warmwasser", hint: "TOP10" },
+  { key: "dhw_heat_delta", label: "Warmwasser Delta", group: "Warmwasser", hint: "TOP22" },
   { key: "dhw_setpoint", label: "Warmwasser Sollwert", group: "Warmwasser", hint: "TOP9, number" },
   { key: "dhw_heater", label: "Heizstab Warmwasser", group: "Warmwasser", hint: "TOP58" },
   { key: "dhw_force", label: "Einmalig aufheizen", group: "Warmwasser", hint: "SetForceDHW, switch" },
@@ -636,7 +640,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       power_now: 1240, energy_today: 8.4,
       flow_temp: 39.2, return_temp: 33.1, pump_speed: 2400, pump_flow: 18.6,
       three_way_valve: 0, water_pressure: 1.8, defrost: 0, error: "0",
-      buffer_temp: 38.4, buffer_target: 42, room_heater: 0, buffer_installed: 1,
+      buffer_temp: 38.4, buffer_target: 42, heat_delta: 2, dhw_heat_delta: -8, room_heater: 0, buffer_installed: 1,
       hk1_water: 34.2, hk1_water_target: 36, hk1_pump: 1,
       hk1_setpoint: 36, hk2_water: 30.1, hk2_water_target: 32,
       hk2_pump: 0, hk2_setpoint: 32, zones_state: 2,
@@ -1697,9 +1701,9 @@ class LutarymHeatpumpCard extends HTMLElement {
     const hk2 = this._config.hk_count === 2;
     const P = {
       W: 760,
-      X_RL: 140, X_VL: 700,      // Primaerkreis
-      S_RL: 190, S_VL: 640,      // Sekundaerkreis vom Puffer
-      U1: 240, U2: 600,          // Kanten der liegenden Baugruppen
+      X_RL: 80, X_VL: 710,      // Primaerkreis
+      S_RL: 170, S_VL: 650,      // Sekundaerkreis vom Puffer
+      U1: 260, U2: 580,          // Kanten der liegenden Baugruppen
       OBEN: 740,
     };
     const UM = (P.U1 + P.U2) / 2;
@@ -1709,9 +1713,9 @@ class LutarymHeatpumpCard extends HTMLElement {
     const PUF = [860, 1080];
     const HK1 = [1140, 1340];
     const HK2 = [1380, 1580];
-    const WW = hk2 ? [1620, 1820] : [1380, 1580];
+    const WW = hk2 ? [1600, 1860] : [1360, 1620];
     const UNTEN = WW[1] + 40;
-    const HOEHE = UNTEN + 100;
+    const HOEHE = WW[1] + 60;
 
     const rohr = (d) =>
       `<path class="pipe-shell" d="${d}"/><path class="pipe" d="${d}"/>`;
@@ -1740,16 +1744,16 @@ class LutarymHeatpumpCard extends HTMLElement {
                       <path d="M-3 -8 L0 -11 L3 -8 M-3 8 L0 11 L3 8"/></g>`,
         }[k];
         return `<g class="modus" id="modus-${k}" transform="translate(${
-          190 + (i - 2.5) * 46
-        } 118)">
+          190 + (i - 2.5) * 44
+        } 78)">
           <circle r="18" fill="#0D1219" stroke="#33415A" stroke-width="1.5"/>${glyph}</g>`;
       })
       .join("");
 
     const fans =
       this._config.fan_count === 2
-        ? `${this._fan("fan1", 190, 380, 84)}${this._fan("fan2", 190, 580, 84)}`
-        : this._fan("fan1", 190, 470, 110);
+        ? `${this._fan("fan1", 190, 280, 96)}${this._fan("fan2", 190, 528, 96)}`
+        : this._fan("fan1", 190, 400, 120);
 
     const kopf = `
       <g class="unit" id="unit-group">
@@ -1760,11 +1764,11 @@ class LutarymHeatpumpCard extends HTMLElement {
               fill="url(#casing)" stroke="#33415A" stroke-width="2"/>
         <rect x="40" y="40" width="300" height="640" rx="16" fill="url(#glass)"/>
         ${symbole}
-        <line x1="70" y1="146" x2="310" y2="146" stroke="#55657F" stroke-width="1"/>
-        <text class="unit-label"   x="129" y="170" text-anchor="middle">Außentemperatur</text>
-        <text class="unit-value-s" id="outside-v" x="129" y="196" text-anchor="middle">--</text>
-        <text class="unit-label"   x="273" y="170" text-anchor="middle">Verdichter</text>
-        <text class="unit-value-s" id="comp-v" x="273" y="196" text-anchor="middle">--</text>
+        <line x1="70" y1="105" x2="310" y2="105" stroke="#55657F" stroke-width="1"/>
+        <text class="unit-label"   x="129" y="122" text-anchor="middle">Außentemperatur</text>
+        <text class="unit-value-s" id="outside-v" x="129" y="148" text-anchor="middle">--</text>
+        <text class="unit-label"   x="273" y="122" text-anchor="middle">Verdichter</text>
+        <text class="unit-value-s" id="comp-v" x="273" y="148" text-anchor="middle">--</text>
         ${fans}
       </g>`;
 
@@ -1802,13 +1806,12 @@ class LutarymHeatpumpCard extends HTMLElement {
 
     /* ---------------- Hauptleitungen ---------------- */
     const leitungen = `
-      ${rohr(`M260 680 V ${P.OBEN} H ${P.X_VL} V ${UNTEN}`)}
-      ${rohr(`M${P.X_RL} ${UNTEN} V 680`)}
-      ${rohr(`M${P.X_RL} ${UNTEN} H ${P.X_VL}`)}
-      <path class="flowdots" id="dots-vl-a" d="M260 680 V ${P.OBEN} H ${P.X_VL}"/>
-      <path class="flowdots" id="dots-vl-b" d="M${P.X_VL} ${P.OBEN} V ${UNTEN}"/>
-      <path class="flowdots rev" id="dots-rl-a" d="M${P.X_RL} ${UNTEN} V 680"/>
-      <path class="flowdots rev" id="dots-rl-b" d="M${P.X_VL} ${UNTEN} H ${P.X_RL}"/>
+      ${rohr(`M260 680 V ${P.OBEN} H ${P.X_VL} V ${WW[0] + 40}`)}
+      ${rohr(`M${P.X_RL} ${WW[1] - 20} V 680`)}
+      <path class="flowdots" id="dots-vl-a" d="M260 680 V ${P.OBEN} H ${P.X_VL} V ${PUF[0] + 60}"/>
+      <path class="flowdots" id="dots-vl-b" d="M${P.X_VL} ${PUF[0] + 60} V ${WW[0] + 40}"/>
+      <path class="flowdots" id="dots-rl-a" d="M${P.X_RL} ${PUF[1] - 60} V 680"/>
+      <path class="flowdots" id="dots-rl-b" d="M${P.X_RL} ${WW[1] - 20} V ${PUF[1] - 60}"/>
 
       <g id="vl-schild">
         <rect x="${P.X_VL - 46}" y="${P.OBEN + 40}" width="92" height="28" rx="8"
@@ -1845,9 +1848,9 @@ class LutarymHeatpumpCard extends HTMLElement {
           <circle r="4" fill="#0D1219"/>
         </g>
       </g>
-      <text class="cap-s"   x="${P.X_RL - 42}" y="942" text-anchor="end">Pumpe</text>
-      <text class="value-s" id="pump-v" x="${P.X_RL - 42}" y="966" text-anchor="end">--</text>
-      <text class="value-s" id="flow-v" x="${P.X_RL - 42}" y="988" text-anchor="end">--</text>
+      <text class="cap-s"   x="${P.X_RL + 42}" y="942" text-anchor="start">Pumpe</text>
+      <text class="value-s" id="pump-v" x="${P.X_RL + 42}" y="966" text-anchor="start">--</text>
+      <text class="value-s" id="flow-v" x="${P.X_RL + 42}" y="988" text-anchor="start">--</text>
 
       <g id="press-group" opacity="0">
         <g transform="translate(${P.X_RL} ${UNTEN - 120})">
@@ -1857,9 +1860,9 @@ class LutarymHeatpumpCard extends HTMLElement {
                 stroke="${NEUTRAL}" stroke-width="3" stroke-linecap="round"/>
           <circle r="4" fill="#55637A"/>
         </g>
-        <text class="cap-s"   x="${P.X_RL - 42}" y="${UNTEN - 126}" text-anchor="end">Druck</text>
-        <text class="value-s" id="press-v" x="${P.X_RL - 42}" y="${UNTEN - 102}" text-anchor="end">--</text>
-        <g id="press-warn" opacity="0" transform="translate(${P.X_RL - 150} ${UNTEN - 114})">
+        <text class="cap-s"   x="${P.X_RL + 42}" y="${UNTEN - 126}" text-anchor="start">Druck</text>
+        <text class="value-s" id="press-v" x="${P.X_RL + 42}" y="${UNTEN - 102}" text-anchor="start">--</text>
+        <g id="press-warn" opacity="0" transform="translate(${P.X_RL + 170} ${UNTEN - 114})">
           <path d="M0 -13 L13 10 L-13 10 Z" fill="#3A0E0E"
                 stroke="#D62B2B" stroke-width="2" stroke-linejoin="round"/>
           <path d="M0 -6 V 3" stroke="#FF6B5E" stroke-width="2.5" stroke-linecap="round"/>
@@ -1888,6 +1891,7 @@ class LutarymHeatpumpCard extends HTMLElement {
           </g>
           <text class="value-l"  id="${name}-v"  x="${UM}" y="${y1 + h / 2 + 24}" text-anchor="middle">--</text>
           <text class="value-sp" id="${name}-sp" x="${UM}" y="${y1 + h / 2 + 48}" text-anchor="middle"></text>
+          <text class="value-sp" id="${name}-delta" x="${UM}" y="${y1 + h / 2 + 72}" text-anchor="middle"></text>
           ${badges || ""}
         </g>`;
     };
@@ -1896,19 +1900,19 @@ class LutarymHeatpumpCard extends HTMLElement {
       stutzenVL(P.X_VL, PUF[0] + 60) +
       stutzenRL(P.X_RL, PUF[1] - 60) +
       `<path class="flowdots" id="dots-buf" d="M${P.X_VL} ${PUF[0] + 60} H ${P.U2 + 9}"/>
-       <path class="flowdots rev" id="dots-buf2" d="M${P.U1 - 9} ${PUF[1] - 60} H ${P.X_RL}"/>` +
+       <path class="flowdots" id="dots-buf2" d="M${P.U1 - 9} ${PUF[1] - 60} H ${P.X_RL}"/>` +
       speicher("buffer-group", PUF[0], PUF[1], "buf", "bufferFill", 150, "label_buffer", `
-        <g id="roomheater-badge" class="badge" transform="translate(${UM} ${PUF[1] - 48})">
+        <g id="roomheater-badge" class="badge" transform="translate(${UM} ${PUF[0] + 70})">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>`);
 
     const warmwasser =
-      stutzenVL(P.X_VL, WW[0] + 44) +
-      stutzenRL(P.X_RL, WW[1] - 44) +
-      `<path class="flowdots" id="dots-dhw" d="M${P.X_VL} ${WW[0] + 44} H ${P.U2 + 9}"/>
-       <path class="flowdots rev" id="dots-dhw2" d="M${P.U1 - 9} ${WW[1] - 44} H ${P.X_RL}"/>` +
+      stutzenVL(P.X_VL, WW[0] + 40) +
+      stutzenRL(P.X_RL, WW[1] - 20) +
+      `<path class="flowdots" id="dots-dhw" d="M${P.X_VL} ${WW[0] + 40} H ${P.U2 + 9}"/>
+       <path class="flowdots" id="dots-dhw2" d="M${P.U1 - 9} ${WW[1] - 20} H ${P.X_RL}"/>` +
       speicher("dhw-group", WW[0], WW[1], "dhw", "dhwFill", 134, "label_dhw", `
         <g id="dhwforce-badge" class="badge" transform="translate(${UM - 120} ${WW[0] + 70})">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
@@ -1933,8 +1937,8 @@ class LutarymHeatpumpCard extends HTMLElement {
       ${rohr(`M${P.U1} ${PUF[1] - 20} H ${P.S_RL} V ${sekEnde}`)}
       <path class="flowdots" id="dots-sf-a" d="M${P.U2} ${PUF[1] - 20} H ${P.S_VL} V ${HK1[0] + 60}"/>
       <path class="flowdots" id="dots-sf-b" d="M${P.S_VL} ${HK1[0] + 60} V ${hk2 ? HK2[0] + 60 : HK1[0] + 60}"/>
-      <path class="flowdots rev" id="dots-sr-a" d="M${P.S_RL} ${HK1[1] - 60} V ${PUF[1] - 20} H ${P.U1}"/>
-      <path class="flowdots rev" id="dots-sr-b" d="M${P.S_RL} ${sekEnde} V ${HK1[1] - 60}"/>`;
+      <path class="flowdots" id="dots-sr-a" d="M${P.S_RL} ${HK1[1] - 60} V ${PUF[1] - 20} H ${P.U1}"/>
+      <path class="flowdots" id="dots-sr-b" d="M${P.S_RL} ${sekEnde} V ${HK1[1] - 60}"/>`;
 
     const heizkreis = (n, y1, y2) => {
       const h = y2 - y1;
@@ -1950,7 +1954,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         ${rohr(`M${P.S_VL} ${y1 + 60} H ${P.U2 + 9}`)}
         ${rohr(`M${P.U1 - 9} ${y2 - 60} H ${P.S_RL}`)}
         <path class="flowdots" id="dots-hk${n}" d="M${P.S_VL} ${y1 + 60} H ${P.U2 + 9}"/>
-        <path class="flowdots rev" id="dots-hk${n}b" d="M${P.U1 - 9} ${y2 - 60} H ${P.S_RL}"/>
+        <path class="flowdots" id="dots-hk${n}b" d="M${P.U1 - 9} ${y2 - 60} H ${P.S_RL}"/>
         <g class="circuit klickbar" id="hk${n}-group">
           <g id="hk${n}-rad">
             <rect x="${P.U1}" y="${y1}" width="${P.U2 - P.U1}" height="${h}" rx="18"
@@ -1971,14 +1975,14 @@ class LutarymHeatpumpCard extends HTMLElement {
             <text class="tag-l" x="-86" y="6">Wasser</text>
             <text class="tag-v" id="hk${n}-water-v" x="86" y="8" text-anchor="end">--</text>
           </g>
-          <g transform="translate(${P.U1 - 50} ${y1 + 60})">
+          <g transform="translate(${(P.U2 + P.S_VL) / 2} ${y1 + 60})">
             <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
             <g class="rotor" id="hk${n}-rotor">
               <path id="hk${n}-blade" d="M0 -13 L4 -3 L14 0 L4 3 L0 13 L-4 3 L-14 0 L-4 -3 Z" fill="#55637A"/>
               <circle r="3.5" fill="#0D1219"/>
             </g>
           </g>
-          <text class="value-s" id="hk${n}-pump-v" x="${P.U1 - 50}" y="${y1 + 104}"
+          <text class="value-s" id="hk${n}-pump-v" x="${(P.U2 + P.S_VL) / 2}" y="${y1 + 100}"
                 text-anchor="middle">--</text>
         </g>`;
     };
@@ -1986,20 +1990,20 @@ class LutarymHeatpumpCard extends HTMLElement {
     /* ---------------- Zirkulation ---------------- */
     const zirk = `
       <g id="zirkulation-group" opacity="0">
-        ${rohr(`M${P.U2} ${WW[0] + 84} H ${P.U2 + 60} M${P.U2 + 60} ${WW[0] + 84} V ${WW[1] - 84} M${P.U2 + 60} ${WW[1] - 84} H ${P.U2}`)}
-        <path class="flowdots" id="dots-zirk-h1" d="M${P.U2} ${WW[0] + 84} H ${P.U2 + 60}"/>
-        <path class="flowdots" id="dots-zirk-v" d="M${P.U2 + 60} ${WW[0] + 84} V ${WW[1] - 84}"/>
-        <path class="flowdots" id="dots-zirk-h2" d="M${P.U2 + 60} ${WW[1] - 84} H ${P.U2}"/>
-        <g transform="translate(${P.U2 + 60} ${(WW[0] + WW[1]) / 2})">
+        ${rohr(`M${P.U2} ${WW[0] + 130} H ${P.U2 + 90} M${P.U2 + 90} ${WW[0] + 130} V ${WW[1] - 30} M${P.U2 + 90} ${WW[1] - 30} H ${P.U2}`)}
+        <path class="flowdots" id="dots-zirk-h1" d="M${P.U2} ${WW[0] + 130} H ${P.U2 + 90}"/>
+        <path class="flowdots" id="dots-zirk-v" d="M${P.U2 + 90} ${WW[0] + 130} V ${WW[1] - 30}"/>
+        <path class="flowdots" id="dots-zirk-h2" d="M${P.U2 + 90} ${WW[1] - 30} H ${P.U2}"/>
+        <g transform="translate(${P.U2 + 90} ${(WW[0] + WW[1]) / 2 + 50})">
           <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
           <g class="rotor" id="zirk-rotor">
             <path id="zirk-blade" d="M0 -13 L4 -3 L14 0 L4 3 L0 13 L-4 3 L-14 0 L-4 -3 Z" fill="#55637A"/>
             <circle r="3.5" fill="#0D1219"/>
           </g>
         </g>
-        <text class="cap-s" x="${P.U2 + 60}" y="${WW[0] + 60}" text-anchor="middle">Zirkulation</text>
-        <text class="value-s" id="zirk-v" x="${P.U2 + 60}" y="${(WW[0] + WW[1]) / 2 + 46}"
-              text-anchor="middle">--</text>
+        <text class="cap-s" x="${P.U2 + 90}" y="${WW[0] + 100}" text-anchor="middle">Zirkulation</text>
+        <text class="value-s" id="zirk-v" x="${P.U2 + 46}" y="${(WW[0] + WW[1]) / 2 + 56}"
+              text-anchor="end">--</text>
       </g>`;
 
     return `
@@ -2284,6 +2288,7 @@ ${this._defs()}
         <rect x="548" y="298" width="174" height="334" rx="20" fill="url(#glass)"/>
         <text class="value-l" id="buf-v" x="${L.X_BUF_C}" y="460" text-anchor="middle">--</text>
         <text class="value-sp" id="buf-sp" x="${L.X_BUF_C}" y="488" text-anchor="middle"></text>
+        <text class="value-sp" id="buf-delta" x="${L.X_BUF_C}" y="512" text-anchor="middle"></text>
         <g id="roomheater-badge" class="badge" transform="translate(${L.X_BUF_C} 604)">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
@@ -2372,6 +2377,7 @@ ${this._defs()}
         <rect x="1448" y="298" width="154" height="334" rx="28" fill="url(#glass)"/>
         <text class="value-l" id="dhw-v" x="${L.X_DHW_C}" y="440" text-anchor="middle">--</text>
         <text class="value-sp" id="dhw-sp" x="${L.X_DHW_C}" y="468" text-anchor="middle"></text>
+        <text class="value-sp" id="dhw-delta" x="${L.X_DHW_C}" y="492" text-anchor="middle"></text>
         <g id="dhwforce-badge" class="badge" transform="translate(${L.X_DHW_C} 536)">
           <rect x="-56" y="-15" width="112" height="30" rx="15"
                 fill="#08243A" stroke="#3B9BE0" stroke-width="1.5"/>
@@ -2752,6 +2758,9 @@ ${this._defs()}
     set("buf-v", buf === null ? "--" : `${fmt(buf)} °C`);
     const bufSp = numState(hass, this._e("buffer_target"));
     set("buf-sp", bufSp === null ? "" : `Ziel ${fmt(bufSp, 0)} °C`);
+    // Delta: ab welcher Abweichung die Waermepumpe nachheizt, TOP23.
+    const hDelta = numState(hass, this._e("heat_delta"));
+    set("buf-delta", hDelta === null ? "" : `Delta ${fmt(hDelta, 0)} K`);
     abzeichen("roomheater-badge", isOn(hass, this._e("room_heater")) === true);
 
     const dhwSp = numState(hass, this._e("dhw_setpoint"));
@@ -2759,6 +2768,9 @@ ${this._defs()}
     paint("dhw-bottom", col(dhw === null ? null : dhw - 6));
     set("dhw-v", dhw === null ? "--" : `${fmt(dhw)} °C`);
     set("dhw-sp", dhwSp === null ? "" : `Ziel ${fmt(dhwSp, 0)} °C`);
+    // TOP22, negativer Wert: so weit darf das Warmwasser absinken.
+    const wDelta = numState(hass, this._e("dhw_heat_delta"));
+    set("dhw-delta", wDelta === null ? "" : `Delta ${fmt(wDelta, 0)} K`);
     const dhwHeizt = isOn(hass, this._e("dhw_heater")) === true;
     abzeichen("dhwheater-badge", dhwHeizt);
     // TOP2 meldet das einmalige Aufheizen, TOP69 den Legionellenschutz.
