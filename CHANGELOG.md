@@ -14,6 +14,26 @@
 - Demomodus: Knopf Bereitschaft, Knopf Zirkulation Schalter entfernt
 - Demomodus: Schieberegler zeigen wieder ihren Wert
 - Animationsschleife entlastet, toter Code entfernt
+- Zustandssymbole im Gehäuse: Betrieb, Abtauen, Automatik, Heizen,
+  Warmwasser, Kühlen. Blass, leuchtend oder blinkend je nach Zustand
+- Kopfbereich der Wärmepumpe neu aufgeteilt, Betriebsanzeige entfällt
+- Vorlauf und Rücklauf beschriftet, als Schild auf der Leitung
+- Pumpe und Druck neu angeordnet, Werte darunter
+- Pumpenräder in der Farbe des geförderten Wassers
+- Wasserdruck grün von 0,5 bis 3 bar, darunter rot blinkend mit Warndreieck
+- Werte in der Grafik und im Popup öffnen den Verlauf von Home Assistant
+- Popups entlastet, nur noch Werte der jeweiligen Einheit
+- Zeile Raum in den Heizkreisen entfernt, TOP56 und TOP57 waren doppelt
+- Ohne zweiten Heizkreis rücken die Baugruppen rechts davon auf
+- Namensfelder wachsen mit der Textlänge
+- Animation läuft nach dem Wiederanhängen der Karte weiter
+- Ventilbeschriftung ergänzt, sie hatte kein Ziel im SVG
+- Waagerechte Ankerpunkte in benannte Konstanten überführt
+- Trennlinie im Gehäuse zwischen Symbolreihe und den Werten
+- Schilder Vorlauf und Rücklauf in der Farbe des zugehörigen Wertes
+- Hochformat: dieselbe Zeichnung um 90 Grad gedreht, Texte bleiben
+  waagerecht, die Wärmepumpe steht aufrecht. Umschaltung im
+  Einstellungsdialog unter Anordnung
 
 # v2.6.4
 - RL-Rohr Korrektur
