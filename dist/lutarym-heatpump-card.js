@@ -1876,6 +1876,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         </g>
 
         <line x1="70" y1="185" x2="310" y2="185" stroke="#55657F" stroke-width="1"/>
+
         <text class="unit-label" x="129" y="202" text-anchor="middle">Außentemperatur</text>
         <text class="unit-value-s" id="outside-v" x="129" y="228"
               text-anchor="middle">--</text>
@@ -1915,6 +1916,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <rect x="370" y="${F - 13}" width="80" height="26" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="1"/>
         <text class="cap-s vl-cap" x="410" y="${F + 5}" text-anchor="middle">Vorlauf</text>
+
       </g>
       <text class="vl-value" id="unit-flow-v" x="410" y="${F - 24}"
             text-anchor="middle">--</text>
@@ -1922,6 +1924,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <rect x="370" y="${R - 13}" width="80" height="26" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="1"/>
         <text class="cap-s rl-cap" x="410" y="${R + 5}" text-anchor="middle">Rücklauf</text>
+
       </g>
       <text class="rl-value" id="unit-ret-v" x="410" y="${R + 40}"
             text-anchor="middle">--</text>
