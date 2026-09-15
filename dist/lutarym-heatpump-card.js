@@ -1698,6 +1698,8 @@ class LutarymHeatpumpCard extends HTMLElement {
       ["dhw-name", L.X_DHW_C, 320],
       ["hk1-name", mid1, 420],
       ["hk2-name", mid2, 420],
+      ["hk1-rad", mid1, (L.RAD_TOP + L.RAD_BOTTOM) / 2],
+      ["hk2-rad", mid2, (L.RAD_TOP + L.RAD_BOTTOM) / 2],
       ["hk1-tag", mid1, L.RAD_TOP + 100],
       ["hk2-tag", mid2, L.RAD_TOP + 100],
       ["vl-schild", 410, L.FLOW_Y],
