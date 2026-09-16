@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.14.2";
+const CARD_VERSION = "2.14.3";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1484,8 +1484,13 @@ class LutarymHeatpumpCard extends HTMLElement {
 
     sr.getElementById("dlg-title").textContent =
       f.titel || this._config[f.beschriftung] || "Einstellen";
-    sr.getElementById("dlg-temp").hidden =
-      !this._dialogKey || !stellbar(this._e(this._dialogKey));
+    const reglerFeld = sr.getElementById("dlg-temp");
+    reglerFeld.hidden = !this._dialogKey;
+    const reglerKann = this._dialogKey && stellbar(this._e(this._dialogKey));
+    reglerFeld.classList.toggle("nur-lesbar", !reglerKann);
+    sr.querySelectorAll("#dlg-temp input, #dlg-temp button").forEach((e) => {
+      e.disabled = !reglerKann;
+    });
     this._baueAktionen();
     this._baueWerte();
     sr.getElementById("dialog").hidden = false;
@@ -1677,15 +1682,22 @@ class LutarymHeatpumpCard extends HTMLElement {
       if (a.typ === "trenner") return;
       if (a.typ !== "zone" && !st) return;
       if (a.typ === "zahl") {
-        // Nur lesbare Entitaeten bekommen keine Knoepfe.
+        // Nur lesbare Entitaeten lassen sich nicht stellen. Die Knoepfe
+        // bleiben sichtbar, aber ausgegraut, und die Beschriftung sagt
+        // warum. Sonst wirkt es wie ein Fehler der Karte.
         const kann = stellbar(this._e(a.feld));
         [`dlg-a${i}-minus`, `dlg-a${i}-plus`].forEach((kid) => {
           const k = this.shadowRoot.getElementById(kid);
-          if (k) {
-            k.disabled = !kann;
-            k.hidden = !kann;
-          }
+          if (k) k.disabled = !kann;
         });
+        const beschriftung = el.parentElement
+          ? el.parentElement.parentElement.querySelector(".lhc-field-label")
+          : null;
+        if (beschriftung) {
+          const hinweis = " – nur lesbar, number-Entität nötig";
+          const rein = beschriftung.textContent.replace(hinweis, "");
+          beschriftung.textContent = kann ? rein : rein + hinweis;
+        }
         // Angezeigt wird die Temperatur, ab der geladen wird, nicht die
         // rohe Differenz. Das ist die Angabe, die im Alltag zaehlt.
         const roh = numState(this._quelle, this._e(a.feld));
@@ -3740,6 +3752,7 @@ ${this._defs()}
       }
       .lhc-dialog-action:focus-visible { outline: 2px solid #E0762E; outline-offset: 2px; }
       #dlg-temp[hidden] { display: none; }
+      #dlg-temp.nur-lesbar { opacity: 0.45; }
       .lhc-dialog-trenner {
         margin: 14px 0 2px; font-size: 13px; font-weight: 600;
         color: #98A6BA; border-bottom: 1px solid var(--line); padding-bottom: 4px;
@@ -3747,7 +3760,7 @@ ${this._defs()}
       .lhc-dialog-num {
         display: flex; flex-direction: column; gap: 3px; margin-top: 8px;
       }
-      .lhc-step[hidden] { display: none; }
+      .lhc-step:disabled { opacity: 0.3; cursor: default; }
       .lhc-num-row {
         display: flex; align-items: center; gap: 10px;
       }

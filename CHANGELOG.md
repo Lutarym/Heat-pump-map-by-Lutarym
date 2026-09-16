@@ -1,3 +1,8 @@
+# v2.14.3
+- Nur lesbare Entitäten: Bedienelemente bleiben sichtbar, sind aber
+  ausgegraut, und die Beschriftung nennt den Grund. Vorher verschwanden
+  sie stillschweigend
+
 # v2.14.2
 - Nur lesbare Entitäten werden erkannt. Steller und Regler erscheinen nur
   bei number- und input_number-Entitäten, sonst meldete Home Assistant
