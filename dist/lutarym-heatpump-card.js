@@ -915,6 +915,29 @@ class LutarymHeatpumpCard extends HTMLElement {
     }
   }
 
+  /**
+   * Breite und Hoehe aus der Konfiguration anwenden.
+   * Null bedeutet automatisch, dann fuellt die Karte ihre Spalte und
+   * behaelt ihr Seitenverhaeltnis.
+   */
+  _groesse() {
+    const karte = this.shadowRoot && this.shadowRoot.querySelector("ha-card");
+    const svg = this.shadowRoot && this.shadowRoot.querySelector("svg");
+    if (!karte || !svg) return;
+    const b = Number(this._config.card_width) || 0;
+    const h = Number(this._config.card_height) || 0;
+    karte.style.maxWidth = b > 0 ? `${b}px` : "";
+    karte.style.marginInline = b > 0 ? "auto" : "";
+    if (h > 0) {
+      // Feste Hoehe: das Bild passt sich an und bleibt vollstaendig sichtbar.
+      svg.style.height = `${h}px`;
+      svg.style.width = "100%";
+    } else {
+      svg.style.height = "";
+      svg.style.width = "";
+    }
+  }
+
   /* -------------------- Aufbau -------------------- */
 
   _build() {
