@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.14.1";
+const CARD_VERSION = "2.14.2";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -284,6 +284,17 @@ function friendly(hass, entityId) {
 function abzeichenBreite(text) {
   const laenge = String(text || "").length;
   return Math.max(112, Math.round(laenge * 13 * 0.57) + 28);
+}
+
+/**
+ * Nur number- und input_number-Entitaeten lassen sich stellen. Zeigt
+ * jemand auf eine sensor-Entitaet, ist der Wert nur lesbar. Ohne diese
+ * Pruefung wuerde Home Assistant mit "sensor.set_value nicht gefunden"
+ * antworten.
+ */
+function stellbar(id) {
+  const bereich = String(id || "").split(".")[0];
+  return bereich === "number" || bereich === "input_number";
 }
 
 function schildBreite(text, mindest) {
@@ -1260,7 +1271,8 @@ class LutarymHeatpumpCard extends HTMLElement {
     // verloren, wenn das Fenster vor dem Absenden geschlossen wird.
     const schreiben = (wert, entitaet) => {
       const id = entitaet || this._e(this._dialogKey);
-      if (!id) return;
+      // Nur lesbare Entitaeten koennen nicht gestellt werden.
+      if (!id || !stellbar(id)) return;
       this._offen = null;
       if (this._offenTimer) {
         clearTimeout(this._offenTimer);
@@ -1472,7 +1484,8 @@ class LutarymHeatpumpCard extends HTMLElement {
 
     sr.getElementById("dlg-title").textContent =
       f.titel || this._config[f.beschriftung] || "Einstellen";
-    sr.getElementById("dlg-temp").hidden = !this._dialogKey;
+    sr.getElementById("dlg-temp").hidden =
+      !this._dialogKey || !stellbar(this._e(this._dialogKey));
     this._baueAktionen();
     this._baueWerte();
     sr.getElementById("dialog").hidden = false;
@@ -1613,7 +1626,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         // Schrittweise verstellen, begrenzt auf den zulaessigen Bereich.
         const stelle = (richtung) => {
           const id = this._e(a.feld);
-          if (!id) return;
+          if (!id || !stellbar(id)) return;
           const jetzt = numState(this._quelle, id);
           if (jetzt === null) return;
           const schritt = a.schritt || 1;
@@ -1664,6 +1677,15 @@ class LutarymHeatpumpCard extends HTMLElement {
       if (a.typ === "trenner") return;
       if (a.typ !== "zone" && !st) return;
       if (a.typ === "zahl") {
+        // Nur lesbare Entitaeten bekommen keine Knoepfe.
+        const kann = stellbar(this._e(a.feld));
+        [`dlg-a${i}-minus`, `dlg-a${i}-plus`].forEach((kid) => {
+          const k = this.shadowRoot.getElementById(kid);
+          if (k) {
+            k.disabled = !kann;
+            k.hidden = !kann;
+          }
+        });
         // Angezeigt wird die Temperatur, ab der geladen wird, nicht die
         // rohe Differenz. Das ist die Angabe, die im Alltag zaehlt.
         const roh = numState(this._quelle, this._e(a.feld));
@@ -3725,6 +3747,7 @@ ${this._defs()}
       .lhc-dialog-num {
         display: flex; flex-direction: column; gap: 3px; margin-top: 8px;
       }
+      .lhc-step[hidden] { display: none; }
       .lhc-num-row {
         display: flex; align-items: center; gap: 10px;
       }

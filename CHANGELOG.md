@@ -1,3 +1,8 @@
+# v2.14.2
+- Nur lesbare Entitäten werden erkannt. Steller und Regler erscheinen nur
+  bei number- und input_number-Entitäten, sonst meldete Home Assistant
+  "sensor.set_value nicht gefunden"
+
 # v2.14.1
 - Heizkurve selbsterklärend: beide Kurvenenden sind direkt beschriftet,
   etwa "-10 °C außen → 45 °C"
