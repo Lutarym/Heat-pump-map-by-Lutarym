@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.11.0";
+const CARD_VERSION = "2.12.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -487,7 +487,7 @@ const ENTITY_FIELDS = [
   { key: "return_temp", label: "Rücklauftemperatur", group: "Primärkreis", hint: "TOP5" },
   { key: "pump_speed", label: "Primärpumpe Drehzahl", group: "Primärkreis", hint: "TOP65" },
   { key: "pump_flow", label: "Durchflussmenge", group: "Primärkreis", hint: "TOP1" },
-  { key: "three_way_valve", label: "Dreiwegeventil", group: "Primärkreis", hint: "TOP20" },
+  { key: "three_way_valve", label: "3-Wege-Umschaltventil", group: "Primärkreis", hint: "TOP20" },
   { key: "water_pressure", label: "Wasserdruck", group: "Primärkreis", hint: "TOP115" },
 
   { key: "buffer_temp", label: "Puffertemperatur", group: "Heizungspuffer", hint: "TOP46" },
@@ -1313,6 +1313,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         aktionen: [
           { feld: "buffer_switch", status: "buffer_installed", typ: "schalter", an: "Pufferbetrieb ist an, ausschalten", aus: "Pufferbetrieb einschalten" },
           { feld: "room_heater_switch", status: "room_heater", typ: "schalter", an: "Heizstab Heizung an, ausschalten", aus: "Heizstab Heizung einschalten" },
+          { feld: "buffer_delta", typ: "zahl", titel: "Lädt ab", bezug: "buffer_target", vorzeichen: -1, min: 0, max: 10, schritt: 1 },
         ],
       },
       {
@@ -1324,6 +1325,7 @@ class LutarymHeatpumpCard extends HTMLElement {
           { feld: "dhw_force", status: "dhw_force_state", typ: "schalter", an: "Aufheizen läuft, beenden", aus: "Einmalig aufheizen" },
           { feld: "force_sterilization", status: "sterilization_state", typ: "schalter", an: "Legionellenschutz läuft, beenden", aus: "Legionellenschutz starten" },
           { feld: "dhw_heater_switch", status: "dhw_heater", typ: "schalter", an: "Heizstab ist an, ausschalten", aus: "Heizstab einschalten" },
+          { feld: "dhw_heat_delta", typ: "zahl", titel: "Lädt ab", bezug: "dhw_setpoint", vorzeichen: 1, min: -12, max: -2, schritt: 1 },
         ],
       },
       {
@@ -1546,6 +1548,17 @@ class LutarymHeatpumpCard extends HTMLElement {
                <select id="dlg-a${i}"></select>
              </label>`
 
+          : a.typ === "zahl"
+          ? `<div class="lhc-dialog-num">
+               <span class="lhc-field-label">${escapeHtml(a.titel)}</span>
+               <div class="lhc-num-row">
+                 <button type="button" class="lhc-step" id="dlg-a${i}-minus"
+                         aria-label="Kleiner">&minus;</button>
+                 <output id="dlg-a${i}">--</output>
+                 <button type="button" class="lhc-step" id="dlg-a${i}-plus"
+                         aria-label="Größer">+</button>
+               </div>
+             </div>`
           : `<button type="button" class="lhc-dialog-action" id="dlg-a${i}">--</button>`
       )
       .join("");
@@ -1561,6 +1574,32 @@ class LutarymHeatpumpCard extends HTMLElement {
             option: el.value,
           });
         });
+      } else if (a.typ === "zahl") {
+        // Schrittweise verstellen, begrenzt auf den zulaessigen Bereich.
+        const stelle = (richtung) => {
+          const id = this._e(a.feld);
+          if (!id) return;
+          const jetzt = numState(this._quelle, id);
+          if (jetzt === null) return;
+          const schritt = a.schritt || 1;
+          // Das Plus soll immer die angezeigte Temperatur erhoehen.
+          // Beim Puffer wird die Hysterese abgezogen, dort dreht sich
+          // die Richtung deshalb um.
+          const neu = clamp(
+            Math.round((jetzt + richtung * (a.vorzeichen || 1) * schritt) * 10) / 10,
+            a.min,
+            a.max
+          );
+          if (neu === jetzt) return;
+          this._quelle.callService(id.split(".")[0], "set_value", {
+            entity_id: id,
+            value: neu,
+          });
+        };
+        const minus = this.shadowRoot.getElementById(`dlg-a${i}-minus`);
+        const plus = this.shadowRoot.getElementById(`dlg-a${i}-plus`);
+        if (minus) minus.addEventListener("click", () => stelle(-1));
+        if (plus) plus.addEventListener("click", () => stelle(1));
       } else if (a.typ === "zone") {
         el.addEventListener("click", () => this._zoneSchalten(a.nummer));
       } else {
@@ -1588,6 +1627,19 @@ class LutarymHeatpumpCard extends HTMLElement {
       const st = this._quelle.states[this._e(a.feld)];
       if (!el) return;
       if (a.typ !== "zone" && !st) return;
+      if (a.typ === "zahl") {
+        // Angezeigt wird die Temperatur, ab der geladen wird, nicht die
+        // rohe Differenz. Das ist die Angabe, die im Alltag zaehlt.
+        const roh = numState(this._quelle, this._e(a.feld));
+        const ziel = a.bezug ? numState(this._quelle, this._e(a.bezug)) : null;
+        el.textContent =
+          roh === null
+            ? "--"
+            : ziel === null
+            ? `${fmt(roh, 0)} K`
+            : `${fmt(ziel + (a.vorzeichen || 1) * roh, 0)} °C`;
+        return;
+      }
       if (a.typ === "auswahl") {
         const optionen = st.attributes.options || [];
         const kennung = optionen.join("|");
@@ -1841,7 +1893,8 @@ class LutarymHeatpumpCard extends HTMLElement {
           <path id="valve-right-head" d="M2 -8 L 14 0 L 2 8 Z" fill="${NEUTRAL}"/>
         </g>
       </g>
-      <text class="cap-s" id="valve-v" x="${P.X_VL - 34}" y="835" text-anchor="end">--</text>
+      <text class="cap-s" x="${P.X_VL - 34}" y="854" text-anchor="end">Umschaltventil</text>
+      <text class="value-s" id="valve-v" x="${P.X_VL - 34}" y="880" text-anchor="end">--</text>
 
       <g transform="translate(${P.X_RL} 960)">
         <circle r="26" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
@@ -2345,6 +2398,7 @@ ${this._defs()}
           <path id="valve-right-head" d="M${630 + 2} ${F - 8} L ${630 + 14} ${F} L ${630 + 2} ${F + 8} Z"
                 fill="${NEUTRAL}"/>
         </g>
+        <text class="cap-s" x="630" y="${F - 58}" text-anchor="middle">Umschaltventil</text>
         <text class="value-s" id="valve-v" x="630" y="${F - 34}"
               text-anchor="middle">--</text>
       </g>
@@ -3406,6 +3460,17 @@ ${this._defs()}
       }
       .lhc-dialog-action:focus-visible { outline: 2px solid #E0762E; outline-offset: 2px; }
       #dlg-temp[hidden] { display: none; }
+      .lhc-dialog-num {
+        display: flex; flex-direction: column; gap: 3px; margin-top: 8px;
+      }
+      .lhc-num-row {
+        display: flex; align-items: center; gap: 10px;
+      }
+      .lhc-num-row output {
+        flex: 1; text-align: center; font-size: 17px; font-weight: 700;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        color: #E8EDF4;
+      }
       #dlg-actions { display: flex; flex-direction: column; }
       .lhc-dialog-select {
         display: flex; flex-direction: column; gap: 3px; margin-top: 8px;

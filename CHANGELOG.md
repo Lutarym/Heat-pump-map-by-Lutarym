@@ -1,3 +1,15 @@
+# v2.12.0
+- In den Popups von Puffer und Warmwasser lässt sich die Temperatur
+  einstellen, ab der nachgeladen wird. Geschrieben wird dabei die
+  Hysterese TOP113 beziehungsweise TOP22
+- Plus erhöht in beiden Fällen die angezeigte Temperatur, die Grenzen
+  der Hysterese werden eingehalten
+
+# v2.11.1
+- Beschriftung Umschaltventil in der Grafik ergänzt
+- Feldbezeichnung auf 3-Wege-Umschaltventil geändert, so nennt Panasonic
+  das Bauteil selbst
+
 # v2.11.0
 - Alle Zahlen mit deutschem Dezimalkomma statt Punkt
 - Durchfluss wird eingefärbt, wenn der Rohrinnendurchmesser eingetragen ist:
