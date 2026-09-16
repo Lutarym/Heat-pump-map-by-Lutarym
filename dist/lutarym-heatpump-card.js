@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.12.0";
+const CARD_VERSION = "2.13.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -276,6 +276,16 @@ function friendly(hass, entityId) {
  * konfigurierbar, feste Kastenbreiten wuerden bei langen Namen
  * ueberlaufen. Die Schrift ist 15px in Grossbuchstaben mit Sperrung.
  */
+/**
+ * Breite eines Abzeichens aus seinem Text. Die Beschriftungen sind
+ * unterschiedlich lang, und in anderen Sprachen deutlich laenger als
+ * im Deutschen. Ein fester Kasten wuerde dort ueberlaufen.
+ */
+function abzeichenBreite(text) {
+  const laenge = String(text || "").length;
+  return Math.max(112, Math.round(laenge * 13 * 0.57) + 28);
+}
+
 function schildBreite(text, mindest) {
   const laenge = String(text === undefined || text === null ? "" : text).length;
   return Math.max(mindest, Math.round(laenge * 15 * 0.66) + 24);
@@ -1637,7 +1647,7 @@ class LutarymHeatpumpCard extends HTMLElement {
             ? "--"
             : ziel === null
             ? `${fmt(roh, 0)} K`
-            : `${fmt(ziel + (a.vorzeichen || 1) * roh, 0)} °C`;
+            : `${fmt(ziel - Math.abs(roh), 0)} °C`;
         return;
       }
       if (a.typ === "auswahl") {
@@ -1868,14 +1878,14 @@ class LutarymHeatpumpCard extends HTMLElement {
       <path class="flowdots" id="dots-rl-b" d="M${P.X_RL} ${WW[1] - 20} V ${PUF[1] - 60}"/>
 
       <g id="vl-schild">
-        <rect x="${P.X_VL - 46}" y="${P.OBEN + 40}" width="92" height="28" rx="8"
+        <rect x="${P.X_VL - schildBreite("Vorlauf", 92) / 2}" y="${P.OBEN + 40}" width="${schildBreite("Vorlauf", 92)}" height="28" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="1"/>
         <text class="cap-s vl-cap" x="${P.X_VL}" y="${P.OBEN + 59}" text-anchor="middle">Vorlauf</text>
       </g>
       <text class="vl-value" id="unit-flow-v" x="${P.X_VL - 34}" y="${P.OBEN + 30}"
             text-anchor="end">--</text>
       <g id="rl-schild">
-        <rect x="${P.X_RL - 52}" y="${P.OBEN + 40}" width="104" height="28" rx="8"
+        <rect x="${P.X_RL - schildBreite("Rücklauf", 104) / 2}" y="${P.OBEN + 40}" width="${schildBreite("Rücklauf", 104)}" height="28" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="1"/>
         <text class="cap-s rl-cap" x="${P.X_RL}" y="${P.OBEN + 59}" text-anchor="middle">Rücklauf</text>
       </g>
@@ -1958,7 +1968,7 @@ class LutarymHeatpumpCard extends HTMLElement {
        <path class="flowdots" id="dots-buf2" d="M${P.U1 - 9} ${PUF[1] - 60} H ${P.X_RL}"/>` +
       speicher("buffer-group", PUF[0], PUF[1], "buf", "bufferFill", 150, "label_buffer", `
         <g id="roomheater-badge" class="badge" transform="translate(${UM} ${PUF[0] + 70})">
-          <rect x="-56" y="-15" width="112" height="30" rx="15"
+          <rect x="${-abzeichenBreite("Heizstab") / 2}" y="-15" width="${abzeichenBreite("Heizstab")}" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>`);
@@ -1970,17 +1980,17 @@ class LutarymHeatpumpCard extends HTMLElement {
        <path class="flowdots" id="dots-dhw2" d="M${P.U1 - 9} ${WW[1] - 20} H ${P.X_RL}"/>` +
       speicher("dhw-group", WW[0], WW[1], "dhw", "dhwFill", 134, "label_dhw", `
         <g id="dhwforce-badge" class="badge" transform="translate(${UM - 120} ${WW[0] + 70})">
-          <rect x="-56" y="-15" width="112" height="30" rx="15"
+          <rect x="${-abzeichenBreite("Aufheizen") / 2}" y="-15" width="${abzeichenBreite("Aufheizen")}" height="30" rx="15"
                 fill="#08243A" stroke="#3B9BE0" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Aufheizen</text>
         </g>
         <g id="sterilization-badge" class="badge" transform="translate(${UM} ${WW[0] + 70})">
-          <rect x="-56" y="-15" width="112" height="30" rx="15"
+          <rect x="${-abzeichenBreite("Legionellen") / 2}" y="-15" width="${abzeichenBreite("Legionellen")}" height="30" rx="15"
                 fill="#2B1240" stroke="#A855F7" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Legionellen</text>
         </g>
         <g id="dhwheater-badge" class="badge" transform="translate(${UM + 120} ${WW[0] + 70})">
-          <rect x="-56" y="-15" width="112" height="30" rx="15"
+          <rect x="${-abzeichenBreite("Heizstab") / 2}" y="-15" width="${abzeichenBreite("Heizstab")}" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>`);
@@ -2302,14 +2312,14 @@ ${this._defs()}
       <!-- Die Beschriftung liegt auf der Leitung und unterbricht sie,
            damit sie ohne Suchen der Leitung zugeordnet werden kann. -->
       <g id="vl-schild">
-        <rect x="370" y="${F - 13}" width="80" height="26" rx="8"
+        <rect x="${410 - schildBreite("Vorlauf", 80) / 2}" y="${F - 13}" width="${schildBreite("Vorlauf", 80)}" height="26" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="1"/>
         <text class="cap-s vl-cap" x="410" y="${F + 5}" text-anchor="middle">Vorlauf</text>
       </g>
       <text class="vl-value" id="unit-flow-v" x="410" y="${F - 24}"
             text-anchor="middle">--</text>
       <g id="rl-schild">
-        <rect x="370" y="${R - 13}" width="80" height="26" rx="8"
+        <rect x="${410 - schildBreite("Rücklauf", 80) / 2}" y="${R - 13}" width="${schildBreite("Rücklauf", 80)}" height="26" rx="8"
               fill="#0D1219" stroke="#33415A" stroke-width="1"/>
         <text class="cap-s rl-cap" x="410" y="${R + 5}" text-anchor="middle">Rücklauf</text>
       </g>
@@ -2345,7 +2355,7 @@ ${this._defs()}
         <text class="value-sp" id="buf-sp" x="${L.X_BUF_C}" y="488" text-anchor="middle"></text>
         <text class="value-sp" id="buf-delta" x="${L.X_BUF_C}" y="512" text-anchor="middle"></text>
         <g id="roomheater-badge" class="badge" transform="translate(${L.X_BUF_C} 604)">
-          <rect x="-56" y="-15" width="112" height="30" rx="15"
+          <rect x="${-abzeichenBreite("Heizstab") / 2}" y="-15" width="${abzeichenBreite("Heizstab")}" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
@@ -2435,17 +2445,17 @@ ${this._defs()}
         <text class="value-sp" id="dhw-sp" x="${L.X_DHW_C}" y="468" text-anchor="middle"></text>
         <text class="value-sp" id="dhw-delta" x="${L.X_DHW_C}" y="492" text-anchor="middle"></text>
         <g id="dhwforce-badge" class="badge" transform="translate(${L.X_DHW_C} 536)">
-          <rect x="-56" y="-15" width="112" height="30" rx="15"
+          <rect x="${-abzeichenBreite("Aufheizen") / 2}" y="-15" width="${abzeichenBreite("Aufheizen")}" height="30" rx="15"
                 fill="#08243A" stroke="#3B9BE0" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Aufheizen</text>
         </g>
         <g id="sterilization-badge" class="badge" transform="translate(${L.X_DHW_C} 570)">
-          <rect x="-56" y="-15" width="112" height="30" rx="15"
+          <rect x="${-abzeichenBreite("Legionellen") / 2}" y="-15" width="${abzeichenBreite("Legionellen")}" height="30" rx="15"
                 fill="#2B1240" stroke="#A855F7" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Legionellen</text>
         </g>
         <g id="dhwheater-badge" class="badge" transform="translate(${L.X_DHW_C} 604)">
-          <rect x="-56" y="-15" width="112" height="30" rx="15"
+          <rect x="${-abzeichenBreite("Heizstab") / 2}" y="-15" width="${abzeichenBreite("Heizstab")}" height="30" rx="15"
                 fill="#3A1B08" stroke="#E0762E" stroke-width="1.5"/>
           <text class="badge-t" x="0" y="5" text-anchor="middle">Heizstab</text>
         </g>
@@ -2811,11 +2821,14 @@ ${this._defs()}
     // TOP113 ist die Hysterese des Puffers, 0 bis 10 K. Angezeigt wird
     // daraus die Temperatur, ab der nachgeladen wird.
     const bDelta = numState(hass, this._e("buffer_delta"));
+    // Der Betrag wird abgezogen. Die Ladetemperatur liegt immer unter
+    // dem Sollwert, unabhaengig davon, mit welchem Vorzeichen die
+    // Anlage die Hysterese meldet.
     set(
       "buf-delta",
       bDelta === null || bufSp === null
         ? ""
-        : `Lädt ab ${fmt(bufSp - bDelta, 0)} °C`
+        : `Lädt ab ${fmt(bufSp - Math.abs(bDelta), 0)} °C`
     );
     abzeichen("roomheater-badge", isOn(hass, this._e("room_heater")) === true);
 
@@ -2834,7 +2847,7 @@ ${this._defs()}
         ? wDelta === null
           ? ""
           : ""
-        : `Lädt ab ${fmt(dhwSp + wDelta, 0)} °C`
+        : `Lädt ab ${fmt(dhwSp - Math.abs(wDelta), 0)} °C`
     );
     const dhwHeizt = isOn(hass, this._e("dhw_heater")) === true;
     abzeichen("dhwheater-badge", dhwHeizt);
@@ -2857,7 +2870,9 @@ ${this._defs()}
     if (flowEl) {
       let farbe = "";
       let hinweis = "";
-      if (innen > 0 && flowRate !== null) {
+      // Steht die Pumpe, gibt es keine Stroemung und damit auch kein
+      // Risiko. Dann bleibt der Wert neutral.
+      if (innen > 0 && flowRate !== null && flowRate > 0) {
         const flaeche = Math.PI * Math.pow(innen / 2000, 2);
         const v = flowRate / 60000 / flaeche;
         hinweis = `${fmt(v, 2)} m/s`;
@@ -3260,7 +3275,7 @@ ${this._defs()}
       .unit-label {
         /* 11px mit engerer Sperrung, sonst passt "Außentemperatur"
            nicht in die halbe Gehaeusebreite. */
-        fill: #7E8CA0; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+        fill: #7E8CA0; font-size: 12px; letter-spacing: 0.02em;
       }
       /* Eigene Groesse fuer die beiden Werte im Gehaeuse. Die gemeinsame
          Klasse wird auch ausserhalb verwendet und bleibt unveraendert. */
@@ -3286,8 +3301,8 @@ ${this._defs()}
          So bleibt erkennbar, dass es sie gibt. */
       .is-inaktiv { opacity: 0.28; transition: opacity 600ms ease; }
       #valve-arrow-down, #valve-arrow-right { transition: opacity 400ms ease; }
-      .cap { fill: #98A6BA; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
-      .cap-s { fill: #7E8CA0; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
+      .cap { fill: #98A6BA; font-size: 15px; letter-spacing: 0.02em; }
+      .cap-s { fill: #7E8CA0; font-size: 13px; letter-spacing: 0.02em; }
       .value-l {
         fill: #FFFFFF; font-size: 30px; font-weight: 700;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
@@ -3305,7 +3320,7 @@ ${this._defs()}
       .bubble {
         fill: #FFFFFF;
       }
-      .tag-l { fill: #8494AA; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+      .tag-l { fill: #8494AA; font-size: 12px; letter-spacing: 0.02em; }
       /* Vorlauf rot, Ruecklauf blau, unabhaengig von der Temperatur. */
       .vl-value, .rl-value {
         font-size: 22px; font-weight: 700;
@@ -3335,7 +3350,7 @@ ${this._defs()}
       }
       #pv-group { transition: opacity 300ms ease; }
       .sg-label {
-        fill: #C3D0E0; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
+        fill: #C3D0E0; font-size: 13px; letter-spacing: 0.02em;
       }
       .sg-value {
         /* 13px, damit auch der laengste Zustand "PV Ueberschuss High"
@@ -3375,7 +3390,7 @@ ${this._defs()}
       #dlg-werte .lhc-field-label { display: block; margin-top: 8px; }
 
       .lhc-field-label {
-        font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+        font-size: 12px; letter-spacing: 0.02em; color: var(--muted);
       }
       .lhc-ctl-scale {
         display: flex; justify-content: space-between; margin-top: 6px;
@@ -3420,7 +3435,7 @@ ${this._defs()}
         display: flex; align-items: center; justify-content: space-between; gap: 12px;
       }
       .lhc-dialog-title {
-        font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+        font-size: 13px; letter-spacing: 0.02em;
         color: var(--muted);
       }
       .lhc-dialog-close {
@@ -3779,8 +3794,8 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
         border-radius: 10px; padding: 12px 14px 14px;
       }
       h3 {
-        margin: 0 0 10px; font-size: 12px; letter-spacing: 0.14em;
-        text-transform: uppercase; color: var(--secondary-text-color, #8A94A6);
+        margin: 0 0 10px; font-size: 13px; letter-spacing: 0.02em;
+        color: var(--secondary-text-color, #8A94A6);
       }
       .ed-row {
         display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);

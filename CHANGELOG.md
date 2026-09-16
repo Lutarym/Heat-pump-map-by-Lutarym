@@ -1,3 +1,17 @@
+# v2.13.1
+- Abzeichen und die Schilder Vorlauf und Rücklauf wachsen mit ihrem Text.
+  Bei den deutschen Beschriftungen ändert sich nichts, längere Texte
+  laufen aber nicht mehr über den Kasten hinaus
+
+# v2.13.0
+- Alle Beschriftungen in normaler Schreibweise statt Großbuchstaben,
+  Sperrung entsprechend enger, Schriftgrade leicht angehoben
+- Durchfluss bleibt bei 0 l/min neutral, stehende Pumpe ist kein Risiko
+
+# v2.12.1
+- Ladetemperatur liegt jetzt in jedem Fall unter dem Sollwert. Gerechnet
+  wird mit dem Betrag der Hysterese, unabhängig vom gemeldeten Vorzeichen
+
 # v2.12.0
 - In den Popups von Puffer und Warmwasser lässt sich die Temperatur
   einstellen, ab der nachgeladen wird. Geschrieben wird dabei die
