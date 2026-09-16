@@ -1,3 +1,9 @@
+# v2.14.1
+- Heizkurve selbsterklärend: beide Kurvenenden sind direkt beschriftet,
+  etwa "-10 °C außen → 45 °C"
+- Fenster der Heizkurve nach den beiden Kurvenpunkten gegliedert, die
+  zusammengehörenden Werte stehen jetzt beieinander
+
 # v2.14.0
 - Verlaufsdiagramm des Stromverbrauchs der letzten 24 Stunden, oben rechts
   in beiden Anordnungen. Die Daten kommen aus dem Verlauf von Home Assistant

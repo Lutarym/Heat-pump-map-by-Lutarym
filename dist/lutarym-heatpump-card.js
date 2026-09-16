@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.14.0";
+const CARD_VERSION = "2.14.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -915,29 +915,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     }
   }
 
-  /**
-   * Breite und Hoehe aus der Konfiguration anwenden.
-   * Null bedeutet automatisch, dann fuellt die Karte ihre Spalte und
-   * behaelt ihr Seitenverhaeltnis.
-   */
-  _groesse() {
-    const karte = this.shadowRoot && this.shadowRoot.querySelector("ha-card");
-    const svg = this.shadowRoot && this.shadowRoot.querySelector("svg");
-    if (!karte || !svg) return;
-    const b = Number(this._config.card_width) || 0;
-    const h = Number(this._config.card_height) || 0;
-    karte.style.maxWidth = b > 0 ? `${b}px` : "";
-    karte.style.marginInline = b > 0 ? "auto" : "";
-    if (h > 0) {
-      // Feste Hoehe: das Bild passt sich an und bleibt vollstaendig sichtbar.
-      svg.style.height = `${h}px`;
-      svg.style.width = "100%";
-    } else {
-      svg.style.height = "";
-      svg.style.width = "";
-    }
-  }
-
   /* -------------------- Aufbau -------------------- */
 
   _build() {
@@ -1364,10 +1341,12 @@ class LutarymHeatpumpCard extends HTMLElement {
         titel: "Heizkurve",
         werte: [],
         aktionen: [
-          { feld: "curve_t_high", typ: "zahl", titel: "Vorlauf bei tiefster Außentemperatur", einheit: "°C", min: 20, max: 60, schritt: 1 },
-          { feld: "curve_t_low", typ: "zahl", titel: "Vorlauf bei höchster Außentemperatur", einheit: "°C", min: 20, max: 60, schritt: 1 },
-          { feld: "curve_o_low", typ: "zahl", titel: "Tiefste Außentemperatur", einheit: "°C", min: -20, max: 15, schritt: 1 },
-          { feld: "curve_o_high", typ: "zahl", titel: "Höchste Außentemperatur", einheit: "°C", min: -20, max: 25, schritt: 1 },
+          { typ: "trenner", titel: "Kalter Punkt, linkes Ende der Kurve" },
+          { feld: "curve_o_low", typ: "zahl", titel: "Wenn es draußen so kalt ist", einheit: "°C", min: -20, max: 15, schritt: 1 },
+          { feld: "curve_t_high", typ: "zahl", titel: "dann heizt die Anlage auf", einheit: "°C", min: 20, max: 60, schritt: 1 },
+          { typ: "trenner", titel: "Warmer Punkt, rechtes Ende der Kurve" },
+          { feld: "curve_o_high", typ: "zahl", titel: "Wenn es draußen so warm ist", einheit: "°C", min: -20, max: 25, schritt: 1 },
+          { feld: "curve_t_low", typ: "zahl", titel: "dann heizt die Anlage auf", einheit: "°C", min: 20, max: 60, schritt: 1 },
         ],
       },
       {
@@ -1602,6 +1581,8 @@ class LutarymHeatpumpCard extends HTMLElement {
                <select id="dlg-a${i}"></select>
              </label>`
 
+          : a.typ === "trenner"
+          ? `<div class="lhc-dialog-trenner">${escapeHtml(a.titel)}</div>`
           : a.typ === "zahl"
           ? `<div class="lhc-dialog-num">
                <span class="lhc-field-label">${escapeHtml(a.titel)}</span>
@@ -1680,6 +1661,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       const el = this.shadowRoot.getElementById(`dlg-a${i}`);
       const st = this._quelle.states[this._e(a.feld)];
       if (!el) return;
+      if (a.typ === "trenner") return;
       if (a.typ !== "zone" && !st) return;
       if (a.typ === "zahl") {
         // Angezeigt wird die Temperatur, ab der geladen wird, nicht die
@@ -2178,12 +2160,13 @@ class LutarymHeatpumpCard extends HTMLElement {
         <path id="kurve-linie" fill="none" stroke="#FF8A5F" stroke-width="2.5"
               stroke-linecap="round" d=""/>
         <circle id="kurve-punkt" r="5" fill="#FFFFFF" opacity="0"/>
-        <text class="value-sp" id="kurve-x1" x="${x + 40}" y="${y + hoehe - 8}">--</text>
-        <text class="value-sp" id="kurve-x2" x="${x + breite - 14}" y="${y + hoehe - 8}"
-              text-anchor="end">--</text>
-        <text class="value-sp" id="kurve-y2" x="${x + 34}" y="${y + 38}" text-anchor="end">--</text>
-        <text class="value-sp" id="kurve-y1" x="${x + 34}" y="${y + hoehe - 26}"
-              text-anchor="end">--</text>
+        <circle id="kurve-e1" r="4" fill="#FF8A5F" opacity="0"/>
+        <circle id="kurve-e2" r="4" fill="#FF8A5F" opacity="0"/>
+        <text class="value-sp" id="kurve-x1" x="0" y="0">--</text>
+        <text class="value-sp" id="kurve-x2" x="0" y="0" text-anchor="end">--</text>
+        <text class="value-sp" id="kurve-y1" x="${x + 44}" y="${y + hoehe - 8}">kalt</text>
+        <text class="value-sp" id="kurve-y2" x="${x + breite - 14}" y="${y + hoehe - 8}"
+              text-anchor="end">warm</text>
       </g>`;
   }
 
@@ -2215,10 +2198,24 @@ class LutarymHeatpumpCard extends HTMLElement {
       "d",
       `M${px(aTief).toFixed(1)} ${py(tHoch).toFixed(1)}L${px(aHoch).toFixed(1)} ${py(tTief).toFixed(1)}`
     );
-    sr.getElementById("kurve-x1").textContent = `${fmt(aTief, 0)} °C`;
-    sr.getElementById("kurve-x2").textContent = `${fmt(aHoch, 0)} °C`;
-    sr.getElementById("kurve-y1").textContent = `${fmt(tTief, 0)}`;
-    sr.getElementById("kurve-y2").textContent = `${fmt(tHoch, 0)}`;
+    // Beide Enden werden direkt beschriftet, damit man ohne Achsen
+    // ablesen kann, was die Kurve aussagt.
+    const e1 = sr.getElementById("kurve-e1");
+    const e2 = sr.getElementById("kurve-e2");
+    e1.setAttribute("cx", px(aTief).toFixed(1));
+    e1.setAttribute("cy", py(tHoch).toFixed(1));
+    e1.setAttribute("opacity", "1");
+    e2.setAttribute("cx", px(aHoch).toFixed(1));
+    e2.setAttribute("cy", py(tTief).toFixed(1));
+    e2.setAttribute("opacity", "1");
+    const b1 = sr.getElementById("kurve-x1");
+    b1.setAttribute("x", (px(aTief) + 10).toFixed(1));
+    b1.setAttribute("y", (py(tHoch) + 16).toFixed(1));
+    b1.textContent = `${fmt(aTief, 0)} °C außen → ${fmt(tHoch, 0)} °C`;
+    const b2El = sr.getElementById("kurve-x2");
+    b2El.setAttribute("x", (px(aHoch) - 10).toFixed(1));
+    b2El.setAttribute("y", (py(tTief) - 10).toFixed(1));
+    b2El.textContent = `${fmt(aHoch, 0)} °C außen → ${fmt(tTief, 0)} °C`;
 
     // Aktuelle Lage auf der Kurve, nach der Formel von HeishaMon.
     const aussen = numState(hass, this._e("outside_temp"));
@@ -3721,6 +3718,10 @@ ${this._defs()}
       }
       .lhc-dialog-action:focus-visible { outline: 2px solid #E0762E; outline-offset: 2px; }
       #dlg-temp[hidden] { display: none; }
+      .lhc-dialog-trenner {
+        margin: 14px 0 2px; font-size: 13px; font-weight: 600;
+        color: #98A6BA; border-bottom: 1px solid var(--line); padding-bottom: 4px;
+      }
       .lhc-dialog-num {
         display: flex; flex-direction: column; gap: 3px; margin-top: 8px;
       }
