@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.9.0";
+const CARD_VERSION = "2.10.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -318,7 +318,6 @@ const INTEGRATION_DOMAIN = "heishamon_lutarym";
 const TOPIC_TO_FIELD = {
   top0: "heatpump_state",
   top22: "dhw_heat_delta",
-  top23: "heat_delta",
   top2: "dhw_force_state",
   top69: "sterilization_state",
   top14: "outside_temp",
@@ -327,6 +326,7 @@ const TOPIC_TO_FIELD = {
   top1: "pump_flow",
   top44: "error",
   top115: "water_pressure",
+  top113: "buffer_delta",
   top62: "fan1_rpm",
   top63: "fan2_rpm",
   top26: "defrost",
@@ -492,7 +492,7 @@ const ENTITY_FIELDS = [
   { key: "buffer_temp", label: "Puffertemperatur", group: "Heizungspuffer", hint: "TOP46" },
   { key: "buffer_installed", label: "Puffer vorhanden", group: "Heizungspuffer", hint: "TOP99" },
   { key: "buffer_switch", label: "Pufferbetrieb ein und aus", group: "Heizungspuffer", hint: "SetBuffer, switch" },
-  { key: "heat_delta", label: "Heizung Delta", group: "Heizungspuffer", hint: "TOP23" },
+  { key: "buffer_delta", label: "Puffer Hysterese", group: "Heizungspuffer", hint: "TOP113" },
   { key: "buffer_target", label: "Puffer Zieltemperatur", group: "Heizungspuffer", hint: "TOP7, Soll Vorlauf" },
   { key: "room_heater", label: "Heizstab Heizung", group: "Heizungspuffer", hint: "TOP59" },
   { key: "room_heater_switch", label: "Heizstab Heizung schalten", group: "Heizungspuffer", hint: "SetRoomHeaterState, switch" },
@@ -513,7 +513,7 @@ const ENTITY_FIELDS = [
 
   { key: "dhw_installed", label: "Warmwasser vorhanden", group: "Warmwasser", hint: "TOP100" },
   { key: "dhw_temp", label: "Warmwasser Isttemperatur", group: "Warmwasser", hint: "TOP10" },
-  { key: "dhw_heat_delta", label: "Warmwasser Delta", group: "Warmwasser", hint: "TOP22" },
+  { key: "dhw_heat_delta", label: "Warmwasser Hysterese", group: "Warmwasser", hint: "TOP22" },
   { key: "dhw_setpoint", label: "Warmwasser Sollwert", group: "Warmwasser", hint: "TOP9, number" },
   { key: "dhw_heater", label: "Heizstab Warmwasser", group: "Warmwasser", hint: "TOP58" },
   { key: "dhw_force", label: "Einmalig aufheizen", group: "Warmwasser", hint: "SetForceDHW, switch" },
@@ -640,7 +640,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       power_now: 1240, energy_today: 8.4,
       flow_temp: 39.2, return_temp: 33.1, pump_speed: 2400, pump_flow: 18.6,
       three_way_valve: 0, water_pressure: 1.8, defrost: 0, error: "0",
-      buffer_temp: 38.4, buffer_target: 42, heat_delta: 2, dhw_heat_delta: -8, room_heater: 0, buffer_installed: 1,
+      buffer_temp: 38.4, buffer_target: 42, buffer_delta: 5, dhw_heat_delta: -8, room_heater: 0, buffer_installed: 1,
       hk1_water: 34.2, hk1_water_target: 36, hk1_pump: 1,
       hk1_setpoint: 36, hk2_water: 30.1, hk2_water_target: 32,
       hk2_pump: 0, hk2_setpoint: 32, zones_state: 2,
@@ -2685,7 +2685,7 @@ ${this._defs()}
     const leistung = numState(hass, this._e("power_now"));
     const energie = numState(hass, this._e("energy_today"));
     zeige("verbrauch-group", leistung !== null || energie !== null);
-    set("power-now-v", leistung === null ? "--" : `${fmt(leistung, 0)} W`);
+    set("power-now-v", leistung === null ? "--" : `${fmt(leistung / 1000, 2)} kW`);
     // Tagesverbrauch, sofern der Stand von Mitternacht bekannt ist.
     let energieAnzeige = energie;
     if (this._config.energy_daily !== false && energie !== null) {
@@ -2733,14 +2733,8 @@ ${this._defs()}
     /* Leistung der Photovoltaik */
     const pv = numState(hass, this._e("pv_power"));
     zeige("pv-group", pv !== null);
-    set(
-      "pv-v",
-      pv === null
-        ? "--"
-        : Math.abs(pv) >= 1000
-        ? `${fmt(pv / 1000, 2)} kW`
-        : `${fmt(pv, 0)} W`
-    );
+    // Immer in Kilowatt, damit die Einheit nicht springt.
+    set("pv-v", pv === null ? "--" : `${fmt(pv / 1000, 2)} kW`);
 
     /* Temperaturen und Leitungsfarben */
     const flow = numState(hass, this._e("flow_temp"));
@@ -2758,9 +2752,15 @@ ${this._defs()}
     set("buf-v", buf === null ? "--" : `${fmt(buf)} °C`);
     const bufSp = numState(hass, this._e("buffer_target"));
     set("buf-sp", bufSp === null ? "" : `Ziel ${fmt(bufSp, 0)} °C`);
-    // Delta: ab welcher Abweichung die Waermepumpe nachheizt, TOP23.
-    const hDelta = numState(hass, this._e("heat_delta"));
-    set("buf-delta", hDelta === null ? "" : `Delta ${fmt(hDelta, 0)} K`);
+    // TOP113 ist die Hysterese des Puffers, 0 bis 10 K. Angezeigt wird
+    // daraus die Temperatur, ab der nachgeladen wird.
+    const bDelta = numState(hass, this._e("buffer_delta"));
+    set(
+      "buf-delta",
+      bDelta === null || bufSp === null
+        ? ""
+        : `Lädt ab ${fmt(bufSp - bDelta, 0)} °C`
+    );
     abzeichen("roomheater-badge", isOn(hass, this._e("room_heater")) === true);
 
     const dhwSp = numState(hass, this._e("dhw_setpoint"));
@@ -2768,9 +2768,18 @@ ${this._defs()}
     paint("dhw-bottom", col(dhw === null ? null : dhw - 6));
     set("dhw-v", dhw === null ? "--" : `${fmt(dhw)} °C`);
     set("dhw-sp", dhwSp === null ? "" : `Ziel ${fmt(dhwSp, 0)} °C`);
-    // TOP22, negativer Wert: so weit darf das Warmwasser absinken.
+    // TOP22 ist negativ und sagt, wie weit das Warmwasser unter den
+    // Sollwert fallen darf. Angezeigt wird daraus die Temperatur, ab
+    // der nachgeladen wird, das ist die eigentlich nuetzliche Angabe.
     const wDelta = numState(hass, this._e("dhw_heat_delta"));
-    set("dhw-delta", wDelta === null ? "" : `Delta ${fmt(wDelta, 0)} K`);
+    set(
+      "dhw-delta",
+      wDelta === null || dhwSp === null
+        ? wDelta === null
+          ? ""
+          : ""
+        : `Lädt ab ${fmt(dhwSp + wDelta, 0)} °C`
+    );
     const dhwHeizt = isOn(hass, this._e("dhw_heater")) === true;
     abzeichen("dhwheater-badge", dhwHeizt);
     // TOP2 meldet das einmalige Aufheizen, TOP69 den Legionellenschutz.

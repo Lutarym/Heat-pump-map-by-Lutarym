@@ -1,3 +1,14 @@
+# v2.10.0
+- Puffer und Warmwasser zeigen die Temperatur, ab der nachgeladen wird
+- Pufferhysterese über TOP113 Buffer_Tank_Delta statt der Spreizung TOP23
+- PV Überschuss und Verbrauch immer in Kilowatt, die Einheit springt nicht mehr
+
+# v2.9.1
+- Warmwasser zeigt statt des rohen Deltas die Temperatur, ab der
+  nachgeladen wird, also Sollwert plus dem negativen Delta
+- Heizungswert richtig benannt: TOP23 ist die Spreizung zur
+  Pumpensteuerung, nicht die Nachladeschwelle
+
 # v2.9.0
 - Delta für Puffer und Warmwasser: ab welcher Abweichung nachgeheizt wird.
   Heizung über TOP23 Heat_Delta, Warmwasser über TOP22 DHW_Heat_Delta
