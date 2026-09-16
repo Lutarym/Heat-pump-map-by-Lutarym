@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.10.0";
+const CARD_VERSION = "2.11.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -263,7 +263,8 @@ function isOn(hass, entityId) {
 
 function fmt(value, digits) {
   if (value === null || value === undefined || Number.isNaN(value)) return "--";
-  return value.toFixed(digits === undefined ? 1 : digits);
+  // Im deutschen Sprachraum trennt das Komma die Nachkommastellen.
+  return value.toFixed(digits === undefined ? 1 : digits).replace(".", ",");
 }
 
 function friendly(hass, entityId) {
@@ -533,6 +534,7 @@ const DEFAULT_CONFIG = {
   hk_count: 2,
   layout: "quer",
   card_width: 0,
+  pipe_inner_mm: 0,
   card_height: 0,
   scale_min: 20,
   scale_max: 60,
@@ -1525,7 +1527,7 @@ class LutarymHeatpumpCard extends HTMLElement {
           // ohne. Sonst erscheint etwa 26.788 W, was im Deutschen wie
           // 26788 W gelesen wird.
           const stellen = ["°C", "bar"].includes(einheit) ? 1 : 0;
-          text = zahl.toFixed(stellen);
+          text = zahl.toFixed(stellen).replace(".", ",");
         }
         wert.textContent = einheit ? `${text} ${einheit}` : text;
       }
@@ -2792,6 +2794,30 @@ ${this._defs()}
     this._spin("pump-rotor", pumpRpm, "pump-v", "U/min", PUMP_SECONDS, laeuft);
     this._blattFarbe("pump-blade", col(flow), laeuft && pumpRpm !== null && pumpRpm > 0);
     set("flow-v", flowRate === null ? "--" : `${fmt(flowRate)} l/min`);
+    // Ist der Rohrinnendurchmesser bekannt, laesst sich aus dem
+    // Durchfluss die Stroemungsgeschwindigkeit berechnen. Ueber etwa
+    // 1 m/s entstehen Stroemungsgeraeusche, unter 0,2 m/s wird die
+    // Waermeuebertragung schlecht. Dazwischen ist alles in Ordnung.
+    const flowEl = sr.getElementById("flow-v");
+    const innen = Number(this._config.pipe_inner_mm) || 0;
+    if (flowEl) {
+      let farbe = "";
+      let hinweis = "";
+      if (innen > 0 && flowRate !== null) {
+        const flaeche = Math.PI * Math.pow(innen / 2000, 2);
+        const v = flowRate / 60000 / flaeche;
+        hinweis = `${fmt(v, 2)} m/s`;
+        if (v > 1) farbe = "#D62B2B";
+        else if (v > 0.8) farbe = "#E0A62E";
+        else if (v < 0.2) farbe = "#E0A62E";
+        else farbe = "#46C07A";
+      }
+      flowEl.style.fill = farbe;
+      // Die Geschwindigkeit steht als Beschriftung bereit, ohne den
+      // sichtbaren Text zu veraendern.
+      if (hinweis) flowEl.setAttribute("aria-label", `${flowEl.textContent} entspricht ${hinweis}`);
+      else flowEl.removeAttribute("aria-label");
+    }
 
     /* Wasserdruck, nur bei vorhandenem Wert */
     const bar = numState(hass, this._e("water_pressure"));
@@ -3502,6 +3528,10 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
             <input type="number" id="opt-hoehe" min="0" step="10">
           </label>
           <label class="ed-row">
+            <span>Rohrinnendurchmesser<em>Millimeter, färbt den Durchfluss, 0 heißt aus</em></span>
+            <input type="number" id="opt-rohr" min="0" max="80" step="1">
+          </label>
+          <label class="ed-row">
             <span>Anzahl Heizkreise</span>
             <select id="opt-hk"><option value="1">1 Heizkreis</option><option value="2">2 Heizkreise</option></select>
           </label>
@@ -3592,6 +3622,7 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     bind("opt-layout", (el) => put({ layout: el.value }));
     bind("opt-breite", (el) => put({ card_width: parseInt(el.value, 10) || 0 }));
     bind("opt-hoehe", (el) => put({ card_height: parseInt(el.value, 10) || 0 }));
+    bind("opt-rohr", (el) => put({ pipe_inner_mm: parseInt(el.value, 10) || 0 }));
     bind("opt-hk", (el) => put({ hk_count: parseInt(el.value, 10) }));
     bind("opt-min", (el) => put({ scale_min: parseFloat(el.value) }));
     bind("opt-max", (el) => put({ scale_max: parseFloat(el.value) }));
@@ -3652,6 +3683,7 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     put("opt-layout", this._config.layout || "quer");
     put("opt-breite", String(this._config.card_width || 0));
     put("opt-hoehe", String(this._config.card_height || 0));
+    put("opt-rohr", String(this._config.pipe_inner_mm || 0));
     put("opt-hk", String(this._config.hk_count));
     put("opt-min", this._config.scale_min);
     put("opt-max", this._config.scale_max);

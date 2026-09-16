@@ -1,3 +1,10 @@
+# v2.11.0
+- Alle Zahlen mit deutschem Dezimalkomma statt Punkt
+- Durchfluss wird eingefärbt, wenn der Rohrinnendurchmesser eingetragen ist:
+  grün zwischen 0,2 und 0,8 m/s, gelb darüber oder darunter, rot ab 1 m/s,
+  wo Strömungsgeräusche entstehen
+- Neue Einstellung Rohrinnendurchmesser in Millimetern
+
 # v2.10.0
 - Puffer und Warmwasser zeigen die Temperatur, ab der nachgeladen wird
 - Pufferhysterese über TOP113 Buffer_Tank_Delta statt der Spreizung TOP23
