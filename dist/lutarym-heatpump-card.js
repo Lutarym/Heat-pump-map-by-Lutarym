@@ -2301,6 +2301,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     return numState(hass, this._e("operating_mode")) === 3;
   }
 
+
   /** Feldname der Heizkurve fuer die gerade gewaehlte Zone. */
   _kf(basis) {
     return this._kurveZone === 2 ? `curve2_${basis}` : `curve_${basis}`;
@@ -2329,6 +2330,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <text class="value-sp" id="kurve-x1" x="${x}" y="${y + hoehe - 4}">--</text>
         <text class="value-sp" id="kurve-x2" x="${x + breite}" y="${y + hoehe - 4}"
               text-anchor="end">--</text>
+
       </g>`;
   }
 
@@ -2411,6 +2413,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       `kalt ${fmt(aTief, 0)} °C → ${fmt(tHoch, 0)} °C`;
     sr.getElementById("kurve-x2").textContent =
       `warm ${fmt(aHoch, 0)} °C → ${fmt(tTief, 0)} °C`;
+
 
     // Aktuelle Lage auf der Kurve, nach der Formel von HeishaMon.
     const aussen = numState(hass, this._e("outside_temp"));

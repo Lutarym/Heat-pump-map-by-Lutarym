@@ -7,6 +7,7 @@
   TOP7 gilt in dieser Zeit dem Speicher und sprang auf dessen
   Ladetemperatur, was als Pufferziel irreführend war
 
+
 # v2.18.0
 - Verlaufsdiagramm und Heizkurve ohne Rahmen, stattdessen Trennlinien
   wie im Kennzahlenbereich
