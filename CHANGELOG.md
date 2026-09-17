@@ -1,3 +1,51 @@
+# v2.19.0
+- Heizkurve rückt auf den Platz des Verbrauchsdiagramms, wenn dieses
+  ausgeblendet ist
+- Neues Design der Heizkurve: die Eckwerte stehen in der Fußzeile statt
+  in der Zeichenfläche, dort stießen sie an die Kurve
+- Pufferziel wird während der Warmwasserladung nicht mehr angezeigt.
+  TOP7 gilt in dieser Zeit dem Speicher und sprang auf dessen
+  Ladetemperatur, was als Pufferziel irreführend war
+
+# v2.18.0
+- Verlaufsdiagramm und Heizkurve ohne Rahmen, stattdessen Trennlinien
+  wie im Kennzahlenbereich
+- Beide Diagramme lassen sich im Einstellungsdialog ein- und ausblenden
+- Kurve nutzt die Fläche besser: 83 Prozent der Breite und 74 der Höhe
+  statt vorher 74 und 42
+
+# v2.17.1
+- Heizkreise werden dargestellt wie Puffer und Warmwasser: große
+  Temperatur, darunter das Ziel. Ohne Fachbegriffe
+
+# v2.17.0
+- Heizkreise zeigen statt "Wasser 29 / 35 °C" zwei benannte Zeilen:
+  Vorlauf ist und Vorlauf soll, jeweils mit einer Nachkommastelle
+
+# v2.16.1
+- Verstellte Werte erscheinen sofort und werden gehalten, bis die Anlage
+  sie zurückmeldet. Mehrfaches Drücken zählt weiter, und das gesendete
+  JSON enthält alle bisherigen Änderungen
+- Beim Überfahren mit der Maus wird nichts mehr unscharf: der CSS-Filter
+  zwang den Browser, die Vektorgrafik zu rastern
+- Heizkurve füllt den Rahmen aus, die Skala ergibt sich aus den Eckwerten
+  beider Heizkreise mit Rand
+
+# v2.16.0
+- Heizkurve auch für Heizkreis 2 über TOP82 bis TOP85, im Fenster
+  zwischen HK1 und HK2 umschaltbar
+- Kurve auf fester Skala von -20 bis 20 Grad außen und 20 bis 60 Grad
+  Vorlauf, dadurch ist die Steigung ablesbar und beide Heizkreise
+  lassen sich vergleichen
+- Beschriftungen der Kurvenenden bleiben auch bei flacher Kurve getrennt
+
+# v2.15.0
+- Heizkurve und beide Hysteresewerte lassen sich auch dann verstellen,
+  wenn nur lesbare Entitäten vorliegen. Die Karte schickt den Wert dann
+  über den Befehlskanal von HeishaMon: SetCurves, SetBufferDelta und
+  SetDHWHeatDelta
+- Neue Einstellung MQTT Präfix, voreingestellt panasonic_heat_pump
+
 # v2.14.3
 - Nur lesbare Entitäten: Bedienelemente bleiben sichtbar, sind aber
   ausgegraut, und die Beschriftung nennt den Grund. Vorher verschwanden

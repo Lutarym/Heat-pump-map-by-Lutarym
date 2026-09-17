@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.14.3";
+const CARD_VERSION = "2.19.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -339,6 +339,10 @@ const INTEGRATION_DOMAIN = "heishamon_lutarym";
 
 const TOPIC_TO_FIELD = {
   top0: "heatpump_state",
+  top82: "curve2_t_high",
+  top83: "curve2_t_low",
+  top84: "curve2_o_high",
+  top85: "curve2_o_low",
   top29: "curve_t_high",
   top30: "curve_t_low",
   top31: "curve_o_high",
@@ -518,10 +522,14 @@ const ENTITY_FIELDS = [
   { key: "buffer_temp", label: "Puffertemperatur", group: "Heizungspuffer", hint: "TOP46" },
   { key: "buffer_installed", label: "Puffer vorhanden", group: "Heizungspuffer", hint: "TOP99" },
   { key: "buffer_switch", label: "Pufferbetrieb ein und aus", group: "Heizungspuffer", hint: "SetBuffer, switch" },
-  { key: "curve_t_high", label: "Heizkurve Vorlauf oben", group: "Heizkurve", hint: "TOP29" },
-  { key: "curve_t_low", label: "Heizkurve Vorlauf unten", group: "Heizkurve", hint: "TOP30" },
-  { key: "curve_o_high", label: "Heizkurve Außen oben", group: "Heizkurve", hint: "TOP31" },
-  { key: "curve_o_low", label: "Heizkurve Außen unten", group: "Heizkurve", hint: "TOP32" },
+  { key: "curve_t_high", label: "HK1 Heizkurve Vorlauf oben", group: "Heizkurve", hint: "TOP29" },
+  { key: "curve_t_low", label: "HK1 Heizkurve Vorlauf unten", group: "Heizkurve", hint: "TOP30" },
+  { key: "curve_o_high", label: "HK1 Heizkurve Außen oben", group: "Heizkurve", hint: "TOP31" },
+  { key: "curve_o_low", label: "HK1 Heizkurve Außen unten", group: "Heizkurve", hint: "TOP32" },
+  { key: "curve2_t_high", label: "HK2 Heizkurve Vorlauf oben", group: "Heizkurve", hint: "TOP82" },
+  { key: "curve2_t_low", label: "HK2 Heizkurve Vorlauf unten", group: "Heizkurve", hint: "TOP83" },
+  { key: "curve2_o_high", label: "HK2 Heizkurve Außen oben", group: "Heizkurve", hint: "TOP84" },
+  { key: "curve2_o_low", label: "HK2 Heizkurve Außen unten", group: "Heizkurve", hint: "TOP85" },
   { key: "buffer_delta", label: "Puffer Hysterese", group: "Heizungspuffer", hint: "TOP113" },
   { key: "buffer_target", label: "Puffer Zieltemperatur", group: "Heizungspuffer", hint: "TOP7, Soll Vorlauf" },
   { key: "room_heater", label: "Heizstab Heizung", group: "Heizungspuffer", hint: "TOP59" },
@@ -562,8 +570,12 @@ const DEFAULT_CONFIG = {
   fan_count: 2,
   hk_count: 2,
   layout: "quer",
+  // gewaehlte Zone der Heizkurve, nur zur Laufzeit
   card_width: 0,
   pipe_inner_mm: 0,
+  mqtt_prefix: "panasonic_heat_pump",
+  show_history: true,
+  show_curve: true,
   card_height: 0,
   scale_min: 20,
   scale_max: 60,
@@ -588,6 +600,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this._built = false;
+    this._kurveZone = 1;
     this._config = null;
     this._hass = null;
     this._auto = null;
@@ -671,7 +684,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       power_now: 1240, energy_today: 8.4,
       flow_temp: 39.2, return_temp: 33.1, pump_speed: 2400, pump_flow: 18.6,
       three_way_valve: 0, water_pressure: 1.8, defrost: 0, error: "0",
-      buffer_temp: 38.4, buffer_target: 42, buffer_delta: 5, curve_t_high: 45, curve_t_low: 28, curve_o_high: 15, curve_o_low: -10, dhw_heat_delta: -8, room_heater: 0, buffer_installed: 1,
+      buffer_temp: 38.4, buffer_target: 42, buffer_delta: 5, curve_t_high: 45, curve_t_low: 28, curve_o_high: 15, curve_o_low: -10, curve2_t_high: 38, curve2_t_low: 26, curve2_o_high: 15, curve2_o_low: -10, dhw_heat_delta: -8, room_heater: 0, buffer_installed: 1,
       hk1_water: 34.2, hk1_water_target: 36, hk1_pump: 1,
       hk1_setpoint: 36, hk2_water: 30.1, hk2_water_target: 32,
       hk2_pump: 0, hk2_setpoint: 32, zones_state: 2,
@@ -1345,7 +1358,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         aktionen: [
           { feld: "buffer_switch", status: "buffer_installed", typ: "schalter", an: "Pufferbetrieb ist an, ausschalten", aus: "Pufferbetrieb einschalten" },
           { feld: "room_heater_switch", status: "room_heater", typ: "schalter", an: "Heizstab Heizung an, ausschalten", aus: "Heizstab Heizung einschalten" },
-          { feld: "buffer_delta", typ: "zahl", titel: "Lädt ab", bezug: "buffer_target", vorzeichen: -1, min: 0, max: 10, schritt: 1 },
+          { feld: "buffer_delta", typ: "zahl", befehl: "SetBufferDelta", titel: "Lädt ab", bezug: "buffer_target", vorzeichen: -1, min: 0, max: 10, schritt: 1 },
         ],
       },
       {
@@ -1353,12 +1366,13 @@ class LutarymHeatpumpCard extends HTMLElement {
         titel: "Heizkurve",
         werte: [],
         aktionen: [
+          { typ: "kurvenzone" },
           { typ: "trenner", titel: "Kalter Punkt, linkes Ende der Kurve" },
-          { feld: "curve_o_low", typ: "zahl", titel: "Wenn es draußen so kalt ist", einheit: "°C", min: -20, max: 15, schritt: 1 },
-          { feld: "curve_t_high", typ: "zahl", titel: "dann heizt die Anlage auf", einheit: "°C", min: 20, max: 60, schritt: 1 },
+          { feld: "o_low", kurve: true, typ: "zahl", befehl: "SetCurves", titel: "Wenn es draußen so kalt ist", einheit: "°C", min: -20, max: 15, schritt: 1 },
+          { feld: "t_high", kurve: true, typ: "zahl", befehl: "SetCurves", titel: "dann heizt die Anlage auf", einheit: "°C", min: 20, max: 60, schritt: 1 },
           { typ: "trenner", titel: "Warmer Punkt, rechtes Ende der Kurve" },
-          { feld: "curve_o_high", typ: "zahl", titel: "Wenn es draußen so warm ist", einheit: "°C", min: -20, max: 25, schritt: 1 },
-          { feld: "curve_t_low", typ: "zahl", titel: "dann heizt die Anlage auf", einheit: "°C", min: 20, max: 60, schritt: 1 },
+          { feld: "o_high", kurve: true, typ: "zahl", befehl: "SetCurves", titel: "Wenn es draußen so warm ist", einheit: "°C", min: -20, max: 25, schritt: 1 },
+          { feld: "t_low", kurve: true, typ: "zahl", befehl: "SetCurves", titel: "dann heizt die Anlage auf", einheit: "°C", min: 20, max: 60, schritt: 1 },
         ],
       },
       {
@@ -1370,7 +1384,7 @@ class LutarymHeatpumpCard extends HTMLElement {
           { feld: "dhw_force", status: "dhw_force_state", typ: "schalter", an: "Aufheizen läuft, beenden", aus: "Einmalig aufheizen" },
           { feld: "force_sterilization", status: "sterilization_state", typ: "schalter", an: "Legionellenschutz läuft, beenden", aus: "Legionellenschutz starten" },
           { feld: "dhw_heater_switch", status: "dhw_heater", typ: "schalter", an: "Heizstab ist an, ausschalten", aus: "Heizstab einschalten" },
-          { feld: "dhw_heat_delta", typ: "zahl", titel: "Lädt ab", bezug: "dhw_setpoint", vorzeichen: 1, min: -12, max: -2, schritt: 1 },
+          { feld: "dhw_heat_delta", typ: "zahl", befehl: "SetDHWHeatDelta", titel: "Lädt ab", bezug: "dhw_setpoint", vorzeichen: 1, min: -12, max: -2, schritt: 1 },
         ],
       },
       {
@@ -1402,7 +1416,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       if (!el) return;
       // Anklickbar, sobald es dort etwas zu bedienen gibt.
       const hatTemperatur = Boolean(f.feld && this._e(f.feld));
-      const hatAktion = (f.aktionen || []).some((a) => this._e(a.feld));
+      const hatAktion = (f.aktionen || []).some((a) =>
+        this._e(a.kurve ? this._kf(a.feld) : a.feld)
+      );
       // Auch reine Anzeigewerte machen die Baugruppe anklickbar, damit
       // man von dort in den Verlauf von Home Assistant springen kann.
       const hatWerte =
@@ -1478,7 +1494,12 @@ class LutarymHeatpumpCard extends HTMLElement {
     const tempId = f.feld ? this._e(f.feld) : "";
     this._dialogKey = tempId && this._quelle.states[tempId] ? f.feld : null;
     this._dialogAnzeige = f.anzeige || null;
-    this._dialogAktionen = (f.aktionen || []).filter((a) => this._e(a.feld));
+    // Zwischenueberschriften und die Zonenwahl haben kein Feld und
+    // bleiben immer erhalten. Bei der Heizkurve zaehlt der Feldname der
+    // gerade gewaehlten Zone.
+    this._dialogAktionen = (f.aktionen || []).filter((a) =>
+      !a.feld ? true : Boolean(this._e(a.kurve ? this._kf(a.feld) : a.feld))
+    );
     this._dialogGruppen = f.werte || [];
     if (this._gehalten) delete this._gehalten["dialog"];
 
@@ -1599,6 +1620,11 @@ class LutarymHeatpumpCard extends HTMLElement {
                <select id="dlg-a${i}"></select>
              </label>`
 
+          : a.typ === "kurvenzone"
+          ? `<div class="lhc-zonenwahl" id="dlg-a${i}">
+               <button type="button" data-zone="1">Heizkreis 1</button>
+               <button type="button" data-zone="2">Heizkreis 2</button>
+             </div>`
           : a.typ === "trenner"
           ? `<div class="lhc-dialog-trenner">${escapeHtml(a.titel)}</div>`
           : a.typ === "zahl"
@@ -1627,12 +1653,31 @@ class LutarymHeatpumpCard extends HTMLElement {
             option: el.value,
           });
         });
+      } else if (a.typ === "kurvenzone") {
+        const box = this.shadowRoot.getElementById(`dlg-a${i}`);
+        if (box) {
+          box.querySelectorAll("button").forEach((k) => {
+            k.addEventListener("click", () => {
+              this._kurveZone = Number(k.dataset.zone);
+              this._zeichneKurve(this._quelle);
+              this._syncAktionen();
+            });
+          });
+        }
       } else if (a.typ === "zahl") {
         // Schrittweise verstellen, begrenzt auf den zulaessigen Bereich.
         const stelle = (richtung) => {
-          const id = this._e(a.feld);
-          if (!id || !stellbar(id)) return;
-          const jetzt = numState(this._quelle, id);
+          const feld = a.kurve ? this._kf(a.feld) : a.feld;
+          const id = this._e(feld);
+          if (!id) return;
+          const kannEntitaet = stellbar(id);
+          if (!kannEntitaet && !a.befehl) return;
+          // Ausgangspunkt ist der zuletzt gesendete Wert, sonst zaehlt
+          // mehrfaches Druecken nicht weiter, solange die Anlage den
+          // alten Wert meldet.
+          const ist = numState(this._quelle, id);
+          const gehalten = this._gehaltenerWert(id, ist);
+          const jetzt = gehalten !== null ? gehalten : ist;
           if (jetzt === null) return;
           const schritt = a.schritt || 1;
           // Das Plus soll immer die angezeigte Temperatur erhoehen.
@@ -1644,10 +1689,54 @@ class LutarymHeatpumpCard extends HTMLElement {
             a.max
           );
           if (neu === jetzt) return;
-          this._quelle.callService(id.split(".")[0], "set_value", {
-            entity_id: id,
-            value: neu,
+          // Der neue Wert wird sofort angezeigt und gehalten, bis die
+          // Anlage ihn zurueckmeldet. Sonst wirkt die Bedienung traege.
+          this._halte(id, neu);
+          if (kannEntitaet) {
+            this._quelle.callService(id.split(".")[0], "set_value", {
+              entity_id: id,
+              value: neu,
+            });
+            this._syncAktionen();
+            this._zeichneKurve(this._quelle);
+            return;
+          }
+          // Rueckfall: HeishaMon nimmt den Wert ueber seinen Befehlskanal
+          // entgegen. Die Heizkurve verlangt dabei alle vier Eckwerte.
+          const praefix = this._config.mqtt_prefix || "panasonic_heat_pump";
+          let nutzlast = String(neu);
+          if (a.befehl === "SetCurves") {
+            // Auch hier die zuletzt gesendeten Werte nehmen, sonst
+            // macht ein zweiter Klick den ersten wieder zunichte.
+            const w = (b) => {
+              const wid = this._e(this._kf(b));
+              const wist = numState(this._quelle, wid);
+              const wgeh = this._gehaltenerWert(wid, wist);
+              return wgeh !== null ? wgeh : wist;
+            };
+            const werte = {
+              t_high: w("t_high"),
+              t_low: w("t_low"),
+              o_high: w("o_high"),
+              o_low: w("o_low"),
+            };
+            werte[a.feld] = neu;
+            if (Object.values(werte).some((v) => v === null)) return;
+            nutzlast = JSON.stringify({
+              [`zone${this._kurveZone}`]: {
+                heat: {
+                  target: { high: werte.t_high, low: werte.t_low },
+                  outside: { high: werte.o_high, low: werte.o_low },
+                },
+              },
+            });
+          }
+          this._quelle.callService("mqtt", "publish", {
+            topic: `${praefix}/commands/${a.befehl}`,
+            payload: nutzlast,
           });
+          this._syncAktionen();
+          this._zeichneKurve(this._quelle);
         };
         const minus = this.shadowRoot.getElementById(`dlg-a${i}-minus`);
         const plus = this.shadowRoot.getElementById(`dlg-a${i}-plus`);
@@ -1677,15 +1766,26 @@ class LutarymHeatpumpCard extends HTMLElement {
     };
     liste.forEach((a, i) => {
       const el = this.shadowRoot.getElementById(`dlg-a${i}`);
-      const st = this._quelle.states[this._e(a.feld)];
+      const st = this._quelle.states[this._e(a.kurve ? this._kf(a.feld) : a.feld)];
       if (!el) return;
+      if (a.typ === "kurvenzone") {
+        const box = this.shadowRoot.getElementById(`dlg-a${i}`);
+        if (box) {
+          box.hidden = this._config.hk_count !== 2;
+          box.querySelectorAll("button").forEach((k) => {
+            k.classList.toggle("is-an", Number(k.dataset.zone) === this._kurveZone);
+          });
+        }
+        return;
+      }
       if (a.typ === "trenner") return;
       if (a.typ !== "zone" && !st) return;
       if (a.typ === "zahl") {
         // Nur lesbare Entitaeten lassen sich nicht stellen. Die Knoepfe
         // bleiben sichtbar, aber ausgegraut, und die Beschriftung sagt
         // warum. Sonst wirkt es wie ein Fehler der Karte.
-        const kann = stellbar(this._e(a.feld));
+        const feldName = a.kurve ? this._kf(a.feld) : a.feld;
+        const kann = stellbar(this._e(feldName)) || Boolean(a.befehl);
         [`dlg-a${i}-minus`, `dlg-a${i}-plus`].forEach((kid) => {
           const k = this.shadowRoot.getElementById(kid);
           if (k) k.disabled = !kann;
@@ -1694,13 +1794,16 @@ class LutarymHeatpumpCard extends HTMLElement {
           ? el.parentElement.parentElement.querySelector(".lhc-field-label")
           : null;
         if (beschriftung) {
-          const hinweis = " – nur lesbar, number-Entität nötig";
+          const hinweis = " – nur lesbar";
           const rein = beschriftung.textContent.replace(hinweis, "");
           beschriftung.textContent = kann ? rein : rein + hinweis;
         }
         // Angezeigt wird die Temperatur, ab der geladen wird, nicht die
         // rohe Differenz. Das ist die Angabe, die im Alltag zaehlt.
-        const roh = numState(this._quelle, this._e(a.feld));
+        const idFeld = this._e(feldName);
+        const istWert = numState(this._quelle, idFeld);
+        const gehalten = this._gehaltenerWert(idFeld, istWert);
+        const roh = gehalten !== null ? gehalten : istWert;
         const ziel = a.bezug ? numState(this._quelle, this._e(a.bezug)) : null;
         el.textContent =
           roh === null
@@ -2096,9 +2199,9 @@ class LutarymHeatpumpCard extends HTMLElement {
                   )}</text>
           </g>
           <g id="hk${n}-tag" transform="translate(${UM} ${y1 + h / 2 + 18})">
-            <rect x="-100" y="-26" width="200" height="52" rx="10" fill="#0B1017" opacity="0.9"/>
-            <text class="tag-l" x="-86" y="6">Wasser</text>
-            <text class="tag-v" id="hk${n}-water-v" x="86" y="8" text-anchor="end">--</text>
+            <rect x="-100" y="-30" width="200" height="60" rx="10" fill="#0B1017" opacity="0.9"/>
+            <text class="tag-v" id="hk${n}-water-v" x="0" y="0" text-anchor="middle">--</text>
+            <text class="value-sp" id="hk${n}-target-v" x="0" y="22" text-anchor="middle"></text>
           </g>
           <g transform="translate(${(P.U2 + P.S_VL) / 2} ${y1 + 60})">
             <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
@@ -2138,7 +2241,12 @@ class LutarymHeatpumpCard extends HTMLElement {
       ${kopf}
       ${kennzahlen}
       ${this._verlaufRahmen(380, 408, 360, 130)}
-      ${this._kurveRahmen(380, 550, 360, 130)}
+      ${this._kurveRahmen(
+        380,
+        this._config.show_history === false ? 408 : 550,
+        360,
+        130
+      )}
       ${leitungen}
       ${puffer}
       ${sekundaer}
@@ -2155,21 +2263,25 @@ class LutarymHeatpumpCard extends HTMLElement {
    * damit die Kurve in denselben Rahmen passt.
    */
   _verlaufRahmen(x, y, breite, hoehe) {
+    if (this._config.show_history === false) {
+      this._verlaufMasse = null;
+      return "";
+    }
     this._verlaufMasse = { x, y, breite, hoehe };
     return `
       <g id="verlauf-group" opacity="0">
-        <rect x="${x}" y="${y}" width="${breite}" height="${hoehe}" rx="12"
-              fill="#0D1219" stroke="#26303F" stroke-width="1"/>
-        <text class="cap-s" x="${x + 14}" y="${y + 22}">Verbrauch 24 Stunden</text>
-        <text class="value-s" id="verlauf-max" x="${x + breite - 14}" y="${y + 22}"
+        <text class="cap-s" x="${x}" y="${y + 14}">Verbrauch 24 Stunden</text>
+        <text class="value-s" id="verlauf-max" x="${x + breite}" y="${y + 14}"
               text-anchor="end">--</text>
-        <line x1="${x + 14}" y1="${y + hoehe - 22}" x2="${x + breite - 14}"
-              y2="${y + hoehe - 22}" stroke="#26303F" stroke-width="1"/>
-        <path id="verlauf-flaeche" fill="#2E7FD4" opacity="0.22" d=""/>
-        <path id="verlauf-linie" fill="none" stroke="#4D9BFF" stroke-width="2"
+        <line x1="${x}" y1="${y + 26}" x2="${x + breite}" y2="${y + 26}"
+              stroke="#55657F" stroke-width="1"/>
+        <path id="verlauf-flaeche" fill="#2E7FD4" opacity="0.2" d=""/>
+        <path id="verlauf-linie" fill="none" stroke="#4D9BFF" stroke-width="2.5"
               stroke-linejoin="round" stroke-linecap="round" d=""/>
-        <text class="value-sp" x="${x + 14}" y="${y + hoehe - 7}">vor 24 h</text>
-        <text class="value-sp" x="${x + breite - 14}" y="${y + hoehe - 7}"
+        <line x1="${x}" y1="${y + hoehe - 20}" x2="${x + breite}"
+              y2="${y + hoehe - 20}" stroke="#2A3446" stroke-width="1"/>
+        <text class="value-sp" x="${x}" y="${y + hoehe - 4}">vor 24 h</text>
+        <text class="value-sp" x="${x + breite}" y="${y + hoehe - 4}"
               text-anchor="end">jetzt</text>
       </g>`;
   }
@@ -2178,29 +2290,45 @@ class LutarymHeatpumpCard extends HTMLElement {
    * Rahmen der Heizkurve. Der Klick oeffnet das Fenster mit den vier
    * Eckwerten. Gezeichnet wird die Kurve spaeter aus den Entitaeten.
    */
+  /**
+   * Ob gerade Warmwasser geladen wird. Das Dreiwegeventil ist die
+   * verlaessliche Quelle, ersatzweise die Betriebsart: 3 heisst
+   * "Nur Warmwasser".
+   */
+  _ladtWarmwasser(hass) {
+    const v = numState(hass, this._e("three_way_valve"));
+    if (v !== null) return v > 0;
+    return numState(hass, this._e("operating_mode")) === 3;
+  }
+
+  /** Feldname der Heizkurve fuer die gerade gewaehlte Zone. */
+  _kf(basis) {
+    return this._kurveZone === 2 ? `curve2_${basis}` : `curve_${basis}`;
+  }
+
   _kurveRahmen(x, y, breite, hoehe) {
+    if (this._config.show_curve === false) {
+      this._kurveMasse = null;
+      return "";
+    }
     this._kurveMasse = { x, y, breite, hoehe };
     return `
       <g id="kurve-group" class="klickbar" opacity="0">
-        <rect x="${x}" y="${y}" width="${breite}" height="${hoehe}" rx="12"
-              fill="#0D1219" stroke="#26303F" stroke-width="1"/>
-        <text class="cap-s" x="${x + 14}" y="${y + 22}">Heizkurve</text>
-        <text class="value-s" id="kurve-soll" x="${x + breite - 14}" y="${y + 22}"
+        <text class="cap-s" id="kurve-titel" x="${x}" y="${y + 14}">Heizkurve</text>
+        <text class="value-s" id="kurve-soll" x="${x + breite}" y="${y + 14}"
               text-anchor="end">--</text>
-        <line x1="${x + 40}" y1="${y + hoehe - 24}" x2="${x + breite - 14}"
-              y2="${y + hoehe - 24}" stroke="#26303F" stroke-width="1"/>
-        <line x1="${x + 40}" y1="${y + 32}" x2="${x + 40}"
-              y2="${y + hoehe - 24}" stroke="#26303F" stroke-width="1"/>
+        <line x1="${x}" y1="${y + 26}" x2="${x + breite}" y2="${y + 26}"
+              stroke="#55657F" stroke-width="1"/>
+        <line x1="${x}" y1="${y + hoehe - 20}" x2="${x + breite}"
+              y2="${y + hoehe - 20}" stroke="#2A3446" stroke-width="1"/>
         <path id="kurve-linie" fill="none" stroke="#FF8A5F" stroke-width="2.5"
               stroke-linecap="round" d=""/>
         <circle id="kurve-punkt" r="5" fill="#FFFFFF" opacity="0"/>
-        <circle id="kurve-e1" r="4" fill="#FF8A5F" opacity="0"/>
-        <circle id="kurve-e2" r="4" fill="#FF8A5F" opacity="0"/>
-        <text class="value-sp" id="kurve-x1" x="0" y="0">--</text>
-        <text class="value-sp" id="kurve-x2" x="0" y="0" text-anchor="end">--</text>
-        <text class="value-sp" id="kurve-y1" x="${x + 44}" y="${y + hoehe - 8}">kalt</text>
-        <text class="value-sp" id="kurve-y2" x="${x + breite - 14}" y="${y + hoehe - 8}"
-              text-anchor="end">warm</text>
+        <circle id="kurve-e1" r="4.5" fill="#FF8A5F" opacity="0"/>
+        <circle id="kurve-e2" r="4.5" fill="#FF8A5F" opacity="0"/>
+        <text class="value-sp" id="kurve-x1" x="${x}" y="${y + hoehe - 4}">--</text>
+        <text class="value-sp" id="kurve-x2" x="${x + breite}" y="${y + hoehe - 4}"
+              text-anchor="end">--</text>
       </g>`;
   }
 
@@ -2214,20 +2342,53 @@ class LutarymHeatpumpCard extends HTMLElement {
     const g = sr && sr.getElementById("kurve-group");
     const m = this._kurveMasse;
     if (!g || !m) return;
-    const tHoch = numState(hass, this._e("curve_t_high"));
-    const tTief = numState(hass, this._e("curve_t_low"));
-    const aHoch = numState(hass, this._e("curve_o_high"));
-    const aTief = numState(hass, this._e("curve_o_low"));
+    const lies = (basis) => {
+      const id = this._e(this._kf(basis));
+      const ist = numState(hass, id);
+      const gehalten = this._gehaltenerWert(id, ist);
+      return gehalten !== null ? gehalten : ist;
+    };
+    const tHoch = lies("t_high");
+    const tTief = lies("t_low");
+    const aHoch = lies("o_high");
+    const aTief = lies("o_low");
     if ([tHoch, tTief, aHoch, aTief].some((v) => v === null) || aHoch === aTief) {
       g.setAttribute("opacity", "0");
       return;
     }
-    const links = m.x + 40;
-    const rechts = m.x + m.breite - 14;
-    const oben = m.y + 32;
+    const links = m.x;
+    const rechts = m.x + m.breite;
+    const oben = m.y + 36;
     const unten = m.y + m.hoehe - 24;
-    const px = (a) => links + ((a - aTief) / (aHoch - aTief)) * (rechts - links);
-    const py = (t) => unten - ((t - tTief) / (tHoch - tTief || 1)) * (unten - oben);
+    // Die Skala ergibt sich aus den Eckwerten beider Heizkreise, mit
+    // etwas Rand. Dadurch fuellt die Kurve den Rahmen aus und beide
+    // Heizkreise bleiben trotzdem vergleichbar, weil sie dieselbe
+    // Skala benutzen.
+    const alleWerte = (art) => {
+      const raus = [];
+      ["", "2"].forEach((z) => {
+        ["high", "low"].forEach((e) => {
+          const id = this._e(`curve${z}_${art}_${e}`);
+          const ist = numState(hass, id);
+          const geh = this._gehaltenerWert(id, ist);
+          const v = geh !== null ? geh : ist;
+          if (v !== null) raus.push(v);
+        });
+      });
+      return raus;
+    };
+    const spanne = (werte, mindest) => {
+      const tief = Math.min(...werte);
+      const hoch = Math.max(...werte);
+      const rand = Math.max((hoch - tief) * 0.1, mindest);
+      return [tief - rand, hoch + rand];
+    };
+    const [A_MIN, A_MAX] = spanne(alleWerte("o"), 2);
+    const [T_MIN, T_MAX] = spanne(alleWerte("t"), 2);
+    const px = (a) =>
+      links + ((clamp(a, A_MIN, A_MAX) - A_MIN) / (A_MAX - A_MIN)) * (rechts - links);
+    const py = (t) =>
+      unten - ((clamp(t, T_MIN, T_MAX) - T_MIN) / (T_MAX - T_MIN)) * (unten - oben);
     sr.getElementById("kurve-linie").setAttribute(
       "d",
       `M${px(aTief).toFixed(1)} ${py(tHoch).toFixed(1)}L${px(aHoch).toFixed(1)} ${py(tTief).toFixed(1)}`
@@ -2242,14 +2403,14 @@ class LutarymHeatpumpCard extends HTMLElement {
     e2.setAttribute("cx", px(aHoch).toFixed(1));
     e2.setAttribute("cy", py(tTief).toFixed(1));
     e2.setAttribute("opacity", "1");
-    const b1 = sr.getElementById("kurve-x1");
-    b1.setAttribute("x", (px(aTief) + 10).toFixed(1));
-    b1.setAttribute("y", (py(tHoch) + 16).toFixed(1));
-    b1.textContent = `${fmt(aTief, 0)} °C außen → ${fmt(tHoch, 0)} °C`;
-    const b2El = sr.getElementById("kurve-x2");
-    b2El.setAttribute("x", (px(aHoch) - 10).toFixed(1));
-    b2El.setAttribute("y", (py(tTief) - 10).toFixed(1));
-    b2El.textContent = `${fmt(aHoch, 0)} °C außen → ${fmt(tTief, 0)} °C`;
+    // Die linke Beschriftung steht ueber ihrem Punkt, die rechte
+    // darunter. So bleiben sie auch bei flacher Kurve getrennt.
+    // Die Angaben stehen in der Fusszeile, nicht in der Zeichenflaeche.
+    // Dort stiessen sie zwangslaeufig an die Kurve.
+    sr.getElementById("kurve-x1").textContent =
+      `kalt ${fmt(aTief, 0)} °C → ${fmt(tHoch, 0)} °C`;
+    sr.getElementById("kurve-x2").textContent =
+      `warm ${fmt(aHoch, 0)} °C → ${fmt(tTief, 0)} °C`;
 
     // Aktuelle Lage auf der Kurve, nach der Formel von HeishaMon.
     const aussen = numState(hass, this._e("outside_temp"));
@@ -2264,6 +2425,13 @@ class LutarymHeatpumpCard extends HTMLElement {
       punkt.setAttribute("cy", py(soll).toFixed(1));
       punkt.setAttribute("opacity", "1");
       sr.getElementById("kurve-soll").textContent = `Soll ${fmt(soll, 0)} °C`;
+    }
+    const titel = sr.getElementById("kurve-titel");
+    if (titel) {
+      titel.textContent =
+        this._config.hk_count === 2
+          ? `Heizkurve ${this._kurveZone === 2 ? "HK2" : "HK1"}`
+          : "Heizkurve";
     }
     g.setAttribute("opacity", "1");
   }
@@ -2334,9 +2502,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       gruppe.setAttribute("opacity", "0");
       return;
     }
-    const links = masse.x + 14;
-    const rechts = masse.x + masse.breite - 14;
-    const oben = masse.y + 32;
+    const links = masse.x;
+    const rechts = masse.x + masse.breite;
+    const oben = masse.y + 38;
     const unten = masse.y + masse.hoehe - 22;
     const t0 = daten[0].t;
     const t1 = daten[daten.length - 1].t;
@@ -2545,7 +2713,12 @@ ${this._defs()}
       </g>
 
       ${this._verlaufRahmen(1150, 96, 450, 120)}
-      ${this._kurveRahmen(700, 96, 420, 120)}
+      ${this._kurveRahmen(
+        this._config.show_history === false ? 1150 : 700,
+        96,
+        this._config.show_history === false ? 450 : 420,
+        120
+      )}
 
       <!-- SG Ready, PV Leistung, Leistung, Verbrauch - zentriert zwischen VL und RL -->
       <!-- Als Gruppe zusammengefasst, damit sie im Hochformat als Ganzes
@@ -2792,10 +2965,10 @@ ${this._defs()}
         </g>
 
         <g id="hk${n}-tag" transform="translate(${mid} ${RT + 100})">
-          <rect x="-100" y="-26" width="200" height="52" rx="10"
+          <rect x="-100" y="-30" width="200" height="60" rx="10"
                 fill="#0B1017" opacity="0.9"/>
-          <text class="tag-l" x="-86" y="6">Wasser</text>
-          <text class="tag-v" id="hk${n}-water-v" x="86" y="8" text-anchor="end">--</text>
+          <text class="tag-v" id="hk${n}-water-v" x="0" y="0" text-anchor="middle">--</text>
+          <text class="value-sp" id="hk${n}-target-v" x="0" y="22" text-anchor="middle"></text>
         </g>
 
         <g id="hk${n}-name"><rect x="${mid - schildBreite(this._config[`label_hk${n}`] || `Heizkreis ${n}`, 180) / 2}" y="405"
@@ -3091,8 +3264,13 @@ ${this._defs()}
     paint("bg-top", col(buf));
     paint("bg-bottom", col(buf === null ? null : buf - 4));
     set("buf-v", buf === null ? "--" : `${fmt(buf)} °C`);
-    const bufSp = numState(hass, this._e("buffer_target"));
-    set("buf-sp", bufSp === null ? "" : `Ziel ${fmt(bufSp, 0)} °C`);
+    // TOP7 ist der Vorlaufsollwert der Anlage. Waehrend der
+    // Warmwasserladung gilt er dem Speicher, nicht dem Puffer, und
+    // springt dann auf dessen Ladetemperatur. In dieser Zeit wird er
+    // hier nicht als Pufferziel ausgegeben, das waere irrefuehrend.
+    const wwLaeuft = this._ladtWarmwasser(hass);
+    const bufSp = wwLaeuft ? null : numState(hass, this._e("buffer_target"));
+    set("buf-sp", wwLaeuft ? "Warmwasser hat Vorrang" : bufSp === null ? "" : `Ziel ${fmt(bufSp, 0)} °C`);
     // TOP113 ist die Hysterese des Puffers, 0 bis 10 K. Angezeigt wird
     // daraus die Temperatur, ab der nachgeladen wird.
     const bDelta = numState(hass, this._e("buffer_delta"));
@@ -3105,6 +3283,7 @@ ${this._defs()}
         ? ""
         : `Lädt ab ${fmt(bufSp - Math.abs(bDelta), 0)} °C`
     );
+    void wwLaeuft;
     abzeichen("roomheater-badge", isOn(hass, this._e("room_heater")) === true);
 
     const dhwSp = numState(hass, this._e("dhw_setpoint"));
@@ -3204,13 +3383,7 @@ ${this._defs()}
     // Quelle. Fehlt es, hilft die Betriebsart weiter: Wert 3 heisst
     // "Nur Warmwasser". Ohne beides gilt Heizen, sonst laufen beide
     // Stichleitungen gleichzeitig.
-    let zuWarmwasser;
-    if (valveNum !== null) {
-      zuWarmwasser = valveNum > 0;
-    } else {
-      const betriebsart = numState(hass, this._e("operating_mode"));
-      zuWarmwasser = betriebsart === 3;
-    }
+    const zuWarmwasser = this._ladtWarmwasser(hass);
     /* Zustandssymbole oben rechts in der Waermepumpe */
     const abtaut = isOn(hass, this._e("defrost")) === true;
     const art = numState(hass, this._e("operating_mode"));
@@ -3381,12 +3554,10 @@ ${this._defs()}
 
     paint(`rad${n}-top`, col(water));
     paint(`rad${n}-bottom`, col(water === null ? null : water - 6));
-    set(
-      `hk${n}-water-v`,
-      water === null
-        ? "--"
-        : `${fmt(water, 0)}${target === null ? "" : ` / ${fmt(target, 0)}`} °C`
-    );
+    // Wie bei Puffer und Warmwasser: oben die Temperatur, darunter das
+    // Ziel. Ohne Fachbegriffe, damit klar ist, was die Zahlen bedeuten.
+    set(`hk${n}-water-v`, water === null ? "--" : `${fmt(water, 1)} °C`);
+    set(`hk${n}-target-v`, target === null ? "" : `Ziel ${fmt(target, 0)} °C`);
 
     const rotor = sr.getElementById(`hk${n}-rotor`);
     if (rotor) {
@@ -3691,7 +3862,9 @@ ${this._defs()}
       .lhc-slider:focus-visible { box-shadow: 0 0 0 3px rgba(224,118,46,0.4); }
       /* Anklickbare Baugruppen und das Einstellfenster. */
       .klickbar { cursor: pointer; }
-      .klickbar:hover { filter: brightness(1.15); }
+      /* Kein filter: der zwingt den Browser, die Vektorgrafik zu rastern,
+         dadurch werden Linien und Schrift beim Ueberfahren unscharf. */
+      .klickbar:hover { opacity: 0.82; }
       .lhc-dialog {
         position: absolute; inset: 0; z-index: 5;
         display: flex; align-items: center; justify-content: center;
@@ -3753,6 +3926,18 @@ ${this._defs()}
       .lhc-dialog-action:focus-visible { outline: 2px solid #E0762E; outline-offset: 2px; }
       #dlg-temp[hidden] { display: none; }
       #dlg-temp.nur-lesbar { opacity: 0.45; }
+      .lhc-zonenwahl {
+        display: flex; gap: 8px; margin-top: 8px;
+      }
+      .lhc-zonenwahl[hidden] { display: none; }
+      .lhc-zonenwahl button {
+        flex: 1; padding: 8px 10px; border-radius: 12px; cursor: pointer;
+        font: inherit; font-size: 14px; color: #C3D0E0;
+        background: #161D28; border: 1px solid var(--line);
+      }
+      .lhc-zonenwahl button.is-an {
+        background: #12331F; border-color: #46C07A; color: #E8EDF4;
+      }
       .lhc-dialog-trenner {
         margin: 14px 0 2px; font-size: 13px; font-weight: 600;
         color: #98A6BA; border-bottom: 1px solid var(--line); padding-bottom: 4px;
@@ -3895,6 +4080,10 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
             <input type="number" id="opt-rohr" min="0" max="80" step="1">
           </label>
           <label class="ed-row">
+            <span>MQTT Präfix<em>für Befehle an HeishaMon, falls Werte nur lesbar sind</em></span>
+            <input type="text" id="opt-mqtt" placeholder="panasonic_heat_pump">
+          </label>
+          <label class="ed-row">
             <span>Anzahl Heizkreise</span>
             <select id="opt-hk"><option value="1">1 Heizkreis</option><option value="2">2 Heizkreise</option></select>
           </label>
@@ -3936,6 +4125,14 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
           <label class="ed-row ed-check">
             <input type="checkbox" id="opt-demo">
             <span>Demomodus<em>erfundene Werte zum Ausprobieren, die Anlage bleibt unberührt</em></span>
+          </label>
+          <label class="ed-row ed-check">
+            <input type="checkbox" id="opt-verlauf">
+            <span>Verbrauchsverlauf<em>Diagramm der letzten 24 Stunden anzeigen</em></span>
+          </label>
+          <label class="ed-row ed-check">
+            <input type="checkbox" id="opt-kurve">
+            <span>Heizkurve<em>Diagramm der Heizkurve anzeigen</em></span>
           </label>
         </div>
 
@@ -3986,6 +4183,7 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     bind("opt-breite", (el) => put({ card_width: parseInt(el.value, 10) || 0 }));
     bind("opt-hoehe", (el) => put({ card_height: parseInt(el.value, 10) || 0 }));
     bind("opt-rohr", (el) => put({ pipe_inner_mm: parseInt(el.value, 10) || 0 }));
+    bind("opt-mqtt", (el) => put({ mqtt_prefix: el.value.trim() || "panasonic_heat_pump" }));
     bind("opt-hk", (el) => put({ hk_count: parseInt(el.value, 10) }));
     bind("opt-min", (el) => put({ scale_min: parseFloat(el.value) }));
     bind("opt-max", (el) => put({ scale_max: parseFloat(el.value) }));
@@ -3999,6 +4197,8 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     bind("opt-eday", (el) => put({ energy_daily: el.checked }));
     bind("opt-animate", (el) => put({ animate: el.checked }));
     bind("opt-demo", (el) => put({ demo: el.checked }));
+    bind("opt-verlauf", (el) => put({ show_history: el.checked }));
+    bind("opt-kurve", (el) => put({ show_curve: el.checked }));
 
     const applyMap = (map, merge) => {
       const entities = merge ? { ...this._config.entities, ...map } : { ...map };
@@ -4047,6 +4247,7 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     put("opt-breite", String(this._config.card_width || 0));
     put("opt-hoehe", String(this._config.card_height || 0));
     put("opt-rohr", String(this._config.pipe_inner_mm || 0));
+    put("opt-mqtt", this._config.mqtt_prefix || "panasonic_heat_pump");
     put("opt-hk", String(this._config.hk_count));
     put("opt-min", this._config.scale_min);
     put("opt-max", this._config.scale_max);
@@ -4060,6 +4261,8 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     check("opt-eday", this._config.energy_daily);
     check("opt-animate", this._config.animate);
     check("opt-demo", this._config.demo === true);
+    check("opt-verlauf", this._config.show_history !== false);
+    check("opt-kurve", this._config.show_curve !== false);
 
     const imFokus = sr.activeElement;
     sr.querySelectorAll("[data-entity]").forEach((input) => {
