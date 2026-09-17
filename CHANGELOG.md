@@ -1,3 +1,9 @@
+# v2.20.1
+- Achsen der Heizkurve mit Teilstrichen auf runden Werten, die
+  Schrittweite richtet sich nach dem Wertebereich
+- Gestrichelte Linien markieren die aktuelle Außentemperatur und den
+  daraus folgenden Vorlauf
+
 # v2.20.0
 - Heizkurve mit Skala: beide Achsen mit je drei Marken, feines Gitter,
   dadurch ist die Kurve ablesbar
