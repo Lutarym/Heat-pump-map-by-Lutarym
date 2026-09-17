@@ -1,3 +1,18 @@
+# v2.16.0
+- Heizkurve auch für Heizkreis 2 über TOP82 bis TOP85, im Fenster
+  zwischen HK1 und HK2 umschaltbar
+- Kurve auf fester Skala von -20 bis 20 Grad außen und 20 bis 60 Grad
+  Vorlauf, dadurch ist die Steigung ablesbar und beide Heizkreise
+  lassen sich vergleichen
+- Beschriftungen der Kurvenenden bleiben auch bei flacher Kurve getrennt
+
+# v2.15.0
+- Heizkurve und beide Hysteresewerte lassen sich auch dann verstellen,
+  wenn nur lesbare Entitäten vorliegen. Die Karte schickt den Wert dann
+  über den Befehlskanal von HeishaMon: SetCurves, SetBufferDelta und
+  SetDHWHeatDelta
+- Neue Einstellung MQTT Präfix, voreingestellt panasonic_heat_pump
+
 # v2.14.3
 - Nur lesbare Entitäten: Bedienelemente bleiben sichtbar, sind aber
   ausgegraut, und die Beschriftung nennt den Grund. Vorher verschwanden
