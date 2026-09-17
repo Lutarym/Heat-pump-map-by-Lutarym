@@ -1,3 +1,12 @@
+# v2.16.1
+- Verstellte Werte erscheinen sofort und werden gehalten, bis die Anlage
+  sie zurückmeldet. Mehrfaches Drücken zählt weiter, und das gesendete
+  JSON enthält alle bisherigen Änderungen
+- Beim Überfahren mit der Maus wird nichts mehr unscharf: der CSS-Filter
+  zwang den Browser, die Vektorgrafik zu rastern
+- Heizkurve füllt den Rahmen aus, die Skala ergibt sich aus den Eckwerten
+  beider Heizkreise mit Rand
+
 # v2.16.0
 - Heizkurve auch für Heizkreis 2 über TOP82 bis TOP85, im Fenster
   zwischen HK1 und HK2 umschaltbar

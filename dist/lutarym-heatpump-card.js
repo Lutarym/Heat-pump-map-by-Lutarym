@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.16.0";
+const CARD_VERSION = "2.16.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1670,7 +1670,12 @@ class LutarymHeatpumpCard extends HTMLElement {
           if (!id) return;
           const kannEntitaet = stellbar(id);
           if (!kannEntitaet && !a.befehl) return;
-          const jetzt = numState(this._quelle, id);
+          // Ausgangspunkt ist der zuletzt gesendete Wert, sonst zaehlt
+          // mehrfaches Druecken nicht weiter, solange die Anlage den
+          // alten Wert meldet.
+          const ist = numState(this._quelle, id);
+          const gehalten = this._gehaltenerWert(id, ist);
+          const jetzt = gehalten !== null ? gehalten : ist;
           if (jetzt === null) return;
           const schritt = a.schritt || 1;
           // Das Plus soll immer die angezeigte Temperatur erhoehen.
@@ -1682,11 +1687,16 @@ class LutarymHeatpumpCard extends HTMLElement {
             a.max
           );
           if (neu === jetzt) return;
+          // Der neue Wert wird sofort angezeigt und gehalten, bis die
+          // Anlage ihn zurueckmeldet. Sonst wirkt die Bedienung traege.
+          this._halte(id, neu);
           if (kannEntitaet) {
             this._quelle.callService(id.split(".")[0], "set_value", {
               entity_id: id,
               value: neu,
             });
+            this._syncAktionen();
+            this._zeichneKurve(this._quelle);
             return;
           }
           // Rueckfall: HeishaMon nimmt den Wert ueber seinen Befehlskanal
@@ -1694,7 +1704,14 @@ class LutarymHeatpumpCard extends HTMLElement {
           const praefix = this._config.mqtt_prefix || "panasonic_heat_pump";
           let nutzlast = String(neu);
           if (a.befehl === "SetCurves") {
-            const w = (b) => numState(this._quelle, this._e(this._kf(b)));
+            // Auch hier die zuletzt gesendeten Werte nehmen, sonst
+            // macht ein zweiter Klick den ersten wieder zunichte.
+            const w = (b) => {
+              const wid = this._e(this._kf(b));
+              const wist = numState(this._quelle, wid);
+              const wgeh = this._gehaltenerWert(wid, wist);
+              return wgeh !== null ? wgeh : wist;
+            };
             const werte = {
               t_high: w("t_high"),
               t_low: w("t_low"),
@@ -1716,6 +1733,8 @@ class LutarymHeatpumpCard extends HTMLElement {
             topic: `${praefix}/commands/${a.befehl}`,
             payload: nutzlast,
           });
+          this._syncAktionen();
+          this._zeichneKurve(this._quelle);
         };
         const minus = this.shadowRoot.getElementById(`dlg-a${i}-minus`);
         const plus = this.shadowRoot.getElementById(`dlg-a${i}-plus`);
@@ -1779,7 +1798,10 @@ class LutarymHeatpumpCard extends HTMLElement {
         }
         // Angezeigt wird die Temperatur, ab der geladen wird, nicht die
         // rohe Differenz. Das ist die Angabe, die im Alltag zaehlt.
-        const roh = numState(this._quelle, this._e(feldName));
+        const idFeld = this._e(feldName);
+        const istWert = numState(this._quelle, idFeld);
+        const gehalten = this._gehaltenerWert(idFeld, istWert);
+        const roh = gehalten !== null ? gehalten : istWert;
         const ziel = a.bezug ? numState(this._quelle, this._e(a.bezug)) : null;
         el.textContent =
           roh === null
@@ -2298,10 +2320,16 @@ class LutarymHeatpumpCard extends HTMLElement {
     const g = sr && sr.getElementById("kurve-group");
     const m = this._kurveMasse;
     if (!g || !m) return;
-    const tHoch = numState(hass, this._e(this._kf("t_high")));
-    const tTief = numState(hass, this._e(this._kf("t_low")));
-    const aHoch = numState(hass, this._e(this._kf("o_high")));
-    const aTief = numState(hass, this._e(this._kf("o_low")));
+    const lies = (basis) => {
+      const id = this._e(this._kf(basis));
+      const ist = numState(hass, id);
+      const gehalten = this._gehaltenerWert(id, ist);
+      return gehalten !== null ? gehalten : ist;
+    };
+    const tHoch = lies("t_high");
+    const tTief = lies("t_low");
+    const aHoch = lies("o_high");
+    const aTief = lies("o_low");
     if ([tHoch, tTief, aHoch, aTief].some((v) => v === null) || aHoch === aTief) {
       g.setAttribute("opacity", "0");
       return;
@@ -2310,13 +2338,31 @@ class LutarymHeatpumpCard extends HTMLElement {
     const rechts = m.x + m.breite - 14;
     const oben = m.y + 32;
     const unten = m.y + m.hoehe - 24;
-    // Feste Skala, damit die Steigung ablesbar ist und sich zwei
-    // Heizkreise vergleichen lassen. Sonst liefe jede Kurve von Ecke
-    // zu Ecke und saehe immer gleich aus.
-    const A_MIN = -20;
-    const A_MAX = 20;
-    const T_MIN = 20;
-    const T_MAX = 60;
+    // Die Skala ergibt sich aus den Eckwerten beider Heizkreise, mit
+    // etwas Rand. Dadurch fuellt die Kurve den Rahmen aus und beide
+    // Heizkreise bleiben trotzdem vergleichbar, weil sie dieselbe
+    // Skala benutzen.
+    const alleWerte = (art) => {
+      const raus = [];
+      ["", "2"].forEach((z) => {
+        ["high", "low"].forEach((e) => {
+          const id = this._e(`curve${z}_${art}_${e}`);
+          const ist = numState(hass, id);
+          const geh = this._gehaltenerWert(id, ist);
+          const v = geh !== null ? geh : ist;
+          if (v !== null) raus.push(v);
+        });
+      });
+      return raus;
+    };
+    const spanne = (werte, mindest) => {
+      const tief = Math.min(...werte);
+      const hoch = Math.max(...werte);
+      const rand = Math.max((hoch - tief) * 0.18, mindest);
+      return [tief - rand, hoch + rand];
+    };
+    const [A_MIN, A_MAX] = spanne(alleWerte("o"), 2);
+    const [T_MIN, T_MAX] = spanne(alleWerte("t"), 2);
     const px = (a) =>
       links + ((clamp(a, A_MIN, A_MAX) - A_MIN) / (A_MAX - A_MIN)) * (rechts - links);
     const py = (t) =>
@@ -3793,7 +3839,9 @@ ${this._defs()}
       .lhc-slider:focus-visible { box-shadow: 0 0 0 3px rgba(224,118,46,0.4); }
       /* Anklickbare Baugruppen und das Einstellfenster. */
       .klickbar { cursor: pointer; }
-      .klickbar:hover { filter: brightness(1.15); }
+      /* Kein filter: der zwingt den Browser, die Vektorgrafik zu rastern,
+         dadurch werden Linien und Schrift beim Ueberfahren unscharf. */
+      .klickbar:hover { opacity: 0.82; }
       .lhc-dialog {
         position: absolute; inset: 0; z-index: 5;
         display: flex; align-items: center; justify-content: center;
