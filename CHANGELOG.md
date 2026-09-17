@@ -1,3 +1,11 @@
+# v2.17.1
+- Heizkreise werden dargestellt wie Puffer und Warmwasser: große
+  Temperatur, darunter das Ziel. Ohne Fachbegriffe
+
+# v2.17.0
+- Heizkreise zeigen statt "Wasser 29 / 35 °C" zwei benannte Zeilen:
+  Vorlauf ist und Vorlauf soll, jeweils mit einer Nachkommastelle
+
 # v2.16.1
 - Verstellte Werte erscheinen sofort und werden gehalten, bis die Anlage
   sie zurückmeldet. Mehrfaches Drücken zählt weiter, und das gesendete

@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.16.1";
+const CARD_VERSION = "2.17.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -2197,9 +2197,9 @@ class LutarymHeatpumpCard extends HTMLElement {
                   )}</text>
           </g>
           <g id="hk${n}-tag" transform="translate(${UM} ${y1 + h / 2 + 18})">
-            <rect x="-100" y="-26" width="200" height="52" rx="10" fill="#0B1017" opacity="0.9"/>
-            <text class="tag-l" x="-86" y="6">Wasser</text>
-            <text class="tag-v" id="hk${n}-water-v" x="86" y="8" text-anchor="end">--</text>
+            <rect x="-100" y="-30" width="200" height="60" rx="10" fill="#0B1017" opacity="0.9"/>
+            <text class="tag-v" id="hk${n}-water-v" x="0" y="0" text-anchor="middle">--</text>
+            <text class="value-sp" id="hk${n}-target-v" x="0" y="22" text-anchor="middle"></text>
           </g>
           <g transform="translate(${(P.U2 + P.S_VL) / 2} ${y1 + 60})">
             <circle r="24" fill="#0D1219" stroke="#33415A" stroke-width="2"/>
@@ -2940,10 +2940,10 @@ ${this._defs()}
         </g>
 
         <g id="hk${n}-tag" transform="translate(${mid} ${RT + 100})">
-          <rect x="-100" y="-26" width="200" height="52" rx="10"
+          <rect x="-100" y="-30" width="200" height="60" rx="10"
                 fill="#0B1017" opacity="0.9"/>
-          <text class="tag-l" x="-86" y="6">Wasser</text>
-          <text class="tag-v" id="hk${n}-water-v" x="86" y="8" text-anchor="end">--</text>
+          <text class="tag-v" id="hk${n}-water-v" x="0" y="0" text-anchor="middle">--</text>
+          <text class="value-sp" id="hk${n}-target-v" x="0" y="22" text-anchor="middle"></text>
         </g>
 
         <g id="hk${n}-name"><rect x="${mid - schildBreite(this._config[`label_hk${n}`] || `Heizkreis ${n}`, 180) / 2}" y="405"
@@ -3529,12 +3529,10 @@ ${this._defs()}
 
     paint(`rad${n}-top`, col(water));
     paint(`rad${n}-bottom`, col(water === null ? null : water - 6));
-    set(
-      `hk${n}-water-v`,
-      water === null
-        ? "--"
-        : `${fmt(water, 0)}${target === null ? "" : ` / ${fmt(target, 0)}`} °C`
-    );
+    // Wie bei Puffer und Warmwasser: oben die Temperatur, darunter das
+    // Ziel. Ohne Fachbegriffe, damit klar ist, was die Zahlen bedeuten.
+    set(`hk${n}-water-v`, water === null ? "--" : `${fmt(water, 1)} °C`);
+    set(`hk${n}-target-v`, target === null ? "" : `Ziel ${fmt(target, 0)} °C`);
 
     const rotor = sr.getElementById(`hk${n}-rotor`);
     if (rotor) {
