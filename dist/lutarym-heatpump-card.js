@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.17.1";
+const CARD_VERSION = "2.18.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -574,6 +574,8 @@ const DEFAULT_CONFIG = {
   card_width: 0,
   pipe_inner_mm: 0,
   mqtt_prefix: "panasonic_heat_pump",
+  show_history: true,
+  show_curve: true,
   card_height: 0,
   scale_min: 20,
   scale_max: 60,
@@ -2256,21 +2258,25 @@ class LutarymHeatpumpCard extends HTMLElement {
    * damit die Kurve in denselben Rahmen passt.
    */
   _verlaufRahmen(x, y, breite, hoehe) {
+    if (this._config.show_history === false) {
+      this._verlaufMasse = null;
+      return "";
+    }
     this._verlaufMasse = { x, y, breite, hoehe };
     return `
       <g id="verlauf-group" opacity="0">
-        <rect x="${x}" y="${y}" width="${breite}" height="${hoehe}" rx="12"
-              fill="#0D1219" stroke="#26303F" stroke-width="1"/>
-        <text class="cap-s" x="${x + 14}" y="${y + 22}">Verbrauch 24 Stunden</text>
-        <text class="value-s" id="verlauf-max" x="${x + breite - 14}" y="${y + 22}"
+        <text class="cap-s" x="${x}" y="${y + 14}">Verbrauch 24 Stunden</text>
+        <text class="value-s" id="verlauf-max" x="${x + breite}" y="${y + 14}"
               text-anchor="end">--</text>
-        <line x1="${x + 14}" y1="${y + hoehe - 22}" x2="${x + breite - 14}"
-              y2="${y + hoehe - 22}" stroke="#26303F" stroke-width="1"/>
-        <path id="verlauf-flaeche" fill="#2E7FD4" opacity="0.22" d=""/>
-        <path id="verlauf-linie" fill="none" stroke="#4D9BFF" stroke-width="2"
+        <line x1="${x}" y1="${y + 26}" x2="${x + breite}" y2="${y + 26}"
+              stroke="#55657F" stroke-width="1"/>
+        <path id="verlauf-flaeche" fill="#2E7FD4" opacity="0.2" d=""/>
+        <path id="verlauf-linie" fill="none" stroke="#4D9BFF" stroke-width="2.5"
               stroke-linejoin="round" stroke-linecap="round" d=""/>
-        <text class="value-sp" x="${x + 14}" y="${y + hoehe - 7}">vor 24 h</text>
-        <text class="value-sp" x="${x + breite - 14}" y="${y + hoehe - 7}"
+        <line x1="${x}" y1="${y + hoehe - 20}" x2="${x + breite}"
+              y2="${y + hoehe - 20}" stroke="#2A3446" stroke-width="1"/>
+        <text class="value-sp" x="${x}" y="${y + hoehe - 4}">vor 24 h</text>
+        <text class="value-sp" x="${x + breite}" y="${y + hoehe - 4}"
               text-anchor="end">jetzt</text>
       </g>`;
   }
@@ -2285,18 +2291,20 @@ class LutarymHeatpumpCard extends HTMLElement {
   }
 
   _kurveRahmen(x, y, breite, hoehe) {
+    if (this._config.show_curve === false) {
+      this._kurveMasse = null;
+      return "";
+    }
     this._kurveMasse = { x, y, breite, hoehe };
     return `
       <g id="kurve-group" class="klickbar" opacity="0">
-        <rect x="${x}" y="${y}" width="${breite}" height="${hoehe}" rx="12"
-              fill="#0D1219" stroke="#26303F" stroke-width="1"/>
-        <text class="cap-s" id="kurve-titel" x="${x + 14}" y="${y + 22}">Heizkurve</text>
-        <text class="value-s" id="kurve-soll" x="${x + breite - 14}" y="${y + 22}"
+        <text class="cap-s" id="kurve-titel" x="${x}" y="${y + 14}">Heizkurve</text>
+        <text class="value-s" id="kurve-soll" x="${x + breite}" y="${y + 14}"
               text-anchor="end">--</text>
-        <line x1="${x + 40}" y1="${y + hoehe - 24}" x2="${x + breite - 14}"
-              y2="${y + hoehe - 24}" stroke="#26303F" stroke-width="1"/>
-        <line x1="${x + 40}" y1="${y + 32}" x2="${x + 40}"
-              y2="${y + hoehe - 24}" stroke="#26303F" stroke-width="1"/>
+        <line x1="${x}" y1="${y + 26}" x2="${x + breite}" y2="${y + 26}"
+              stroke="#55657F" stroke-width="1"/>
+        <line x1="${x}" y1="${y + hoehe - 20}" x2="${x + breite}"
+              y2="${y + hoehe - 20}" stroke="#2A3446" stroke-width="1"/>
         <path id="kurve-linie" fill="none" stroke="#FF8A5F" stroke-width="2.5"
               stroke-linecap="round" d=""/>
         <circle id="kurve-punkt" r="5" fill="#FFFFFF" opacity="0"/>
@@ -2304,8 +2312,8 @@ class LutarymHeatpumpCard extends HTMLElement {
         <circle id="kurve-e2" r="4" fill="#FF8A5F" opacity="0"/>
         <text class="value-sp" id="kurve-x1" x="0" y="0">--</text>
         <text class="value-sp" id="kurve-x2" x="0" y="0" text-anchor="end">--</text>
-        <text class="value-sp" id="kurve-y1" x="${x + 44}" y="${y + hoehe - 8}">kalt</text>
-        <text class="value-sp" id="kurve-y2" x="${x + breite - 14}" y="${y + hoehe - 8}"
+        <text class="value-sp" id="kurve-y1" x="${x}" y="${y + hoehe - 4}">kalt</text>
+        <text class="value-sp" id="kurve-y2" x="${x + breite}" y="${y + hoehe - 4}"
               text-anchor="end">warm</text>
       </g>`;
   }
@@ -2334,9 +2342,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       g.setAttribute("opacity", "0");
       return;
     }
-    const links = m.x + 40;
-    const rechts = m.x + m.breite - 14;
-    const oben = m.y + 32;
+    const links = m.x;
+    const rechts = m.x + m.breite;
+    const oben = m.y + 36;
     const unten = m.y + m.hoehe - 24;
     // Die Skala ergibt sich aus den Eckwerten beider Heizkreise, mit
     // etwas Rand. Dadurch fuellt die Kurve den Rahmen aus und beide
@@ -2358,7 +2366,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     const spanne = (werte, mindest) => {
       const tief = Math.min(...werte);
       const hoch = Math.max(...werte);
-      const rand = Math.max((hoch - tief) * 0.18, mindest);
+      const rand = Math.max((hoch - tief) * 0.1, mindest);
       return [tief - rand, hoch + rand];
     };
     const [A_MIN, A_MAX] = spanne(alleWerte("o"), 2);
@@ -2385,7 +2393,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     // darunter. So bleiben sie auch bei flacher Kurve getrennt.
     const b1 = sr.getElementById("kurve-x1");
     b1.setAttribute("x", (px(aTief) + 10).toFixed(1));
-    b1.setAttribute("y", Math.max(py(tHoch) - 12, m.y + 46).toFixed(1));
+    b1.setAttribute("y", Math.max(py(tHoch) - 12, m.y + 54).toFixed(1));
     b1.textContent = `${fmt(aTief, 0)} °C außen → ${fmt(tHoch, 0)} °C`;
     const b2El = sr.getElementById("kurve-x2");
     b2El.setAttribute("x", (px(aHoch) - 10).toFixed(1));
@@ -2482,9 +2490,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       gruppe.setAttribute("opacity", "0");
       return;
     }
-    const links = masse.x + 14;
-    const rechts = masse.x + masse.breite - 14;
-    const oben = masse.y + 32;
+    const links = masse.x;
+    const rechts = masse.x + masse.breite;
+    const oben = masse.y + 38;
     const unten = masse.y + masse.hoehe - 22;
     const t0 = daten[0].t;
     const t1 = daten[daten.length - 1].t;
@@ -4101,6 +4109,14 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
             <input type="checkbox" id="opt-demo">
             <span>Demomodus<em>erfundene Werte zum Ausprobieren, die Anlage bleibt unberührt</em></span>
           </label>
+          <label class="ed-row ed-check">
+            <input type="checkbox" id="opt-verlauf">
+            <span>Verbrauchsverlauf<em>Diagramm der letzten 24 Stunden anzeigen</em></span>
+          </label>
+          <label class="ed-row ed-check">
+            <input type="checkbox" id="opt-kurve">
+            <span>Heizkurve<em>Diagramm der Heizkurve anzeigen</em></span>
+          </label>
         </div>
 
         ${groups
@@ -4164,6 +4180,8 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     bind("opt-eday", (el) => put({ energy_daily: el.checked }));
     bind("opt-animate", (el) => put({ animate: el.checked }));
     bind("opt-demo", (el) => put({ demo: el.checked }));
+    bind("opt-verlauf", (el) => put({ show_history: el.checked }));
+    bind("opt-kurve", (el) => put({ show_curve: el.checked }));
 
     const applyMap = (map, merge) => {
       const entities = merge ? { ...this._config.entities, ...map } : { ...map };
@@ -4226,6 +4244,8 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     check("opt-eday", this._config.energy_daily);
     check("opt-animate", this._config.animate);
     check("opt-demo", this._config.demo === true);
+    check("opt-verlauf", this._config.show_history !== false);
+    check("opt-kurve", this._config.show_curve !== false);
 
     const imFokus = sr.activeElement;
     sr.querySelectorAll("[data-entity]").forEach((input) => {

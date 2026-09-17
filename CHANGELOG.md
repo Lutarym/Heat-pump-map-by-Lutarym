@@ -1,3 +1,10 @@
+# v2.18.0
+- Verlaufsdiagramm und Heizkurve ohne Rahmen, stattdessen Trennlinien
+  wie im Kennzahlenbereich
+- Beide Diagramme lassen sich im Einstellungsdialog ein- und ausblenden
+- Kurve nutzt die Fläche besser: 83 Prozent der Breite und 74 der Höhe
+  statt vorher 74 und 42
+
 # v2.17.1
 - Heizkreise werden dargestellt wie Puffer und Warmwasser: große
   Temperatur, darunter das Ziel. Ohne Fachbegriffe
