@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.19.0";
+const CARD_VERSION = "2.20.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -2301,7 +2301,6 @@ class LutarymHeatpumpCard extends HTMLElement {
     return numState(hass, this._e("operating_mode")) === 3;
   }
 
-
   /** Feldname der Heizkurve fuer die gerade gewaehlte Zone. */
   _kf(basis) {
     return this._kurveZone === 2 ? `curve2_${basis}` : `curve_${basis}`;
@@ -2313,6 +2312,27 @@ class LutarymHeatpumpCard extends HTMLElement {
       return "";
     }
     this._kurveMasse = { x, y, breite, hoehe };
+    const links = x + 34;
+    const oben = y + 38;
+    const unten = y + hoehe - 26;
+    const gitter = [0, 1, 2]
+      .map(
+        (i) => `
+        <line class="kurve-gitter" id="kurve-gx${i}" x1="0" y1="${oben}" x2="0"
+              y2="${unten}" stroke="#212B39" stroke-width="1"/>
+        <line class="kurve-gitter" id="kurve-gy${i}" x1="${links}" y1="0"
+              x2="${x + breite}" y2="0" stroke="#212B39" stroke-width="1"/>`
+      )
+      .join("");
+    const beschriftung = [0, 1, 2]
+      .map(
+        (i) => `
+        <text class="value-sp" id="kurve-yt${i}" x="${links - 6}" y="0"
+              text-anchor="end">--</text>
+        <text class="value-sp" id="kurve-xt${i}" x="0" y="${y + hoehe - 8}"
+              text-anchor="middle">--</text>`
+      )
+      .join("");
     return `
       <g id="kurve-group" class="klickbar" opacity="0">
         <text class="cap-s" id="kurve-titel" x="${x}" y="${y + 14}">Heizkurve</text>
@@ -2320,17 +2340,18 @@ class LutarymHeatpumpCard extends HTMLElement {
               text-anchor="end">--</text>
         <line x1="${x}" y1="${y + 26}" x2="${x + breite}" y2="${y + 26}"
               stroke="#55657F" stroke-width="1"/>
-        <line x1="${x}" y1="${y + hoehe - 20}" x2="${x + breite}"
-              y2="${y + hoehe - 20}" stroke="#2A3446" stroke-width="1"/>
+        ${gitter}
+        <line x1="${links}" y1="${oben}" x2="${links}" y2="${unten}"
+              stroke="#3A4658" stroke-width="1"/>
+        <line x1="${links}" y1="${unten}" x2="${x + breite}" y2="${unten}"
+              stroke="#3A4658" stroke-width="1"/>
+        ${beschriftung}
         <path id="kurve-linie" fill="none" stroke="#FF8A5F" stroke-width="2.5"
               stroke-linecap="round" d=""/>
-        <circle id="kurve-punkt" r="5" fill="#FFFFFF" opacity="0"/>
-        <circle id="kurve-e1" r="4.5" fill="#FF8A5F" opacity="0"/>
-        <circle id="kurve-e2" r="4.5" fill="#FF8A5F" opacity="0"/>
-        <text class="value-sp" id="kurve-x1" x="${x}" y="${y + hoehe - 4}">--</text>
-        <text class="value-sp" id="kurve-x2" x="${x + breite}" y="${y + hoehe - 4}"
-              text-anchor="end">--</text>
-
+        <circle id="kurve-e1" r="4" fill="#FF8A5F" opacity="0"/>
+        <circle id="kurve-e2" r="4" fill="#FF8A5F" opacity="0"/>
+        <circle id="kurve-punkt" r="5.5" fill="#FFFFFF" stroke="#0D1219"
+                stroke-width="2" opacity="0"/>
       </g>`;
   }
 
@@ -2358,10 +2379,10 @@ class LutarymHeatpumpCard extends HTMLElement {
       g.setAttribute("opacity", "0");
       return;
     }
-    const links = m.x;
+    const links = m.x + 34;
     const rechts = m.x + m.breite;
-    const oben = m.y + 36;
-    const unten = m.y + m.hoehe - 24;
+    const oben = m.y + 38;
+    const unten = m.y + m.hoehe - 26;
     // Die Skala ergibt sich aus den Eckwerten beider Heizkreise, mit
     // etwas Rand. Dadurch fuellt die Kurve den Rahmen aus und beide
     // Heizkreise bleiben trotzdem vergleichbar, weil sie dieselbe
@@ -2407,13 +2428,31 @@ class LutarymHeatpumpCard extends HTMLElement {
     e2.setAttribute("opacity", "1");
     // Die linke Beschriftung steht ueber ihrem Punkt, die rechte
     // darunter. So bleiben sie auch bei flacher Kurve getrennt.
-    // Die Angaben stehen in der Fusszeile, nicht in der Zeichenflaeche.
-    // Dort stiessen sie zwangslaeufig an die Kurve.
-    sr.getElementById("kurve-x1").textContent =
-      `kalt ${fmt(aTief, 0)} °C → ${fmt(tHoch, 0)} °C`;
-    sr.getElementById("kurve-x2").textContent =
-      `warm ${fmt(aHoch, 0)} °C → ${fmt(tTief, 0)} °C`;
-
+    // Achsenbeschriftung und Gitter. Drei Marken je Achse reichen,
+    // damit die Kurve ablesbar wird, ohne das Bild zu ueberladen.
+    [0, 1, 2].forEach((i) => {
+      const anteil = i / 2;
+      const aWert = A_MIN + (A_MAX - A_MIN) * anteil;
+      const tWert = T_MIN + (T_MAX - T_MIN) * anteil;
+      const gx = px(aWert);
+      const gy = py(tWert);
+      const setz = (id, attrs) => {
+        const el = sr.getElementById(id);
+        if (el) Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+      };
+      setz(`kurve-gx${i}`, { x1: gx.toFixed(1), x2: gx.toFixed(1) });
+      setz(`kurve-gy${i}`, { y1: gy.toFixed(1), y2: gy.toFixed(1) });
+      const xt = sr.getElementById(`kurve-xt${i}`);
+      if (xt) {
+        xt.setAttribute("x", gx.toFixed(1));
+        xt.textContent = `${fmt(aWert, 0)}°`;
+      }
+      const yt = sr.getElementById(`kurve-yt${i}`);
+      if (yt) {
+        yt.setAttribute("y", (gy + 4).toFixed(1));
+        yt.textContent = `${fmt(tWert, 0)}°`;
+      }
+    });
 
     // Aktuelle Lage auf der Kurve, nach der Formel von HeishaMon.
     const aussen = numState(hass, this._e("outside_temp"));
@@ -2427,7 +2466,8 @@ class LutarymHeatpumpCard extends HTMLElement {
       punkt.setAttribute("cx", px(begrenzt).toFixed(1));
       punkt.setAttribute("cy", py(soll).toFixed(1));
       punkt.setAttribute("opacity", "1");
-      sr.getElementById("kurve-soll").textContent = `Soll ${fmt(soll, 0)} °C`;
+      sr.getElementById("kurve-soll").textContent =
+        `${fmt(aussen, 1)} °C außen → Soll ${fmt(soll, 0)} °C`;
     }
     const titel = sr.getElementById("kurve-titel");
     if (titel) {

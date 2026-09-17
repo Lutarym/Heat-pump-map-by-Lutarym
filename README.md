@@ -1,5 +1,4 @@
-# Lutarym Wärmepumpen Card v2.19.0
-
+# Lutarym Wärmepumpen Card v2.20.0
 
 Lovelace Custom Card für Panasonic Aquarea Wärmepumpensysteme über HeishaMon.
 

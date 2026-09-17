@@ -1,3 +1,11 @@
+# v2.20.0
+- Heizkurve mit Skala: beide Achsen mit je drei Marken, feines Gitter,
+  dadurch ist die Kurve ablesbar
+- Kopfzeile nennt die aktuelle Außentemperatur und den daraus folgenden
+  Sollwert
+- Betriebspunkt als weißer Punkt mit dunklem Rand, bleibt auch außerhalb
+  der Kurvenenden im Bild
+
 # v2.19.0
 - Heizkurve rückt auf den Platz des Verbrauchsdiagramms, wenn dieses
   ausgeblendet ist
@@ -6,7 +14,6 @@
 - Pufferziel wird während der Warmwasserladung nicht mehr angezeigt.
   TOP7 gilt in dieser Zeit dem Speicher und sprang auf dessen
   Ladetemperatur, was als Pufferziel irreführend war
-
 
 # v2.18.0
 - Verlaufsdiagramm und Heizkurve ohne Rahmen, stattdessen Trennlinien
