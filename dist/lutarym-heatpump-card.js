@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.21.0";
+const CARD_VERSION = "2.21.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -2545,8 +2545,15 @@ class LutarymHeatpumpCard extends HTMLElement {
       achse(marken(A_MIN, A_MAX, 8), 9, "x", false);
       achse(marken(T_MIN, T_MAX, 7), 8, "y", true);
 
+      // Ausserhalb der beiden Eckwerte bleibt der Sollwert konstant.
+      // Deshalb laeuft die Linie waagerecht bis an die Raender weiter,
+      // statt in der Mitte zu enden.
       setz(`kd${z}-linie`, {
-        d: `M${px(aTief).toFixed(1)} ${py(tHoch).toFixed(1)}L${px(aHoch).toFixed(1)} ${py(tTief).toFixed(1)}`,
+        d:
+          `M${px(A_MIN).toFixed(1)} ${py(tHoch).toFixed(1)}` +
+          `L${px(aTief).toFixed(1)} ${py(tHoch).toFixed(1)}` +
+          `L${px(aHoch).toFixed(1)} ${py(tTief).toFixed(1)}` +
+          `L${px(A_MAX).toFixed(1)} ${py(tTief).toFixed(1)}`,
       });
       setz(`kd${z}-e1`, { cx: px(aTief).toFixed(1), cy: py(tHoch).toFixed(1), opacity: "1" });
       setz(`kd${z}-e2`, { cx: px(aHoch).toFixed(1), cy: py(tTief).toFixed(1), opacity: "1" });
@@ -2559,7 +2566,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       }
       const beg = clamp(aussen, aTief, aHoch);
       const soll = tTief + ((aHoch - beg) * (tHoch - tTief)) / (aHoch - aTief);
-      const mx = px(beg);
+      // Der Punkt sitzt bei der tatsaechlichen Aussentemperatur, auch
+      // auf den waagerechten Abschnitten ausserhalb der Eckwerte.
+      const mx = px(aussen);
       const my = py(soll);
       setz(`kd${z}-punkt`, { cx: mx.toFixed(1), cy: my.toFixed(1), opacity: "1" });
       setz(`kd${z}-mx`, { x1: mx.toFixed(1), x2: mx.toFixed(1), y1: my.toFixed(1), opacity: "0.6" });

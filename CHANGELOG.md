@@ -1,3 +1,9 @@
+# v2.21.1
+- Heizkurve nutzt die ganze Skala: außerhalb der Eckwerte läuft die Linie
+  waagerecht weiter, denn dort bleibt der Sollwert konstant
+- Betriebspunkt sitzt bei der tatsächlichen Außentemperatur, auch auf den
+  waagerechten Abschnitten
+
 # v2.21.0
 - Heizkurve ist nicht mehr auf der Karte, sondern in einem eigenen großen
   Fenster. Es wird über die Wärmepumpe aufgerufen und zeigt HK1 und HK2
