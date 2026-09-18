@@ -1,3 +1,9 @@
+# v2.23.0
+- Die Heizkurve wird nicht mehr über die Wärmepumpe aufgerufen, sondern
+  im Popup des jeweiligen Heizkreises. Jeder zeigt nur seine eigene Kurve
+- Der Titel nennt den konfigurierten Namen des Heizkreises
+- Fenster entsprechend schmaler, da nur noch eine Spalte gezeigt wird
+
 # v2.22.1
 - Heizkurvenfenster schließt über ein Kreuz in der Kopfzeile statt über
   eine eigene Schaltfläche am Fuß, das spart rund 48 Pixel Höhe

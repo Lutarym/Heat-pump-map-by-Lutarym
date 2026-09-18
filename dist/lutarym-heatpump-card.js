@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.22.1";
+const CARD_VERSION = "2.23.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1365,7 +1365,6 @@ class LutarymHeatpumpCard extends HTMLElement {
           { feld: "powerful_mode", typ: "auswahl", titel: "Turbomodus", texte: POWERFUL_LABELS },
           { feld: "quiet_mode", typ: "auswahl", titel: "Leisemodus", texte: QUIET_LABELS },
           { feld: "mode_select", typ: "auswahl", titel: "Betriebsart", texte: MODE_LABELS },
-          { typ: "kurveknopf", titel: "Heizkurve anzeigen" },
         ],
       },
       {
@@ -1399,6 +1398,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         aktionen: [
           { feld: "zones_select", typ: "zone", nummer: 1 },
           { feld: "hk1_switch", typ: "schalter", an: "Heizkreis ist an, ausschalten", aus: "Heizkreis einschalten" },
+          { typ: "kurveknopf", zone: 1, titel: "Heizkurve anzeigen" },
         ],
       },
       {
@@ -1410,6 +1410,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         aktionen: [
           { feld: "zones_select", typ: "zone", nummer: 2 },
           { feld: "hk2_switch", typ: "schalter", an: "Heizkreis ist an, ausschalten", aus: "Heizkreis einschalten" },
+          { typ: "kurveknopf", zone: 2, titel: "Heizkurve anzeigen" },
         ],
       },
     ];
@@ -1663,7 +1664,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         if (k) {
           k.addEventListener("click", () => {
             this.shadowRoot.getElementById("dialog").hidden = true;
-            this._oeffneKurve();
+            this._oeffneKurve(a.zone || 1);
           });
         }
       } else if (a.typ === "kurvenzone") {
@@ -2461,9 +2462,17 @@ class LutarymHeatpumpCard extends HTMLElement {
   }
 
   /** Oeffnet das grosse Heizkurvenfenster. */
-  _oeffneKurve() {
+  _oeffneKurve(zone) {
     const d = this.shadowRoot && this.shadowRoot.getElementById("kurve-dialog");
     if (!d) return;
+    // Jeder Heizkreis zeigt nur seine eigene Kurve.
+    this._kurveNur = zone || 1;
+    const t = this.shadowRoot.getElementById("kurve-haupttitel");
+    if (t) {
+      const name =
+        this._config[`label_hk${this._kurveNur}`] || `Heizkreis ${this._kurveNur}`;
+      t.textContent = `Heizkurve ${name}`;
+    }
     this._kurveRegler();
     this._zeichneKurveDialog();
     d.hidden = false;
@@ -2505,7 +2514,11 @@ class LutarymHeatpumpCard extends HTMLElement {
       const aTief = lies("o_low");
       const spalte = sr.getElementById(`kd${z}-linie`).closest(".lhc-kurve-spalte");
       const fehlt = [tHoch, tTief, aHoch, aTief].some((v) => v === null);
-      if (spalte) spalte.hidden = fehlt || (z === 2 && this._config.hk_count !== 2);
+      if (spalte)
+        spalte.hidden =
+          fehlt ||
+          (z === 2 && this._config.hk_count !== 2) ||
+          (this._kurveNur && this._kurveNur !== z);
       if (fehlt) return;
 
       const setz = (id, attrs, text) => {
@@ -2603,7 +2616,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       <div class="lhc-dialog" id="kurve-dialog" hidden>
         <div class="lhc-kurve-box">
           <div class="lhc-kurve-titel">
-            <span>Heizkurve</span>
+            <span id="kurve-haupttitel">Heizkurve</span>
             <button type="button" class="lhc-dialog-close" id="kurve-zu"
                     aria-label="Schließen">&times;</button>
           </div>
@@ -4112,7 +4125,8 @@ ${this._defs()}
       #dlg-temp[hidden] { display: none; }
       #dlg-temp.nur-lesbar { opacity: 0.45; }
       .lhc-kurve-box {
-        box-sizing: border-box; width: 66%; max-width: 900px; max-height: 100%;
+        /* Eine Spalte braucht weniger Platz als zwei. */
+        box-sizing: border-box; width: 66%; max-width: 560px; max-height: 100%;
         overflow-y: auto; padding: 16px 18px 14px; border-radius: 16px;
         background: #161D28; border: 1px solid var(--line);
         box-shadow: 0 18px 48px rgba(0,0,0,0.55);
