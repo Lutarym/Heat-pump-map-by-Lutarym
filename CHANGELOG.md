@@ -1,3 +1,11 @@
+# v2.21.0
+- Heizkurve ist nicht mehr auf der Karte, sondern in einem eigenen großen
+  Fenster. Es wird über die Wärmepumpe aufgerufen und zeigt HK1 und HK2
+  nebeneinander, jeweils mit vollständiger Skala, Betriebspunkt und den
+  vier Stellern
+- Das Fenster nimmt zwei Drittel der Kartenbreite ein
+- Der Verbrauchsverlauf bekommt den frei gewordenen Platz
+
 # v2.20.1
 - Achsen der Heizkurve mit Teilstrichen auf runden Werten, die
   Schrittweite richtet sich nach dem Wertebereich

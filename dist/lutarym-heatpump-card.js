@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.20.1";
+const CARD_VERSION = "2.21.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -575,7 +575,10 @@ const DEFAULT_CONFIG = {
   pipe_inner_mm: 0,
   mqtt_prefix: "panasonic_heat_pump",
   show_history: true,
-  show_curve: true,
+  curve_x_min: -20,
+  curve_x_max: 20,
+  curve_y_min: 20,
+  curve_y_max: 75,
   card_height: 0,
   scale_min: 20,
   scale_max: 60,
@@ -912,8 +915,20 @@ class LutarymHeatpumpCard extends HTMLElement {
     }
     this._groesse();
     this._update();
-    this._zeichneKurve(this._quelle);
     this._holeVerlauf();
+    const kd = this.shadowRoot.getElementById("kurve-dialog");
+    if (kd && !kd.dataset.fertig) {
+      kd.dataset.fertig = "1";
+      kd.addEventListener("click", (ev) => {
+        if (ev.target === kd) kd.hidden = true;
+      });
+      const zu = this.shadowRoot.getElementById("kurve-zu");
+      if (zu) zu.addEventListener("click", () => { kd.hidden = true; });
+    }
+    if (kd && !kd.hidden) {
+      this._kurveRegler();
+      this._zeichneKurveDialog();
+    }
   }
 
   /**
@@ -955,6 +970,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         <div class="lhc-demo" id="demo-leiste" hidden></div>
         <div class="lhc-scene">${this._svg()}</div>
 
+        ${this._kurveDialogMarkup()}
         <div class="lhc-dialog" id="dialog" hidden>
           <div class="lhc-dialog-box" role="dialog" aria-modal="true">
             <div class="lhc-dialog-head">
@@ -1349,6 +1365,7 @@ class LutarymHeatpumpCard extends HTMLElement {
           { feld: "powerful_mode", typ: "auswahl", titel: "Turbomodus", texte: POWERFUL_LABELS },
           { feld: "quiet_mode", typ: "auswahl", titel: "Leisemodus", texte: QUIET_LABELS },
           { feld: "mode_select", typ: "auswahl", titel: "Betriebsart", texte: MODE_LABELS },
+          { typ: "kurveknopf", titel: "Heizkurve anzeigen" },
         ],
       },
       {
@@ -1359,20 +1376,6 @@ class LutarymHeatpumpCard extends HTMLElement {
           { feld: "buffer_switch", status: "buffer_installed", typ: "schalter", an: "Pufferbetrieb ist an, ausschalten", aus: "Pufferbetrieb einschalten" },
           { feld: "room_heater_switch", status: "room_heater", typ: "schalter", an: "Heizstab Heizung an, ausschalten", aus: "Heizstab Heizung einschalten" },
           { feld: "buffer_delta", typ: "zahl", befehl: "SetBufferDelta", titel: "Lädt ab", bezug: "buffer_target", vorzeichen: -1, min: 0, max: 10, schritt: 1 },
-        ],
-      },
-      {
-        gruppe: "kurve-group",
-        titel: "Heizkurve",
-        werte: [],
-        aktionen: [
-          { typ: "kurvenzone" },
-          { typ: "trenner", titel: "Kalter Punkt, linkes Ende der Kurve" },
-          { feld: "o_low", kurve: true, typ: "zahl", befehl: "SetCurves", titel: "Wenn es draußen so kalt ist", einheit: "°C", min: -20, max: 15, schritt: 1 },
-          { feld: "t_high", kurve: true, typ: "zahl", befehl: "SetCurves", titel: "dann heizt die Anlage auf", einheit: "°C", min: 20, max: 60, schritt: 1 },
-          { typ: "trenner", titel: "Warmer Punkt, rechtes Ende der Kurve" },
-          { feld: "o_high", kurve: true, typ: "zahl", befehl: "SetCurves", titel: "Wenn es draußen so warm ist", einheit: "°C", min: -20, max: 25, schritt: 1 },
-          { feld: "t_low", kurve: true, typ: "zahl", befehl: "SetCurves", titel: "dann heizt die Anlage auf", einheit: "°C", min: 20, max: 60, schritt: 1 },
         ],
       },
       {
@@ -1620,6 +1623,8 @@ class LutarymHeatpumpCard extends HTMLElement {
                <select id="dlg-a${i}"></select>
              </label>`
 
+          : a.typ === "kurveknopf"
+          ? `<button type="button" class="lhc-dialog-action" id="dlg-a${i}">${escapeHtml(a.titel)}</button>`
           : a.typ === "kurvenzone"
           ? `<div class="lhc-zonenwahl" id="dlg-a${i}">
                <button type="button" data-zone="1">Heizkreis 1</button>
@@ -1653,13 +1658,20 @@ class LutarymHeatpumpCard extends HTMLElement {
             option: el.value,
           });
         });
+      } else if (a.typ === "kurveknopf") {
+        const k = this.shadowRoot.getElementById(`dlg-a${i}`);
+        if (k) {
+          k.addEventListener("click", () => {
+            this.shadowRoot.getElementById("dialog").hidden = true;
+            this._oeffneKurve();
+          });
+        }
       } else if (a.typ === "kurvenzone") {
         const box = this.shadowRoot.getElementById(`dlg-a${i}`);
         if (box) {
           box.querySelectorAll("button").forEach((k) => {
             k.addEventListener("click", () => {
               this._kurveZone = Number(k.dataset.zone);
-              this._zeichneKurve(this._quelle);
               this._syncAktionen();
             });
           });
@@ -1698,7 +1710,6 @@ class LutarymHeatpumpCard extends HTMLElement {
               value: neu,
             });
             this._syncAktionen();
-            this._zeichneKurve(this._quelle);
             return;
           }
           // Rueckfall: HeishaMon nimmt den Wert ueber seinen Befehlskanal
@@ -1736,7 +1747,6 @@ class LutarymHeatpumpCard extends HTMLElement {
             payload: nutzlast,
           });
           this._syncAktionen();
-          this._zeichneKurve(this._quelle);
         };
         const minus = this.shadowRoot.getElementById(`dlg-a${i}-minus`);
         const plus = this.shadowRoot.getElementById(`dlg-a${i}-plus`);
@@ -1768,6 +1778,7 @@ class LutarymHeatpumpCard extends HTMLElement {
       const el = this.shadowRoot.getElementById(`dlg-a${i}`);
       const st = this._quelle.states[this._e(a.kurve ? this._kf(a.feld) : a.feld)];
       if (!el) return;
+      if (a.typ === "kurveknopf") return;
       if (a.typ === "kurvenzone") {
         const box = this.shadowRoot.getElementById(`dlg-a${i}`);
         if (box) {
@@ -2240,13 +2251,8 @@ class LutarymHeatpumpCard extends HTMLElement {
       ${this._defs()}
       ${kopf}
       ${kennzahlen}
-      ${this._verlaufRahmen(380, 408, 360, 130)}
-      ${this._kurveRahmen(
-        380,
-        this._config.show_history === false ? 408 : 550,
-        360,
-        130
-      )}
+      ${this._verlaufRahmen(380, 420, 360, 240)}
+
       ${leitungen}
       ${puffer}
       ${sekundaer}
@@ -2306,227 +2312,289 @@ class LutarymHeatpumpCard extends HTMLElement {
     return this._kurveZone === 2 ? `curve2_${basis}` : `curve_${basis}`;
   }
 
-  _kurveRahmen(x, y, breite, hoehe) {
-    if (this._config.show_curve === false) {
-      this._kurveMasse = null;
-      return "";
-    }
-    this._kurveMasse = { x, y, breite, hoehe };
-    const links = x + 34;
-    const oben = y + 38;
-    const unten = y + hoehe - 26;
-    // Vorrat an Teilstrichen. Wie viele genutzt werden, entscheidet
-    // sich beim Zeichnen nach dem Wertebereich.
-    const gitter =
-      [0, 1, 2, 3, 4, 5, 6]
+  /**
+   * Ein Heizkurvendiagramm fuer das grosse Fenster. Jede Zone bekommt
+   * ein eigenes, sie stehen nebeneinander und lassen sich vergleichen.
+   */
+  _kurveBild(z) {
+    const B = 420;
+    const H = 300;
+    const links = 46;
+    const rechts = B - 14;
+    const oben = 18;
+    const unten = H - 40;
+    const striche = (n, pre, waag) =>
+      [...Array(n).keys()]
         .map(
           (i) => `
-        <line id="kurve-gx${i}" x1="0" y1="${oben}" x2="0" y2="${unten}"
-              stroke="#212B39" stroke-width="1" opacity="0"/>
-        <text class="value-sp" id="kurve-xt${i}" x="0" y="${y + hoehe - 8}"
-              text-anchor="middle" opacity="0">--</text>`
-        )
-        .join("") +
-      [0, 1, 2, 3, 4]
-        .map(
-          (i) => `
-        <line id="kurve-gy${i}" x1="${links}" y1="0" x2="${x + breite}" y2="0"
-              stroke="#212B39" stroke-width="1" opacity="0"/>
-        <text class="value-sp" id="kurve-yt${i}" x="${links - 6}" y="0"
-              text-anchor="end" opacity="0">--</text>`
+        <line id="kd${z}-g${pre}${i}" ${
+            waag
+              ? `x1="${links}" x2="${rechts}" y1="0" y2="0"`
+              : `y1="${oben}" y2="${unten}" x1="0" x2="0"`
+          } stroke="#212B39" stroke-width="1" opacity="0"/>
+        <text class="value-sp" id="kd${z}-t${pre}${i}" ${
+            waag
+              ? `x="${links - 8}" y="0" text-anchor="end"`
+              : `y="${H - 22}" x="0" text-anchor="middle"`
+          } opacity="0">--</text>`
         )
         .join("");
-    const beschriftung = `
-        <line id="kurve-marke" x1="0" y1="0" x2="0" y2="${unten}"
-              stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="4 4"
-              opacity="0"/>
-        <line id="kurve-marke-y" x1="${links}" y1="0" x2="0" y2="0"
-              stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="4 4"
-              opacity="0"/>`;
     return `
-      <g id="kurve-group" class="klickbar" opacity="0">
-        <text class="cap-s" id="kurve-titel" x="${x}" y="${y + 14}">Heizkurve</text>
-        <text class="value-s" id="kurve-soll" x="${x + breite}" y="${y + 14}"
-              text-anchor="end">--</text>
-        <line x1="${x}" y1="${y + 26}" x2="${x + breite}" y2="${y + 26}"
-              stroke="#55657F" stroke-width="1"/>
-        ${gitter}
+      <svg viewBox="0 0 ${B} ${H}" class="lhc-kurve-svg" xmlns="http://www.w3.org/2000/svg">
+        ${striche(9, "x", false)}
+        ${striche(8, "y", true)}
         <line x1="${links}" y1="${oben}" x2="${links}" y2="${unten}"
               stroke="#3A4658" stroke-width="1"/>
-        <line x1="${links}" y1="${unten}" x2="${x + breite}" y2="${unten}"
+        <line x1="${links}" y1="${unten}" x2="${rechts}" y2="${unten}"
               stroke="#3A4658" stroke-width="1"/>
-        ${beschriftung}
-        <path id="kurve-linie" fill="none" stroke="#FF8A5F" stroke-width="2.5"
+        <line id="kd${z}-mx" x1="0" y1="0" x2="0" y2="${unten}" stroke="#FFFFFF"
+              stroke-width="1.5" stroke-dasharray="4 4" opacity="0"/>
+        <line id="kd${z}-my" x1="${links}" y1="0" x2="0" y2="0" stroke="#FFFFFF"
+              stroke-width="1.5" stroke-dasharray="4 4" opacity="0"/>
+        <path id="kd${z}-linie" fill="none" stroke="#FF8A5F" stroke-width="3"
               stroke-linecap="round" d=""/>
-        <circle id="kurve-e1" r="4" fill="#FF8A5F" opacity="0"/>
-        <circle id="kurve-e2" r="4" fill="#FF8A5F" opacity="0"/>
-        <circle id="kurve-punkt" r="5.5" fill="#FFFFFF" stroke="#0D1219"
+        <circle id="kd${z}-e1" r="5" fill="#FF8A5F" opacity="0"/>
+        <circle id="kd${z}-e2" r="5" fill="#FF8A5F" opacity="0"/>
+        <circle id="kd${z}-punkt" r="6.5" fill="#FFFFFF" stroke="#0D1219"
                 stroke-width="2" opacity="0"/>
-      </g>`;
+        <text class="kurve-marke-t" id="kd${z}-mxt" x="0" y="${unten - 8}"
+              text-anchor="middle" opacity="0">--</text>
+        <text class="kurve-marke-t" id="kd${z}-myt" x="${links + 8}" y="0"
+              opacity="0">--</text>
+        <text class="value-sp" x="${rechts}" y="${H - 6}" text-anchor="end">Außentemperatur °C</text>
+        <text class="value-sp" x="0" y="${H - 6}">Vorlauf °C</text>
+      </svg>`;
   }
 
-  /**
-   * Zeichnet die Heizkurve. Sie verlaeuft von der tiefsten Aussen-
-   * temperatur mit dem hoechsten Vorlauf zur hoechsten Aussentemperatur
-   * mit dem niedrigsten Vorlauf. Der Punkt zeigt die aktuelle Lage.
-   */
-  _zeichneKurve(hass) {
+  /** Die vier Eckwerte je Heizkreis als Steller. */
+  _kurveRegler() {
     const sr = this.shadowRoot;
-    const g = sr && sr.getElementById("kurve-group");
-    const m = this._kurveMasse;
-    if (!g || !m) return;
-    const lies = (basis) => {
-      const id = this._e(this._kf(basis));
-      const ist = numState(hass, id);
-      const gehalten = this._gehaltenerWert(id, ist);
-      return gehalten !== null ? gehalten : ist;
-    };
-    const tHoch = lies("t_high");
-    const tTief = lies("t_low");
-    const aHoch = lies("o_high");
-    const aTief = lies("o_low");
-    if ([tHoch, tTief, aHoch, aTief].some((v) => v === null) || aHoch === aTief) {
-      g.setAttribute("opacity", "0");
-      return;
-    }
-    const links = m.x + 34;
-    const rechts = m.x + m.breite;
-    const oben = m.y + 38;
-    const unten = m.y + m.hoehe - 26;
-    // Die Skala ergibt sich aus den Eckwerten beider Heizkreise, mit
-    // etwas Rand. Dadurch fuellt die Kurve den Rahmen aus und beide
-    // Heizkreise bleiben trotzdem vergleichbar, weil sie dieselbe
-    // Skala benutzen.
-    const alleWerte = (art) => {
-      const raus = [];
-      ["", "2"].forEach((z) => {
-        ["high", "low"].forEach((e) => {
-          const id = this._e(`curve${z}_${art}_${e}`);
-          const ist = numState(hass, id);
-          const geh = this._gehaltenerWert(id, ist);
-          const v = geh !== null ? geh : ist;
-          if (v !== null) raus.push(v);
+    if (!sr) return;
+    const zeilen = [
+      { basis: "o_low", titel: "Wenn es draußen so kalt ist", min: -20, max: 15 },
+      { basis: "t_high", titel: "dann heizt die Anlage auf", min: 20, max: 75 },
+      { basis: "o_high", titel: "Wenn es draußen so warm ist", min: -20, max: 25 },
+      { basis: "t_low", titel: "dann heizt die Anlage auf", min: 20, max: 75 },
+    ];
+    [1, 2].forEach((z) => {
+      const box = sr.getElementById(`kd${z}-regler`);
+      if (!box) return;
+      if (!box.dataset.fertig) {
+        box.innerHTML = zeilen
+          .map(
+            (r, i) => `
+            <div class="lhc-dialog-num">
+              <span class="lhc-field-label">${escapeHtml(r.titel)}</span>
+              <div class="lhc-num-row">
+                <button type="button" class="lhc-step" id="kd${z}-r${i}-minus">&minus;</button>
+                <output id="kd${z}-r${i}">--</output>
+                <button type="button" class="lhc-step" id="kd${z}-r${i}-plus">+</button>
+              </div>
+            </div>`
+          )
+          .join("");
+        zeilen.forEach((r, i) => {
+          const feld = z === 2 ? `curve2_${r.basis}` : `curve_${r.basis}`;
+          const stelle = (richtung) => {
+            const id = this._e(feld);
+            if (!id) return;
+            const ist = numState(this._quelle, id);
+            const geh = this._gehaltenerWert(id, ist);
+            const jetzt = geh !== null ? geh : ist;
+            if (jetzt === null) return;
+            const neu = clamp(jetzt + richtung, r.min, r.max);
+            if (neu === jetzt) return;
+            this._halte(id, neu);
+            if (stellbar(id)) {
+              this._quelle.callService(id.split(".")[0], "set_value", {
+                entity_id: id,
+                value: neu,
+              });
+            } else {
+              const w = (b2) => {
+                const wid = this._e(z === 2 ? `curve2_${b2}` : `curve_${b2}`);
+                const wist = numState(this._quelle, wid);
+                const wgeh = this._gehaltenerWert(wid, wist);
+                return wgeh !== null ? wgeh : wist;
+              };
+              const werte = {
+                t_high: w("t_high"), t_low: w("t_low"),
+                o_high: w("o_high"), o_low: w("o_low"),
+              };
+              werte[r.basis] = neu;
+              if (Object.values(werte).some((v) => v === null)) return;
+              this._quelle.callService("mqtt", "publish", {
+                topic: `${this._config.mqtt_prefix || "panasonic_heat_pump"}/commands/SetCurves`,
+                payload: JSON.stringify({
+                  [`zone${z}`]: {
+                    heat: {
+                      target: { high: werte.t_high, low: werte.t_low },
+                      outside: { high: werte.o_high, low: werte.o_low },
+                    },
+                  },
+                }),
+              });
+            }
+            this._kurveRegler();
+            this._zeichneKurveDialog();
+          };
+          const m = sr.getElementById(`kd${z}-r${i}-minus`);
+          const pl = sr.getElementById(`kd${z}-r${i}-plus`);
+          if (m) m.addEventListener("click", () => stelle(-1));
+          if (pl) pl.addEventListener("click", () => stelle(1));
+        });
+        box.dataset.fertig = "1";
+      }
+      zeilen.forEach((r, i) => {
+        const feld = z === 2 ? `curve2_${r.basis}` : `curve_${r.basis}`;
+        const id = this._e(feld);
+        const ist = numState(this._quelle, id);
+        const geh = this._gehaltenerWert(id, ist);
+        const wert = geh !== null ? geh : ist;
+        const out = sr.getElementById(`kd${z}-r${i}`);
+        if (out) out.textContent = wert === null ? "--" : `${fmt(wert, 0)} °C`;
+        const kann = Boolean(id);
+        [`kd${z}-r${i}-minus`, `kd${z}-r${i}-plus`].forEach((kid) => {
+          const k = sr.getElementById(kid);
+          if (k) k.disabled = !kann;
         });
       });
-      return raus;
-    };
-    const spanne = (werte, mindest) => {
-      const tief = Math.min(...werte);
-      const hoch = Math.max(...werte);
-      const rand = Math.max((hoch - tief) * 0.1, mindest);
-      return [tief - rand, hoch + rand];
-    };
-    const [A_MIN, A_MAX] = spanne(alleWerte("o"), 2);
-    const [T_MIN, T_MAX] = spanne(alleWerte("t"), 2);
-    const px = (a) =>
-      links + ((clamp(a, A_MIN, A_MAX) - A_MIN) / (A_MAX - A_MIN)) * (rechts - links);
-    const py = (t) =>
-      unten - ((clamp(t, T_MIN, T_MAX) - T_MIN) / (T_MAX - T_MIN)) * (unten - oben);
-    sr.getElementById("kurve-linie").setAttribute(
-      "d",
-      `M${px(aTief).toFixed(1)} ${py(tHoch).toFixed(1)}L${px(aHoch).toFixed(1)} ${py(tTief).toFixed(1)}`
-    );
-    // Beide Enden werden direkt beschriftet, damit man ohne Achsen
-    // ablesen kann, was die Kurve aussagt.
-    const e1 = sr.getElementById("kurve-e1");
-    const e2 = sr.getElementById("kurve-e2");
-    e1.setAttribute("cx", px(aTief).toFixed(1));
-    e1.setAttribute("cy", py(tHoch).toFixed(1));
-    e1.setAttribute("opacity", "1");
-    e2.setAttribute("cx", px(aHoch).toFixed(1));
-    e2.setAttribute("cy", py(tTief).toFixed(1));
-    e2.setAttribute("opacity", "1");
-    // Die linke Beschriftung steht ueber ihrem Punkt, die rechte
-    // darunter. So bleiben sie auch bei flacher Kurve getrennt.
-    // Teilstriche auf runden Werten, damit die Achse lesbar ist.
-    // Die Schrittweite richtet sich nach dem Wertebereich.
-    const schrittweite = (bereich, hoechstens) => {
-      const roh = bereich / hoechstens;
-      return [1, 2, 5, 10, 20].find((s) => s >= roh) || 20;
-    };
+    });
+  }
+
+  /** Oeffnet das grosse Heizkurvenfenster. */
+  _oeffneKurve() {
+    const d = this.shadowRoot && this.shadowRoot.getElementById("kurve-dialog");
+    if (!d) return;
+    this._kurveRegler();
+    this._zeichneKurveDialog();
+    d.hidden = false;
+  }
+
+  /** Zeichnet beide Heizkurven im grossen Fenster. */
+  _zeichneKurveDialog() {
+    const sr = this.shadowRoot;
+    if (!sr || !sr.getElementById("kurve-dialog")) return;
+    const B = 420, H = 300, links = 46, rechts = B - 14, oben = 18, unten = H - 40;
+    const A_MIN = Number(this._config.curve_x_min);
+    const A_MAX = Number(this._config.curve_x_max);
+    const T_MIN = Number(this._config.curve_y_min);
+    const T_MAX = Number(this._config.curve_y_max);
+    if (!(A_MAX > A_MIN) || !(T_MAX > T_MIN)) return;
+    const px = (a) => links + ((clamp(a, A_MIN, A_MAX) - A_MIN) / (A_MAX - A_MIN)) * (rechts - links);
+    const py = (t) => unten - ((clamp(t, T_MIN, T_MAX) - T_MIN) / (T_MAX - T_MIN)) * (unten - oben);
+    const schritt = (bereich, hoechstens) =>
+      [1, 2, 5, 10, 15, 20, 25].find((s) => s >= bereich / hoechstens) || 25;
     const marken = (min, max, anzahl) => {
-      const s = schrittweite(max - min, anzahl);
+      const s = schritt(max - min, anzahl);
       const raus = [];
       for (let v = Math.ceil(min / s) * s; v <= max + 0.001; v += s) raus.push(v);
       return raus;
     };
-    const zeichneAchse = (werte, vorrat, istX) => {
-      for (let i = 0; i < vorrat; i++) {
-        const linie = sr.getElementById(`kurve-g${istX ? "x" : "y"}${i}`);
-        const text = sr.getElementById(`kurve-${istX ? "x" : "y"}t${i}`);
-        if (!linie || !text) continue;
-        if (i >= werte.length) {
-          linie.setAttribute("opacity", "0");
-          text.setAttribute("opacity", "0");
-          continue;
-        }
-        const v = werte[i];
-        const pos = istX ? px(v) : py(v);
-        if (istX) {
-          linie.setAttribute("x1", pos.toFixed(1));
-          linie.setAttribute("x2", pos.toFixed(1));
-          text.setAttribute("x", pos.toFixed(1));
-        } else {
-          linie.setAttribute("y1", pos.toFixed(1));
-          linie.setAttribute("y2", pos.toFixed(1));
-          text.setAttribute("y", (pos + 4).toFixed(1));
-        }
-        linie.setAttribute("opacity", "1");
-        text.setAttribute("opacity", "1");
-        text.textContent = `${fmt(v, 0)}°`;
-      }
-    };
-    zeichneAchse(marken(A_MIN, A_MAX, 6), 7, true);
-    zeichneAchse(marken(T_MIN, T_MAX, 4), 5, false);
+    const aussen = numState(this._quelle, this._e("outside_temp"));
 
-    // Aktuelle Lage auf der Kurve, nach der Formel von HeishaMon.
-    const aussen = numState(hass, this._e("outside_temp"));
-    const punkt = sr.getElementById("kurve-punkt");
-    if (aussen === null) {
-      punkt.setAttribute("opacity", "0");
-      ["kurve-marke", "kurve-marke-y"].forEach((id) => {
-        const e = sr.getElementById(id);
-        if (e) e.setAttribute("opacity", "0");
+    [1, 2].forEach((z) => {
+      const feld = (basis) => (z === 2 ? `curve2_${basis}` : `curve_${basis}`);
+      const lies = (basis) => {
+        const id = this._e(feld(basis));
+        const ist = numState(this._quelle, id);
+        const geh = this._gehaltenerWert(id, ist);
+        return geh !== null ? geh : ist;
+      };
+      const tHoch = lies("t_high");
+      const tTief = lies("t_low");
+      const aHoch = lies("o_high");
+      const aTief = lies("o_low");
+      const spalte = sr.getElementById(`kd${z}-linie`).closest(".lhc-kurve-spalte");
+      const fehlt = [tHoch, tTief, aHoch, aTief].some((v) => v === null);
+      if (spalte) spalte.hidden = fehlt || (z === 2 && this._config.hk_count !== 2);
+      if (fehlt) return;
+
+      const setz = (id, attrs, text) => {
+        const el = sr.getElementById(id);
+        if (!el) return;
+        Object.entries(attrs || {}).forEach(([k, v]) => el.setAttribute(k, v));
+        if (text !== undefined) el.textContent = text;
+      };
+      const achse = (werte, vorrat, pre, waag) => {
+        for (let i = 0; i < vorrat; i++) {
+          const li = sr.getElementById(`kd${z}-g${pre}${i}`);
+          const tx = sr.getElementById(`kd${z}-t${pre}${i}`);
+          if (!li || !tx) continue;
+          if (i >= werte.length) {
+            li.setAttribute("opacity", "0");
+            tx.setAttribute("opacity", "0");
+            continue;
+          }
+          const v = werte[i];
+          const pos = waag ? py(v) : px(v);
+          if (waag) {
+            li.setAttribute("y1", pos.toFixed(1));
+            li.setAttribute("y2", pos.toFixed(1));
+            tx.setAttribute("y", (pos + 4).toFixed(1));
+          } else {
+            li.setAttribute("x1", pos.toFixed(1));
+            li.setAttribute("x2", pos.toFixed(1));
+            tx.setAttribute("x", pos.toFixed(1));
+          }
+          li.setAttribute("opacity", "1");
+          tx.setAttribute("opacity", "1");
+          tx.textContent = fmt(v, 0);
+        }
+      };
+      achse(marken(A_MIN, A_MAX, 8), 9, "x", false);
+      achse(marken(T_MIN, T_MAX, 7), 8, "y", true);
+
+      setz(`kd${z}-linie`, {
+        d: `M${px(aTief).toFixed(1)} ${py(tHoch).toFixed(1)}L${px(aHoch).toFixed(1)} ${py(tTief).toFixed(1)}`,
       });
-      sr.getElementById("kurve-soll").textContent = "--";
-    } else {
-      const begrenzt = clamp(aussen, aTief, aHoch);
-      const soll = tTief + ((aHoch - begrenzt) * (tHoch - tTief)) / (aHoch - aTief);
-      const mx = px(begrenzt);
+      setz(`kd${z}-e1`, { cx: px(aTief).toFixed(1), cy: py(tHoch).toFixed(1), opacity: "1" });
+      setz(`kd${z}-e2`, { cx: px(aHoch).toFixed(1), cy: py(tTief).toFixed(1), opacity: "1" });
+      setz(`kd${z}-titel`, {}, `Heizkreis ${z}`);
+
+      if (aussen === null) {
+        ["punkt", "mx", "my", "mxt", "myt"].forEach((s) => setz(`kd${z}-${s}`, { opacity: "0" }));
+        setz(`kd${z}-soll`, {}, "--");
+        return;
+      }
+      const beg = clamp(aussen, aTief, aHoch);
+      const soll = tTief + ((aHoch - beg) * (tHoch - tTief)) / (aHoch - aTief);
+      const mx = px(beg);
       const my = py(soll);
-      punkt.setAttribute("cx", mx.toFixed(1));
-      punkt.setAttribute("cy", my.toFixed(1));
-      punkt.setAttribute("opacity", "1");
-      // Gestrichelte Linien zeigen, wo die aktuelle Aussentemperatur
-      // liegt und welcher Vorlauf sich daraus ergibt.
-      const mk = sr.getElementById("kurve-marke");
-      if (mk) {
-        mk.setAttribute("x1", mx.toFixed(1));
-        mk.setAttribute("x2", mx.toFixed(1));
-        mk.setAttribute("y1", my.toFixed(1));
-        mk.setAttribute("opacity", "0.6");
-      }
-      const mky = sr.getElementById("kurve-marke-y");
-      if (mky) {
-        mky.setAttribute("x2", mx.toFixed(1));
-        mky.setAttribute("y1", my.toFixed(1));
-        mky.setAttribute("y2", my.toFixed(1));
-        mky.setAttribute("opacity", "0.6");
-      }
-      sr.getElementById("kurve-soll").textContent =
-        `${fmt(aussen, 1)} °C außen → Soll ${fmt(soll, 0)} °C`;
-    }
-    const titel = sr.getElementById("kurve-titel");
-    if (titel) {
-      titel.textContent =
-        this._config.hk_count === 2
-          ? `Heizkurve ${this._kurveZone === 2 ? "HK2" : "HK1"}`
-          : "Heizkurve";
-    }
-    g.setAttribute("opacity", "1");
+      setz(`kd${z}-punkt`, { cx: mx.toFixed(1), cy: my.toFixed(1), opacity: "1" });
+      setz(`kd${z}-mx`, { x1: mx.toFixed(1), x2: mx.toFixed(1), y1: my.toFixed(1), opacity: "0.6" });
+      setz(`kd${z}-my`, { x2: mx.toFixed(1), y1: my.toFixed(1), y2: my.toFixed(1), opacity: "0.6" });
+      setz(`kd${z}-mxt`, { x: mx.toFixed(1), opacity: "1" }, `${fmt(aussen, 1)} °C`);
+      setz(`kd${z}-myt`, { y: (my - 8).toFixed(1), opacity: "1" }, `${fmt(soll, 0)} °C`);
+      setz(`kd${z}-soll`, {}, `${fmt(aussen, 1)} °C außen → ${fmt(soll, 0)} °C`);
+    });
+  }
+
+  /** Aufbau des grossen Heizkurvenfensters. */
+  _kurveDialogMarkup() {
+    const spalte = (z) => `
+      <div class="lhc-kurve-spalte">
+        <div class="lhc-kurve-kopf">
+          <span id="kd${z}-titel">Heizkreis ${z}</span>
+          <span class="lhc-kurve-soll" id="kd${z}-soll">--</span>
+        </div>
+        ${this._kurveBild(z)}
+        <div class="lhc-kurve-regler" id="kd${z}-regler"></div>
+      </div>`;
+    return `
+      <div class="lhc-dialog" id="kurve-dialog" hidden>
+        <div class="lhc-kurve-box">
+          <div class="lhc-kurve-titel">Heizkurve</div>
+          <div class="lhc-kurve-reihe" id="kurve-reihe">
+            ${spalte(1)}${spalte(2)}
+          </div>
+          <button type="button" class="lhc-dialog-close" id="kurve-zu">Schließen</button>
+        </div>
+      </div>`;
   }
 
   /**
+   * Holt den Verlauf aus Home Assistant.  /**
    * Holt den Verlauf aus Home Assistant. Hoechstens alle fuenf Minuten,
    * damit die Abfrage die Oberflaeche nicht belastet.
    */
@@ -2802,13 +2870,8 @@ ${this._defs()}
 
       </g>
 
-      ${this._verlaufRahmen(1150, 96, 450, 120)}
-      ${this._kurveRahmen(
-        this._config.show_history === false ? 1150 : 700,
-        96,
-        this._config.show_history === false ? 450 : 420,
-        120
-      )}
+      ${this._verlaufRahmen(1150, 96, 450, 130)}
+
 
       <!-- SG Ready, PV Leistung, Leistung, Verbrauch - zentriert zwischen VL und RL -->
       <!-- Als Gruppe zusammengefasst, damit sie im Hochformat als Ganzes
@@ -3850,6 +3913,10 @@ ${this._defs()}
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums;
       }
+      .kurve-marke-t {
+        fill: #FFFFFF; font-size: 13px; font-weight: 700;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      }
       .value-sp { fill: rgba(255,255,255,0.85); font-size: 17px; }
       /* Aufsteigende Blasen. Je waermer der Speicher, desto mehr
          davon werden sichtbar geschaltet. */
@@ -4016,6 +4083,28 @@ ${this._defs()}
       .lhc-dialog-action:focus-visible { outline: 2px solid #E0762E; outline-offset: 2px; }
       #dlg-temp[hidden] { display: none; }
       #dlg-temp.nur-lesbar { opacity: 0.45; }
+      .lhc-kurve-box {
+        box-sizing: border-box; width: 66%; max-width: 900px; max-height: 100%;
+        overflow-y: auto; padding: 16px 18px 14px; border-radius: 16px;
+        background: #161D28; border: 1px solid var(--line);
+        box-shadow: 0 18px 48px rgba(0,0,0,0.55);
+      }
+      .lhc-kurve-titel {
+        font-size: 16px; font-weight: 600; color: #E8EDF4; margin-bottom: 10px;
+      }
+      .lhc-kurve-reihe { display: flex; gap: 18px; align-items: flex-start; }
+      .lhc-kurve-spalte { flex: 1; min-width: 0; }
+      .lhc-kurve-spalte[hidden] { display: none; }
+      .lhc-kurve-kopf {
+        display: flex; justify-content: space-between; align-items: baseline;
+        font-size: 13px; color: #98A6BA; margin-bottom: 4px;
+        border-bottom: 1px solid var(--line); padding-bottom: 4px;
+      }
+      .lhc-kurve-soll {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace; color: #C3D0E0;
+      }
+      .lhc-kurve-svg { width: 100%; height: auto; display: block; }
+      .lhc-kurve-regler { margin-top: 6px; }
       .lhc-zonenwahl {
         display: flex; gap: 8px; margin-top: 8px;
       }
@@ -4174,6 +4263,22 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
             <input type="text" id="opt-mqtt" placeholder="panasonic_heat_pump">
           </label>
           <label class="ed-row">
+            <span>Heizkurve Außen von<em>linker Rand der Skala in Grad</em></span>
+            <input type="number" id="opt-kxmin" step="1">
+          </label>
+          <label class="ed-row">
+            <span>Heizkurve Außen bis<em>rechter Rand der Skala in Grad</em></span>
+            <input type="number" id="opt-kxmax" step="1">
+          </label>
+          <label class="ed-row">
+            <span>Heizkurve Vorlauf von<em>unterer Rand der Skala in Grad</em></span>
+            <input type="number" id="opt-kymin" step="1">
+          </label>
+          <label class="ed-row">
+            <span>Heizkurve Vorlauf bis<em>oberer Rand der Skala in Grad</em></span>
+            <input type="number" id="opt-kymax" step="1">
+          </label>
+          <label class="ed-row">
             <span>Anzahl Heizkreise</span>
             <select id="opt-hk"><option value="1">1 Heizkreis</option><option value="2">2 Heizkreise</option></select>
           </label>
@@ -4219,10 +4324,6 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
           <label class="ed-row ed-check">
             <input type="checkbox" id="opt-verlauf">
             <span>Verbrauchsverlauf<em>Diagramm der letzten 24 Stunden anzeigen</em></span>
-          </label>
-          <label class="ed-row ed-check">
-            <input type="checkbox" id="opt-kurve">
-            <span>Heizkurve<em>Diagramm der Heizkurve anzeigen</em></span>
           </label>
         </div>
 
@@ -4274,6 +4375,10 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     bind("opt-hoehe", (el) => put({ card_height: parseInt(el.value, 10) || 0 }));
     bind("opt-rohr", (el) => put({ pipe_inner_mm: parseInt(el.value, 10) || 0 }));
     bind("opt-mqtt", (el) => put({ mqtt_prefix: el.value.trim() || "panasonic_heat_pump" }));
+    bind("opt-kxmin", (el) => put({ curve_x_min: parseInt(el.value, 10) }));
+    bind("opt-kxmax", (el) => put({ curve_x_max: parseInt(el.value, 10) }));
+    bind("opt-kymin", (el) => put({ curve_y_min: parseInt(el.value, 10) }));
+    bind("opt-kymax", (el) => put({ curve_y_max: parseInt(el.value, 10) }));
     bind("opt-hk", (el) => put({ hk_count: parseInt(el.value, 10) }));
     bind("opt-min", (el) => put({ scale_min: parseFloat(el.value) }));
     bind("opt-max", (el) => put({ scale_max: parseFloat(el.value) }));
@@ -4288,7 +4393,6 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     bind("opt-animate", (el) => put({ animate: el.checked }));
     bind("opt-demo", (el) => put({ demo: el.checked }));
     bind("opt-verlauf", (el) => put({ show_history: el.checked }));
-    bind("opt-kurve", (el) => put({ show_curve: el.checked }));
 
     const applyMap = (map, merge) => {
       const entities = merge ? { ...this._config.entities, ...map } : { ...map };
@@ -4338,6 +4442,10 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     put("opt-hoehe", String(this._config.card_height || 0));
     put("opt-rohr", String(this._config.pipe_inner_mm || 0));
     put("opt-mqtt", this._config.mqtt_prefix || "panasonic_heat_pump");
+    put("opt-kxmin", String(this._config.curve_x_min));
+    put("opt-kxmax", String(this._config.curve_x_max));
+    put("opt-kymin", String(this._config.curve_y_min));
+    put("opt-kymax", String(this._config.curve_y_max));
     put("opt-hk", String(this._config.hk_count));
     put("opt-min", this._config.scale_min);
     put("opt-max", this._config.scale_max);
@@ -4352,7 +4460,6 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     check("opt-animate", this._config.animate);
     check("opt-demo", this._config.demo === true);
     check("opt-verlauf", this._config.show_history !== false);
-    check("opt-kurve", this._config.show_curve !== false);
 
     const imFokus = sr.activeElement;
     sr.querySelectorAll("[data-entity]").forEach((input) => {
