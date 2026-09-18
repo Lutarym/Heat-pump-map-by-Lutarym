@@ -1,3 +1,13 @@
+# v2.24.0
+- Heizkurve farblich zugeordnet: Vorlauf orange, Außentemperatur blau.
+  Achsenlinie, Teilstriche, Beschriftung, Markierungslinie und der Wert
+  daran tragen jeweils dieselbe Farbe
+
+# v2.23.2
+- "Vorlauf °C" steht senkrecht links neben dem Diagramm,
+  "Außentemperatur °C" mittig darunter
+- Beide Achsenbeschriftungen in größerer Schrift
+
 # v2.23.1
 - Heizkurvenfenster passt ohne Scrollen: Diagramm von 420 mal 300 auf
   420 mal 230 abgeflacht, Regler in zwei Spalten. Zusammen rund

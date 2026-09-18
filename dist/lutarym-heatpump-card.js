@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.23.1";
+const CARD_VERSION = "2.24.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -2320,7 +2320,7 @@ class LutarymHeatpumpCard extends HTMLElement {
   _kurveBild(z) {
     const B = 420;
     const H = 230;
-    const links = 46;
+    const links = 62;
     const rechts = B - 14;
     const oben = 18;
     const unten = H - 40;
@@ -2333,7 +2333,7 @@ class LutarymHeatpumpCard extends HTMLElement {
               ? `x1="${links}" x2="${rechts}" y1="0" y2="0"`
               : `y1="${oben}" y2="${unten}" x1="0" x2="0"`
           } stroke="#212B39" stroke-width="1" opacity="0"/>
-        <text class="value-sp" id="kd${z}-t${pre}${i}" ${
+        <text class="${waag ? "achse-vl" : "achse-aussen"}" id="kd${z}-t${pre}${i}" ${
             waag
               ? `x="${links - 8}" y="0" text-anchor="end"`
               : `y="${H - 22}" x="0" text-anchor="middle"`
@@ -2345,12 +2345,12 @@ class LutarymHeatpumpCard extends HTMLElement {
         ${striche(9, "x", false)}
         ${striche(8, "y", true)}
         <line x1="${links}" y1="${oben}" x2="${links}" y2="${unten}"
-              stroke="#3A4658" stroke-width="1"/>
+              stroke="#FF8A5F" stroke-width="1.5" opacity="0.65"/>
         <line x1="${links}" y1="${unten}" x2="${rechts}" y2="${unten}"
-              stroke="#3A4658" stroke-width="1"/>
-        <line id="kd${z}-mx" x1="0" y1="0" x2="0" y2="${unten}" stroke="#FFFFFF"
+              stroke="#6BB7E8" stroke-width="1.5" opacity="0.65"/>
+        <line id="kd${z}-mx" x1="0" y1="0" x2="0" y2="${unten}" stroke="#6BB7E8"
               stroke-width="1.5" stroke-dasharray="4 4" opacity="0"/>
-        <line id="kd${z}-my" x1="${links}" y1="0" x2="0" y2="0" stroke="#FFFFFF"
+        <line id="kd${z}-my" x1="${links}" y1="0" x2="0" y2="0" stroke="#FF8A5F"
               stroke-width="1.5" stroke-dasharray="4 4" opacity="0"/>
         <path id="kd${z}-linie" fill="none" stroke="#FF8A5F" stroke-width="3"
               stroke-linecap="round" d=""/>
@@ -2358,12 +2358,14 @@ class LutarymHeatpumpCard extends HTMLElement {
         <circle id="kd${z}-e2" r="5" fill="#FF8A5F" opacity="0"/>
         <circle id="kd${z}-punkt" r="6.5" fill="#FFFFFF" stroke="#0D1219"
                 stroke-width="2" opacity="0"/>
-        <text class="kurve-marke-t" id="kd${z}-mxt" x="0" y="${unten - 8}"
+        <text class="kurve-marke-t achse-aussen" id="kd${z}-mxt" x="0" y="${unten - 8}"
               text-anchor="middle" opacity="0">--</text>
-        <text class="kurve-marke-t" id="kd${z}-myt" x="${links + 8}" y="0"
+        <text class="kurve-marke-t achse-vl" id="kd${z}-myt" x="${links + 8}" y="0"
               opacity="0">--</text>
-        <text class="value-sp" x="${rechts}" y="${H - 6}" text-anchor="end">Außentemperatur °C</text>
-        <text class="value-sp" x="0" y="${H - 6}">Vorlauf °C</text>
+        <text class="kurve-achse achse-aussen" x="${(links + rechts) / 2}" y="${H - 4}"
+              text-anchor="middle">Außentemperatur °C</text>
+        <text class="kurve-achse achse-vl" x="18" y="${(oben + unten) / 2}" text-anchor="middle"
+              transform="rotate(-90 18 ${(oben + unten) / 2})">Vorlauf °C</text>
       </svg>`;
   }
 
@@ -2482,7 +2484,7 @@ class LutarymHeatpumpCard extends HTMLElement {
   _zeichneKurveDialog() {
     const sr = this.shadowRoot;
     if (!sr || !sr.getElementById("kurve-dialog")) return;
-    const B = 420, H = 230, links = 46, rechts = B - 14, oben = 18, unten = H - 40;
+    const B = 420, H = 230, links = 62, rechts = B - 14, oben = 18, unten = H - 40;
     const A_MIN = Number(this._config.curve_x_min);
     const A_MAX = Number(this._config.curve_x_max);
     const T_MIN = Number(this._config.curve_y_min);
@@ -3947,8 +3949,15 @@ ${this._defs()}
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-variant-numeric: tabular-nums;
       }
+      /* Rot gehoert zum Vorlauf, blau zur Aussentemperatur. Achse,
+         Teilstriche, Beschriftung und Markierung teilen sich die Farbe. */
+      .kurve-achse { font-size: 15px; letter-spacing: 0.02em; }
+      .achse-vl { fill: #FF8A5F; font-size: 13px; }
+      .achse-aussen { fill: #6BB7E8; font-size: 13px; }
+      .kurve-achse.achse-vl, .kurve-achse.achse-aussen { font-size: 15px; }
+      /* Die Farbe kommt von der Achsenklasse, hier nur Groesse und Schnitt. */
       .kurve-marke-t {
-        fill: #FFFFFF; font-size: 13px; font-weight: 700;
+        font-size: 14px; font-weight: 700;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
       }
       .value-sp { fill: rgba(255,255,255,0.85); font-size: 17px; }
