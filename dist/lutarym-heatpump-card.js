@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.21.2";
+const CARD_VERSION = "2.22.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -2371,10 +2371,10 @@ class LutarymHeatpumpCard extends HTMLElement {
     const sr = this.shadowRoot;
     if (!sr) return;
     const zeilen = [
-      { basis: "o_low", titel: "Wenn es draußen so kalt ist", min: -20, max: 15 },
-      { basis: "t_high", titel: "dann heizt die Anlage auf", min: 20, max: 75 },
-      { basis: "o_high", titel: "Wenn es draußen so warm ist", min: -20, max: 25 },
-      { basis: "t_low", titel: "dann heizt die Anlage auf", min: 20, max: 75 },
+      { basis: "o_low", titel: "Außen kalt", min: -20, max: 15 },
+      { basis: "t_high", titel: "dann Vorlauf", min: 20, max: 75 },
+      { basis: "o_high", titel: "Außen warm", min: -20, max: 25 },
+      { basis: "t_low", titel: "dann Vorlauf", min: 20, max: 75 },
     ];
     [1, 2].forEach((z) => {
       const box = sr.getElementById(`kd${z}-regler`);
@@ -2383,13 +2383,11 @@ class LutarymHeatpumpCard extends HTMLElement {
         box.innerHTML = zeilen
           .map(
             (r, i) => `
-            <div class="lhc-dialog-num">
-              <span class="lhc-field-label">${escapeHtml(r.titel)}</span>
-              <div class="lhc-num-row">
-                <button type="button" class="lhc-step" id="kd${z}-r${i}-minus">&minus;</button>
-                <output id="kd${z}-r${i}">--</output>
-                <button type="button" class="lhc-step" id="kd${z}-r${i}-plus">+</button>
-              </div>
+            <div class="lhc-num-kompakt">
+              <span>${escapeHtml(r.titel)}</span>
+              <button type="button" class="lhc-step klein" id="kd${z}-r${i}-minus">&minus;</button>
+              <output id="kd${z}-r${i}">--</output>
+              <button type="button" class="lhc-step klein" id="kd${z}-r${i}-plus">+</button>
             </div>`
           )
           .join("");
@@ -4002,7 +4000,7 @@ ${this._defs()}
 
       .lhc-wert {
         display: flex; justify-content: space-between; align-items: center;
-        width: 100%; gap: 12px; margin-top: 4px; padding: 7px 12px;
+        width: 100%; gap: 12px; margin-top: 3px; padding: 5px 12px;
         background: #0D131B; color: var(--ink); font: inherit; font-size: 14px;
         border: 1px solid var(--line); border-radius: 8px;
         cursor: pointer; text-align: left;
@@ -4083,8 +4081,15 @@ ${this._defs()}
       }
       .lhc-step:hover { border-color: #3E4C61; }
       .lhc-step:focus-visible { outline: 2px solid #E0762E; outline-offset: 2px; }
+      /* Zwei Spalten: die Auswahlfelder stehen nebeneinander, die
+         Schaltflaechen laufen ueber die volle Breite. Das spart Hoehe. */
+      #dlg-actions {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px;
+      }
+      .lhc-dialog-trenner, .lhc-zonenwahl, .lhc-dialog-num { grid-column: 1 / -1; }
       .lhc-dialog-action {
-        width: 100%; margin-top: 8px; padding: 8px 14px; border-radius: 12px;
+        width: 100%; margin-top: 0; padding: 8px 14px; border-radius: 12px;
+        grid-column: 1 / -1;
         font: inherit; font-size: 15px; font-weight: 500; cursor: pointer;
         background: #1B2431; border: 1px solid var(--line); color: var(--ink);
       }
@@ -4124,7 +4129,19 @@ ${this._defs()}
         font-family: ui-monospace, "SF Mono", Menlo, monospace; color: #C3D0E0;
       }
       .lhc-kurve-svg { width: 100%; height: auto; display: block; }
-      .lhc-kurve-regler { margin-top: 6px; }
+      .lhc-kurve-regler { margin-top: 4px; }
+      .lhc-num-kompakt {
+        display: flex; align-items: center; gap: 6px; padding: 2px 0;
+        font-size: 12px; color: #98A6BA;
+      }
+      .lhc-num-kompakt span { flex: 1; min-width: 0; }
+      .lhc-num-kompakt output {
+        min-width: 58px; text-align: right; font-size: 13px; font-weight: 700;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace; color: #E8EDF4;
+      }
+      .lhc-step.klein {
+        width: 26px; height: 26px; padding: 0; font-size: 15px; line-height: 1;
+      }
       .lhc-zonenwahl {
         display: flex; gap: 8px; margin-top: 8px;
       }
@@ -4142,7 +4159,7 @@ ${this._defs()}
         color: #98A6BA; border-bottom: 1px solid var(--line); padding-bottom: 4px;
       }
       .lhc-dialog-num {
-        display: flex; flex-direction: column; gap: 3px; margin-top: 8px;
+        display: flex; flex-direction: column; gap: 2px; margin-top: 0;
       }
       .lhc-step:disabled { opacity: 0.3; cursor: default; }
       .lhc-num-row {
@@ -4155,7 +4172,7 @@ ${this._defs()}
       }
       #dlg-actions { display: flex; flex-direction: column; }
       .lhc-dialog-select {
-        display: flex; flex-direction: column; gap: 3px; margin-top: 8px;
+        display: flex; flex-direction: column; gap: 2px; margin-top: 0;
       }
       .lhc-dialog-select select {
         background: #0D131B; color: var(--ink); font: inherit; font-size: 15px;

@@ -1,3 +1,9 @@
+# v2.22.0
+- Regler im Heizkurvenfenster einzeilig, dadurch rund 112 Pixel weniger
+  je Heizkreis
+- Popup der Wärmepumpe verdichtet: die Auswahlfelder stehen nebeneinander,
+  Abstände verringert, rund 72 Pixel weniger
+
 # v2.21.2
 - Heizkurve wird durchgehend gerade gezeichnet, über die ganze Skala,
   und dort abgeschnitten, wo sie den Rand verlässt
