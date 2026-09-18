@@ -1,3 +1,8 @@
+# v2.23.1
+- Heizkurvenfenster passt ohne Scrollen: Diagramm von 420 mal 300 auf
+  420 mal 230 abgeflacht, Regler in zwei Spalten. Zusammen rund
+  126 Pixel weniger Höhe
+
 # v2.23.0
 - Die Heizkurve wird nicht mehr über die Wärmepumpe aufgerufen, sondern
   im Popup des jeweiligen Heizkreises. Jeder zeigt nur seine eigene Kurve

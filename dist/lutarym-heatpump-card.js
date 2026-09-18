@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.23.0";
+const CARD_VERSION = "2.23.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -2319,7 +2319,7 @@ class LutarymHeatpumpCard extends HTMLElement {
    */
   _kurveBild(z) {
     const B = 420;
-    const H = 300;
+    const H = 230;
     const links = 46;
     const rechts = B - 14;
     const oben = 18;
@@ -2482,7 +2482,7 @@ class LutarymHeatpumpCard extends HTMLElement {
   _zeichneKurveDialog() {
     const sr = this.shadowRoot;
     if (!sr || !sr.getElementById("kurve-dialog")) return;
-    const B = 420, H = 300, links = 46, rechts = B - 14, oben = 18, unten = H - 40;
+    const B = 420, H = 230, links = 46, rechts = B - 14, oben = 18, unten = H - 40;
     const A_MIN = Number(this._config.curve_x_min);
     const A_MAX = Number(this._config.curve_x_max);
     const T_MIN = Number(this._config.curve_y_min);
@@ -4147,7 +4147,10 @@ ${this._defs()}
         font-family: ui-monospace, "SF Mono", Menlo, monospace; color: #C3D0E0;
       }
       .lhc-kurve-svg { width: 100%; height: auto; display: block; }
-      .lhc-kurve-regler { margin-top: 4px; }
+      .lhc-kurve-regler {
+        margin-top: 4px; display: grid; grid-template-columns: 1fr 1fr;
+        gap: 4px 14px;
+      }
       .lhc-num-kompakt {
         display: flex; align-items: center; gap: 6px; padding: 2px 0;
         font-size: 12px; color: #98A6BA;
