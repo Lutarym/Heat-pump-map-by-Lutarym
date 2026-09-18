@@ -1,3 +1,9 @@
+# v2.24.2
+- Aktuelle Außentemperatur als grüne senkrechte gestrichelte Linie, der
+  Betriebspunkt ebenfalls grün
+- Kennlinie und ihre Eckpunkte in Weiß statt Orange, damit Orange
+  eindeutig dem Vorlauf gehört
+
 # v2.24.1
 - Auch die Regler unter dem Diagramm tragen die Farbe ihrer Achse:
   Außenwerte blau, Vorlaufwerte orange

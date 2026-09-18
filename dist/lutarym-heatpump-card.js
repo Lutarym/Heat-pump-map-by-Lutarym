@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.24.1";
+const CARD_VERSION = "2.24.2";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -2348,17 +2348,17 @@ class LutarymHeatpumpCard extends HTMLElement {
               stroke="#FF8A5F" stroke-width="1.5" opacity="0.65"/>
         <line x1="${links}" y1="${unten}" x2="${rechts}" y2="${unten}"
               stroke="#6BB7E8" stroke-width="1.5" opacity="0.65"/>
-        <line id="kd${z}-mx" x1="0" y1="0" x2="0" y2="${unten}" stroke="#6BB7E8"
-              stroke-width="1.5" stroke-dasharray="4 4" opacity="0"/>
+        <line id="kd${z}-mx" x1="0" y1="0" x2="0" y2="${unten}" stroke="#46C07A"
+              stroke-width="2" stroke-dasharray="5 4" opacity="0"/>
         <line id="kd${z}-my" x1="${links}" y1="0" x2="0" y2="0" stroke="#FF8A5F"
               stroke-width="1.5" stroke-dasharray="4 4" opacity="0"/>
-        <path id="kd${z}-linie" fill="none" stroke="#FF8A5F" stroke-width="3"
+        <path id="kd${z}-linie" fill="none" stroke="#E8EDF4" stroke-width="3"
               stroke-linecap="round" d=""/>
-        <circle id="kd${z}-e1" r="5" fill="#FF8A5F" opacity="0"/>
-        <circle id="kd${z}-e2" r="5" fill="#FF8A5F" opacity="0"/>
-        <circle id="kd${z}-punkt" r="6.5" fill="#FFFFFF" stroke="#0D1219"
+        <circle id="kd${z}-e1" r="5" fill="#E8EDF4" opacity="0"/>
+        <circle id="kd${z}-e2" r="5" fill="#E8EDF4" opacity="0"/>
+        <circle id="kd${z}-punkt" r="6.5" fill="#46C07A" stroke="#0D1219"
                 stroke-width="2" opacity="0"/>
-        <text class="kurve-marke-t achse-aussen" id="kd${z}-mxt" x="0" y="${unten - 8}"
+        <text class="kurve-marke-t ist-jetzt" id="kd${z}-mxt" x="0" y="${unten - 8}"
               text-anchor="middle" opacity="0">--</text>
         <text class="kurve-marke-t achse-vl" id="kd${z}-myt" x="${links + 8}" y="0"
               opacity="0">--</text>
@@ -3955,6 +3955,8 @@ ${this._defs()}
       .kurve-achse { font-size: 15px; letter-spacing: 0.02em; }
       .achse-vl { fill: #FF8A5F; font-size: 13px; }
       .achse-aussen { fill: #6BB7E8; font-size: 13px; }
+      /* Gruen kennzeichnet den aktuellen Betriebspunkt. */
+      .ist-jetzt { fill: #46C07A; font-size: 13px; }
       .kurve-achse.achse-vl, .kurve-achse.achse-aussen { font-size: 15px; }
       /* Die Farbe kommt von der Achsenklasse, hier nur Groesse und Schnitt. */
       .kurve-marke-t {
