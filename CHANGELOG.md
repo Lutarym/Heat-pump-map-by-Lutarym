@@ -1,3 +1,7 @@
+# v2.24.1
+- Auch die Regler unter dem Diagramm tragen die Farbe ihrer Achse:
+  Außenwerte blau, Vorlaufwerte orange
+
 # v2.24.0
 - Heizkurve farblich zugeordnet: Vorlauf orange, Außentemperatur blau.
   Achsenlinie, Teilstriche, Beschriftung, Markierungslinie und der Wert

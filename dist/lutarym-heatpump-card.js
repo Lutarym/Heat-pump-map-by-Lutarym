@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.24.0";
+const CARD_VERSION = "2.24.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -2373,11 +2373,12 @@ class LutarymHeatpumpCard extends HTMLElement {
   _kurveRegler() {
     const sr = this.shadowRoot;
     if (!sr) return;
+    // Die Farbe entspricht der jeweiligen Achse im Diagramm.
     const zeilen = [
-      { basis: "o_low", titel: "Außen kalt", min: -20, max: 15 },
-      { basis: "t_high", titel: "dann Vorlauf", min: 20, max: 75 },
-      { basis: "o_high", titel: "Außen warm", min: -20, max: 25 },
-      { basis: "t_low", titel: "dann Vorlauf", min: 20, max: 75 },
+      { basis: "o_low", titel: "Außen kalt", min: -20, max: 15, farbe: "aussen" },
+      { basis: "t_high", titel: "dann Vorlauf", min: 20, max: 75, farbe: "vl" },
+      { basis: "o_high", titel: "Außen warm", min: -20, max: 25, farbe: "aussen" },
+      { basis: "t_low", titel: "dann Vorlauf", min: 20, max: 75, farbe: "vl" },
     ];
     [1, 2].forEach((z) => {
       const box = sr.getElementById(`kd${z}-regler`);
@@ -2386,7 +2387,7 @@ class LutarymHeatpumpCard extends HTMLElement {
         box.innerHTML = zeilen
           .map(
             (r, i) => `
-            <div class="lhc-num-kompakt">
+            <div class="lhc-num-kompakt ist-${r.farbe}">
               <span>${escapeHtml(r.titel)}</span>
               <button type="button" class="lhc-step klein" id="kd${z}-r${i}-minus">&minus;</button>
               <output id="kd${z}-r${i}">--</output>
@@ -4165,6 +4166,9 @@ ${this._defs()}
         font-size: 12px; color: #98A6BA;
       }
       .lhc-num-kompakt span { flex: 1; min-width: 0; }
+      /* Dieselbe Zuordnung wie im Diagramm: orange Vorlauf, blau außen. */
+      .lhc-num-kompakt.ist-vl span, .lhc-num-kompakt.ist-vl output { color: #FF8A5F; }
+      .lhc-num-kompakt.ist-aussen span, .lhc-num-kompakt.ist-aussen output { color: #6BB7E8; }
       .lhc-num-kompakt output {
         min-width: 58px; text-align: right; font-size: 13px; font-weight: 700;
         font-family: ui-monospace, "SF Mono", Menlo, monospace; color: #E8EDF4;
