@@ -1,3 +1,8 @@
+# v2.21.2
+- Heizkurve wird durchgehend gerade gezeichnet, über die ganze Skala,
+  und dort abgeschnitten, wo sie den Rand verlässt
+- Sollwert folgt derselben Geraden, auch außerhalb der Eckpunkte
+
 # v2.21.1
 - Heizkurve nutzt die ganze Skala: außerhalb der Eckwerte läuft die Linie
   waagerecht weiter, denn dort bleibt der Sollwert konstant
