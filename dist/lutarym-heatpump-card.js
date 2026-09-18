@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.22.0";
+const CARD_VERSION = "2.22.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -2602,11 +2602,14 @@ class LutarymHeatpumpCard extends HTMLElement {
     return `
       <div class="lhc-dialog" id="kurve-dialog" hidden>
         <div class="lhc-kurve-box">
-          <div class="lhc-kurve-titel">Heizkurve</div>
+          <div class="lhc-kurve-titel">
+            <span>Heizkurve</span>
+            <button type="button" class="lhc-dialog-close" id="kurve-zu"
+                    aria-label="Schließen">&times;</button>
+          </div>
           <div class="lhc-kurve-reihe" id="kurve-reihe">
             ${spalte(1)}${spalte(2)}
           </div>
-          <button type="button" class="lhc-dialog-close" id="kurve-zu">Schließen</button>
         </div>
       </div>`;
   }
@@ -4115,7 +4118,8 @@ ${this._defs()}
         box-shadow: 0 18px 48px rgba(0,0,0,0.55);
       }
       .lhc-kurve-titel {
-        font-size: 16px; font-weight: 600; color: #E8EDF4; margin-bottom: 10px;
+        display: flex; align-items: center; justify-content: space-between;
+        font-size: 16px; font-weight: 600; color: #E8EDF4; margin-bottom: 8px;
       }
       .lhc-kurve-reihe { display: flex; gap: 18px; align-items: flex-start; }
       .lhc-kurve-spalte { flex: 1; min-width: 0; }

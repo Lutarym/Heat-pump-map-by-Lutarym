@@ -1,3 +1,7 @@
+# v2.22.1
+- Heizkurvenfenster schließt über ein Kreuz in der Kopfzeile statt über
+  eine eigene Schaltfläche am Fuß, das spart rund 48 Pixel Höhe
+
 # v2.22.0
 - Regler im Heizkurvenfenster einzeilig, dadurch rund 112 Pixel weniger
   je Heizkreis
