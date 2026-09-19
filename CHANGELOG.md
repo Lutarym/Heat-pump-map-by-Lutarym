@@ -1,3 +1,10 @@
+# v2.26.2
+- Aktualisierung deutlich schneller: die Elementzugriffe laufen über den
+  vorhandenen Zwischenspeicher, 108 statt 12 Zugriffe je Lauf, rund
+  27 Prozent weniger Rechenzeit
+- Toter Code entfernt: eine übrig gebliebene Hilfsfunktion aus dem
+  früheren Drehansatz und eine ungenutzte Stilklasse
+
 # v2.26.1
 - Beim Einlesen einer Konfiguration werden die Entitäten einzeln geprüft:
   unbekannte Felder, unpassender Entitätsbereich und in Home Assistant

@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.26.1";
+const CARD_VERSION = "2.26.2";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -300,29 +300,6 @@ function stellbar(id) {
 function schildBreite(text, mindest) {
   const laenge = String(text === undefined || text === null ? "" : text).length;
   return Math.max(mindest, Math.round(laenge * 15 * 0.66) + 24);
-}
-
-/**
- * Schneidet eine <g>-Gruppe mit der gesuchten Kennung aus dem Markup.
- * Zaehlt oeffnende und schliessende Klammern, damit verschachtelte
- * Gruppen nicht zu einem falschen Ende fuehren.
- */
-function schneideGruppe(markup, id) {
-  const start = markup.indexOf(`id="${id}"`);
-  if (start < 0) return null;
-  const auf = markup.lastIndexOf("<g", start);
-  if (auf < 0) return null;
-  let i = auf, tiefe = 0;
-  while (i < markup.length) {
-    if (markup.startsWith("<g", i)) tiefe++;
-    else if (markup.startsWith("</g>", i)) {
-      tiefe--;
-      if (tiefe === 0) return { inhalt: markup.slice(auf, i + 4), rest: markup };
-      i += 3;
-    }
-    i++;
-  }
-  return null;
 }
 
 function escapeHtml(text) {
@@ -3318,19 +3295,19 @@ ${this._defs()}
     const animate = this._config.animate !== false;
 
     const set = (id, text) => {
-      const el = sr.getElementById(id);
+      const el = this._animEl(id);
       if (el) el.textContent = text;
     };
     const paint = (id, color) => {
-      const el = sr.getElementById(id);
+      const el = this._animEl(id);
       if (el) el.setAttribute("stop-color", color);
     };
     const zeige = (id, sichtbar) => {
-      const el = sr.getElementById(id);
+      const el = this._animEl(id);
       if (el) el.setAttribute("opacity", sichtbar ? "1" : "0");
     };
     const abzeichen = (id, aktiv) => {
-      const el = sr.getElementById(id);
+      const el = this._animEl(id);
       if (!el) return;
       el.classList.toggle("is-on", aktiv);
       if (aktiv && animate) {
@@ -3344,7 +3321,7 @@ ${this._defs()}
     // dort gerade fliesst. Animation läuft via requestAnimationFrame.
     const stroemt = (ids, an, farbe) => {
       ids.forEach((id) => {
-        const el = sr.getElementById(id);
+        const el = this._animEl(id);
         if (!el) return;
         const aktiv = animate && laeuft && an === true;
         el.classList.toggle("is-on", aktiv);
@@ -3367,7 +3344,7 @@ ${this._defs()}
       const id = this._e(k);
       return id && hass.states[id] !== undefined;
     }).length;
-    const hinweis = sr.getElementById("hinweis");
+    const hinweis = this._animEl("hinweis");
     if (hinweis) {
       hinweis.hidden = gefunden > 0 || this._config.demo === true;
       if (gefunden === 0) {
@@ -3381,7 +3358,7 @@ ${this._defs()}
     const err = rawState(hass, this._e("error"));
     const harmlos = [null, "", "OK", "ok", "0", "No error", "unknown", "unavailable"];
     const stoerung = err !== null && !harmlos.includes(err);
-    const alertEl = sr.getElementById("alert");
+    const alertEl = this._animEl("alert");
     if (alertEl) {
       alertEl.hidden = !stoerung;
       if (stoerung) alertEl.textContent = `Störung der Wärmepumpe: ${err}`;
@@ -3393,13 +3370,13 @@ ${this._defs()}
     const oMax = Number(this._config.outdoor_max);
     const outColor = thermalColor(outside, oMin, oMax);
     set("outside-v", outside === null ? "--" : `${fmt(outside)} °C`);
-    const aussenEl = sr.getElementById("outside-v");
+    const aussenEl = this._animEl("outside-v");
     if (aussenEl) aussenEl.style.fill = outColor;
 
     /* Außengerät */
     const comp = numState(hass, this._e("compressor"));
     set("comp-v", comp === null ? "--" : `${fmt(comp, 0)} Hz`);
-    const compEl = sr.getElementById("comp-v");
+    const compEl = this._animEl("comp-v");
     if (compEl) compEl.style.fill = loadColor(comp, COMP_MIN_HZ, COMP_MAX_HZ);
 
     // Meldet die Waermepumpe ausdruecklich aus, steht alles still.
@@ -3422,7 +3399,7 @@ ${this._defs()}
     if (this._config.fan_count === 2) {
       this._spin("fan2", numState(hass, this._e("fan2_rpm")), "fan2-rpm", "U/min", 0, laeuft);
     }
-    const glow = sr.getElementById("unit-glow");
+    const glow = this._animEl("unit-glow");
     if (glow) {
       // Eine Stoerung hat Vorrang vor der Betriebsanzeige.
       const glowStoerung = animate && stoerung;
@@ -3443,7 +3420,7 @@ ${this._defs()}
     }
 
     /* SG Ready */
-    const sgGroup = sr.getElementById("sg-group");
+    const sgGroup = this._animEl("sg-group");
     if (sgGroup) {
       const konfiguriert = Boolean(this._e("sg_k1")) && Boolean(this._e("sg_k2"));
       sgGroup.setAttribute("opacity", konfiguriert ? "1" : "0");
@@ -3452,13 +3429,13 @@ ${this._defs()}
         const info = SG_STATES[sg];
         const farbe = info ? info.farbe : NEUTRAL;
         set("sg-text", sg === null ? "unbekannt" : info.kurz);
-        const t = sr.getElementById("sg-text");
+        const t = this._animEl("sg-text");
         if (t) {
           t.style.fill = farbe;
           t.style.color = farbe;
         }
         for (let i = 1; i <= 4; i++) {
-          const seg = sr.getElementById(`sg-seg-${i}`);
+          const seg = this._animEl(`sg-seg-${i}`);
           if (!seg) continue;
           const aktiv = sg === i;
           // Das zutreffende Segment wird hoeher und leuchtet, die
@@ -3506,7 +3483,7 @@ ${this._defs()}
     const zirkAn = isOn(hass, zirkId) === true;
     zeige("zirkulation-group", Boolean(zirkId) && hass.states[zirkId] !== undefined);
     set("zirk-v", !zirkId ? "--" : zirkAn ? "läuft" : "aus");
-    const zirkRotor = sr.getElementById("zirk-rotor");
+    const zirkRotor = this._animEl("zirk-rotor");
     if (zirkRotor) {
       zirkRotor.classList.toggle("is-still", !zirkAn);
       if (zirkAn && animate && laeuft) {
@@ -3596,7 +3573,7 @@ ${this._defs()}
     // Durchfluss die Stroemungsgeschwindigkeit berechnen. Ueber etwa
     // 1 m/s entstehen Stroemungsgeraeusche, unter 0,2 m/s wird die
     // Waermeuebertragung schlecht. Dazwischen ist alles in Ordnung.
-    const flowEl = sr.getElementById("flow-v");
+    const flowEl = this._animEl("flow-v");
     const innen = Number(this._config.pipe_inner_mm) || 0;
     if (flowEl) {
       let farbe = "";
@@ -3627,16 +3604,16 @@ ${this._defs()}
       // Panasonic nennt fuer Aquarea 0,5 bis 3 bar als Normalbereich.
       const druckOk = bar >= DRUCK_MIN && bar <= DRUCK_MAX;
       const druckfarbe = druckOk ? "#46C07A" : "#D62B2B";
-      const needle = sr.getElementById("press-needle");
+      const needle = this._animEl("press-needle");
       if (needle) {
         needle.setAttribute("transform", `rotate(${-120 + 240 * clamp(bar / 4, 0, 1)})`);
         needle.setAttribute("stroke", druckfarbe);
       }
-      const druckText = sr.getElementById("press-v");
+      const druckText = this._animEl("press-v");
       if (druckText) druckText.style.fill = druckfarbe;
       // Unter dem Mindestdruck blinken Wert und Warndreieck.
       const zuNiedrig = bar < DRUCK_MIN;
-      const warn = sr.getElementById("press-warn");
+      const warn = this._animEl("press-warn");
       if (warn) warn.setAttribute("opacity", zuNiedrig ? "1" : "0");
       if (zuNiedrig && animate) {
         this._animState.set("press-v", {
@@ -3692,7 +3669,7 @@ ${this._defs()}
       abtauen: "#3E9BE0",
     };
     Object.keys(modusFarben).forEach((k) => {
-      const el = sr.getElementById(`modus-${k}`);
+      const el = this._animEl(`modus-${k}`);
       if (!el) return;
       const dabei =
         k === "betrieb" ? anAus === true : k === "abtauen" ? abtaut : umfasst[k];
@@ -3720,11 +3697,11 @@ ${this._defs()}
     zeige("valve-arrow-right", bekannt && zuWarmwasser);
     const pfeilfarbe = col(flow);
     ["valve-down-line", "valve-right-line"].forEach((id) => {
-      const el = sr.getElementById(id);
+      const el = this._animEl(id);
       if (el) el.setAttribute("stroke", pfeilfarbe);
     });
     ["valve-down-head", "valve-right-head"].forEach((id) => {
-      const el = sr.getElementById(id);
+      const el = this._animEl(id);
       if (el) el.setAttribute("fill", pfeilfarbe);
     });
 
@@ -3743,7 +3720,7 @@ ${this._defs()}
       return v === null ? true : v > 0;
     })();
     const blende = (id, aktiv) => {
-      const el = sr.getElementById(id);
+      const el = this._animEl(id);
       if (el) el.classList.toggle("is-inaktiv", !aktiv);
     };
     // Nur der Heizkoerper wird blasser, wenn die Zone nicht freigegeben
@@ -3793,7 +3770,7 @@ ${this._defs()}
 
     // Blasen: je waermer der Speicher, desto mehr steigen auf.
     const blasen = (id, wert) => {
-      const g = sr.getElementById(id);
+      const g = this._animEl(id);
       if (!g || !g.children) return;
       const anteil =
         wert === null ? 0 : clamp((wert - min) / ((max - min) || 1), 0, 1);
@@ -3821,11 +3798,11 @@ ${this._defs()}
     const pumpOn = isOn(hass, this._e(`hk${n}_pump`)) === true;
 
     const set = (id, text) => {
-      const el = sr.getElementById(id);
+      const el = this._animEl(id);
       if (el) el.textContent = text;
     };
     const paint = (id, color) => {
-      const el = sr.getElementById(id);
+      const el = this._animEl(id);
       if (el) el.setAttribute("stop-color", color);
     };
 
@@ -3836,7 +3813,7 @@ ${this._defs()}
     set(`hk${n}-water-v`, water === null ? "--" : `${fmt(water, 1)} °C`);
     set(`hk${n}-target-v`, target === null ? "" : `Ziel ${fmt(target, 0)} °C`);
 
-    const rotor = sr.getElementById(`hk${n}-rotor`);
+    const rotor = this._animEl(`hk${n}-rotor`);
     if (rotor) {
       // Nur der Heizkoerper wird blasser, wenn der Kreis steht.
       // Pumpe und Rohre behalten ihr normales Aussehen, sie sind
@@ -3859,7 +3836,7 @@ ${this._defs()}
 
     // Die beiden Leitungen dieses Heizkreises laufen nur mit seiner Pumpe.
     [`dots-hk${n}`, `dots-hk${n}b`].forEach((id, i) => {
-      const el = sr.getElementById(id);
+      const el = this._animEl(id);
       if (!el) return;
       const aktiv = animate && laeuft && pumpOn;
       el.classList.toggle("is-on", aktiv);
@@ -4056,7 +4033,6 @@ ${this._defs()}
       .bubble {
         fill: #FFFFFF;
       }
-      .tag-l { fill: #8494AA; font-size: 12px; letter-spacing: 0.02em; }
       /* Vorlauf rot, Ruecklauf blau, unabhaengig von der Temperatur. */
       .vl-value, .rl-value {
         font-size: 22px; font-weight: 700;
