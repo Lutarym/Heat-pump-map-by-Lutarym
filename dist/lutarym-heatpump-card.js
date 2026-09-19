@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.24.2";
+const CARD_VERSION = "2.25.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -429,6 +429,11 @@ function detectIntegration(hass) {
     if (!field || !entityId) return;
     const allowed = FIELD_DOMAIN[field];
     if (allowed && !allowed.includes(entityId.split(".")[0])) return;
+    // Liefert die Integration zum selben Wert einen Sensor und eine
+    // stellbare Entitaet, gewinnt die stellbare. Sonst waere der Wert
+    // nur lesbar, obwohl er sich einstellen liesse.
+    const bisher = result.entities[field];
+    if (bisher && stellbar(bisher) && !stellbar(entityId)) return;
     result.entities[field] = entityId;
   };
 
@@ -474,6 +479,20 @@ function detectIntegration(hass) {
   }
   return result;
 }
+
+/**
+ * Herstellerprofile. Jedes Profil beschreibt, wie die Entitaeten einer
+ * Integration heissen. Umgesetzt ist bisher HeishaMon, die uebrigen
+ * sind vorgemerkt und werden ergaenzt, sobald die Namensschemata
+ * geklaert sind.
+ */
+const PROFILE = [
+  { id: "heishamon", name: "Panasonic Aquarea über HeishaMon", fertig: true },
+  { id: "vaillant", name: "Vaillant (in Vorbereitung)", fertig: false },
+  { id: "bosch", name: "Bosch (in Vorbereitung)", fertig: false },
+  { id: "viessmann", name: "Viessmann (in Vorbereitung)", fertig: false },
+  { id: "stiebel", name: "Stiebel Eltron (in Vorbereitung)", fertig: false },
+];
 
 function defaultEntityMap() {
   const map = {};
@@ -574,6 +593,7 @@ const DEFAULT_CONFIG = {
   card_width: 0,
   pipe_inner_mm: 0,
   mqtt_prefix: "panasonic_heat_pump",
+  profil: "heishamon",
   show_history: true,
   curve_x_min: -20,
   curve_x_max: 20,
@@ -2283,11 +2303,17 @@ class LutarymHeatpumpCard extends HTMLElement {
         <line x1="${x}" y1="${y + 26}" x2="${x + breite}" y2="${y + 26}"
               stroke="#55657F" stroke-width="1"/>
         <path id="verlauf-flaeche" fill="#2E7FD4" opacity="0.2" d=""/>
-        <path id="verlauf-linie" fill="none" stroke="#4D9BFF" stroke-width="2.5"
+        <path id="verlauf-linie" fill="none" stroke="#7E8CA0" stroke-width="2.5"
+              stroke-linejoin="round" stroke-linecap="round" d=""/>
+        <path id="verlauf-heiz" fill="none" stroke="#FF5F52" stroke-width="2.5"
+              stroke-linejoin="round" stroke-linecap="round" d=""/>
+        <path id="verlauf-ww" fill="none" stroke="#4D9BFF" stroke-width="2.5"
               stroke-linejoin="round" stroke-linecap="round" d=""/>
         <line x1="${x}" y1="${y + hoehe - 20}" x2="${x + breite}"
               y2="${y + hoehe - 20}" stroke="#2A3446" stroke-width="1"/>
         <text class="value-sp" x="${x}" y="${y + hoehe - 4}">vor 24 h</text>
+        <text class="value-sp" x="${x + breite / 2}" y="${y + hoehe - 4}"
+              text-anchor="middle"><tspan fill="#FF5F52">Heizung</tspan><tspan fill="#7E8CA0"> · </tspan><tspan fill="#4D9BFF">Warmwasser</tspan></text>
         <text class="value-sp" x="${x + breite}" y="${y + hoehe - 4}"
               text-anchor="end">jetzt</text>
       </g>`;
@@ -2348,7 +2374,7 @@ class LutarymHeatpumpCard extends HTMLElement {
               stroke="#FF8A5F" stroke-width="1.5" opacity="0.65"/>
         <line x1="${links}" y1="${unten}" x2="${rechts}" y2="${unten}"
               stroke="#6BB7E8" stroke-width="1.5" opacity="0.65"/>
-        <line id="kd${z}-mx" x1="0" y1="0" x2="0" y2="${unten}" stroke="#46C07A"
+        <line id="kd${z}-mx" x1="0" y1="${oben}" x2="0" y2="${unten}" stroke="#46C07A"
               stroke-width="2" stroke-dasharray="5 4" opacity="0"/>
         <line id="kd${z}-my" x1="${links}" y1="0" x2="0" y2="0" stroke="#FF8A5F"
               stroke-width="1.5" stroke-dasharray="4 4" opacity="0"/>
@@ -2356,8 +2382,6 @@ class LutarymHeatpumpCard extends HTMLElement {
               stroke-linecap="round" d=""/>
         <circle id="kd${z}-e1" r="5" fill="#E8EDF4" opacity="0"/>
         <circle id="kd${z}-e2" r="5" fill="#E8EDF4" opacity="0"/>
-        <circle id="kd${z}-punkt" r="6.5" fill="#46C07A" stroke="#0D1219"
-                stroke-width="2" opacity="0"/>
         <text class="kurve-marke-t ist-jetzt" id="kd${z}-mxt" x="0" y="${unten - 8}"
               text-anchor="middle" opacity="0">--</text>
         <text class="kurve-marke-t achse-vl" id="kd${z}-myt" x="${links + 8}" y="0"
@@ -2585,8 +2609,9 @@ class LutarymHeatpumpCard extends HTMLElement {
       setz(`kd${z}-titel`, {}, `Heizkreis ${z}`);
 
       if (aussen === null) {
-        ["punkt", "mx", "my", "mxt", "myt"].forEach((s) => setz(`kd${z}-${s}`, { opacity: "0" }));
-        setz(`kd${z}-soll`, {}, "--");
+        ["mx", "my", "mxt", "myt"].forEach((s) => setz(`kd${z}-${s}`, { opacity: "0" }));
+        setz(`kd${z}-aussen`, {}, "--");
+        setz(`kd${z}-soll`, {}, "");
         return;
       }
       // Linear, ohne Begrenzung auf die Eckpunkte.
@@ -2595,12 +2620,16 @@ class LutarymHeatpumpCard extends HTMLElement {
       // auf den waagerechten Abschnitten ausserhalb der Eckwerte.
       const mx = px(aussen);
       const my = py(soll);
-      setz(`kd${z}-punkt`, { cx: mx.toFixed(1), cy: my.toFixed(1), opacity: "1" });
-      setz(`kd${z}-mx`, { x1: mx.toFixed(1), x2: mx.toFixed(1), y1: my.toFixed(1), opacity: "0.6" });
+      // Die Linie der Aussentemperatur laeuft ueber die ganze Hoehe.
+      setz(`kd${z}-mx`, {
+        x1: mx.toFixed(1), x2: mx.toFixed(1),
+        y1: oben, y2: unten, opacity: "0.85",
+      });
       setz(`kd${z}-my`, { x2: mx.toFixed(1), y1: my.toFixed(1), y2: my.toFixed(1), opacity: "0.6" });
       setz(`kd${z}-mxt`, { x: mx.toFixed(1), opacity: "1" }, `${fmt(aussen, 1)} °C`);
       setz(`kd${z}-myt`, { y: (my - 8).toFixed(1), opacity: "1" }, `${fmt(soll, 0)} °C`);
-      setz(`kd${z}-soll`, {}, `${fmt(aussen, 1)} °C außen → ${fmt(soll, 0)} °C`);
+      setz(`kd${z}-aussen`, {}, `${fmt(aussen, 1)} °C außen`);
+      setz(`kd${z}-soll`, {}, `→ ${fmt(soll, 0)} °C Vorlauf`);
     });
   }
 
@@ -2610,7 +2639,10 @@ class LutarymHeatpumpCard extends HTMLElement {
       <div class="lhc-kurve-spalte">
         <div class="lhc-kurve-kopf">
           <span id="kd${z}-titel">Heizkreis ${z}</span>
-          <span class="lhc-kurve-soll" id="kd${z}-soll">--</span>
+          <span class="lhc-kurve-soll">
+            <span class="ist-jetzt-html" id="kd${z}-aussen">--</span>
+            <span class="vl-html" id="kd${z}-soll">--</span>
+          </span>
         </div>
         ${this._kurveBild(z)}
         <div class="lhc-kurve-regler" id="kd${z}-regler"></div>
@@ -2654,6 +2686,7 @@ class LutarymHeatpumpCard extends HTMLElement {
     }
 
     const id = this._e("power_now");
+    const vid = this._e("three_way_valve");
     if (!id || !this._hass || typeof this._hass.callWS !== "function") {
       this._verlauf = null;
       this._zeichneVerlauf();
@@ -2666,11 +2699,18 @@ class LutarymHeatpumpCard extends HTMLElement {
         type: "history/history_during_period",
         start_time: start.toISOString(),
         end_time: ende.toISOString(),
-        entity_ids: [id],
+        entity_ids: vid ? [id, vid] : [id],
         minimal_response: true,
         no_attributes: true,
       })
       .then((antwort) => {
+        // Der Ventilverlauf sagt, wohin in dieser Zeit geladen wurde.
+        this._ventilVerlauf = ((antwort && vid && antwort[vid]) || [])
+          .map((p) => ({
+            t: p.lu ? p.lu * 1000 : Date.parse(p.last_changed),
+            ww: parseFloat(p.s !== undefined ? p.s : p.state) > 0,
+          }))
+          .filter((p) => !Number.isNaN(p.t));
         const reihe = (antwort && antwort[id]) || [];
         this._verlauf = reihe
           .map((p) => ({
@@ -2711,7 +2751,42 @@ class LutarymHeatpumpCard extends HTMLElement {
     daten.forEach((d, i) => {
       linie += `${i ? "L" : "M"}${px(d).toFixed(1)} ${py(d).toFixed(1)}`;
     });
-    sr.getElementById("verlauf-linie").setAttribute("d", linie);
+
+    // Abschnitte nach Ladeziel einfaerben. Rot heisst Heizung, blau
+    // Warmwasser. Ohne Ventilverlauf bleibt die Linie neutral.
+    const ventil = this._ventilVerlauf || [];
+    const wwZu = (t) => {
+      let stand = false;
+      for (const v of ventil) {
+        if (v.t > t) break;
+        stand = v.ww;
+      }
+      return stand;
+    };
+    let heiz = "";
+    let ww = "";
+    if (ventil.length) {
+      let vorher = null;
+      daten.forEach((d) => {
+        const istWW = wwZu(d.t);
+        const stueck = `${px(d).toFixed(1)} ${py(d).toFixed(1)}`;
+        const ziel = istWW ? "ww" : "heiz";
+        if (vorher && vorher.ziel === ziel) {
+          if (ziel === "ww") ww += `L${stueck}`;
+          else heiz += `L${stueck}`;
+        } else {
+          // Am Wechsel beginnt ein neuer Abschnitt beim vorigen Punkt,
+          // damit keine Luecke entsteht.
+          const anfang = vorher ? `M${vorher.stueck}L${stueck}` : `M${stueck}`;
+          if (ziel === "ww") ww += anfang;
+          else heiz += anfang;
+        }
+        vorher = { ziel, stueck };
+      });
+    }
+    sr.getElementById("verlauf-linie").setAttribute("d", ventil.length ? "" : linie);
+    sr.getElementById("verlauf-heiz").setAttribute("d", heiz);
+    sr.getElementById("verlauf-ww").setAttribute("d", ww);
     sr.getElementById("verlauf-flaeche").setAttribute(
       "d",
       `${linie}L${rechts.toFixed(1)} ${unten}L${links.toFixed(1)} ${unten}Z`
@@ -4158,6 +4233,8 @@ ${this._defs()}
       .lhc-kurve-soll {
         font-family: ui-monospace, "SF Mono", Menlo, monospace; color: #C3D0E0;
       }
+      .ist-jetzt-html { color: #46C07A; }
+      .vl-html { color: #FF8A5F; }
       .lhc-kurve-svg { width: 100%; height: auto; display: block; }
       .lhc-kurve-regler {
         margin-top: 4px; display: grid; grid-template-columns: 1fr 1fr;
@@ -4304,6 +4381,22 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
             <button type="button" id="btn-default">Standardnamen eintragen</button>
             <button type="button" id="btn-clear" class="is-quiet">Alle leeren</button>
           </div>
+          <label class="ed-row">
+            <span>Herstellerprofil<em>legt fest, nach welchem Namensschema gesucht wird</em></span>
+            <select id="opt-profil">
+              ${PROFILE.map(
+                (pr) =>
+                  `<option value="${pr.id}"${pr.fertig ? "" : " disabled"}>${escapeHtml(pr.name)}</option>`
+              ).join("")}
+            </select>
+          </label>
+          <div class="ed-buttons">
+            <button type="button" id="btn-export">Konfiguration exportieren</button>
+            <button type="button" id="btn-import">Konfiguration einlesen</button>
+          </div>
+          <textarea id="ed-austausch" rows="4" spellcheck="false"
+                    placeholder="Hier erscheint die exportierte Konfiguration. Zum Einlesen eigenen Text einfügen und auf Einlesen drücken."></textarea>
+          <p class="ed-info" id="ed-austausch-hinweis"></p>
         </div>
 
         <div class="ed-group">
@@ -4448,6 +4541,7 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     bind("opt-hoehe", (el) => put({ card_height: parseInt(el.value, 10) || 0 }));
     bind("opt-rohr", (el) => put({ pipe_inner_mm: parseInt(el.value, 10) || 0 }));
     bind("opt-mqtt", (el) => put({ mqtt_prefix: el.value.trim() || "panasonic_heat_pump" }));
+    bind("opt-profil", (el) => put({ profil: el.value }));
     bind("opt-kxmin", (el) => put({ curve_x_min: parseInt(el.value, 10) }));
     bind("opt-kxmax", (el) => put({ curve_x_max: parseInt(el.value, 10) }));
     bind("opt-kymin", (el) => put({ curve_y_min: parseInt(el.value, 10) }));
@@ -4473,6 +4567,59 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
       this._syncValues();
       this._emit();
     };
+    // Austausch der Konfiguration. Beim Einlesen werden nur bekannte
+    // Schluessel uebernommen, damit fremder Text nichts kaputt macht.
+    const feld = this.shadowRoot.getElementById("ed-austausch");
+    // Nach dem Einlesen baut sich der Editor neu auf, deshalb wird das
+    // Hinweisfeld frisch gesucht statt gemerkt.
+    const sagen = (text) => {
+      const el = this.shadowRoot.getElementById("ed-austausch-hinweis");
+      if (el) el.textContent = text;
+    };
+    const exp = this.shadowRoot.getElementById("btn-export");
+    if (exp) {
+      exp.addEventListener("click", () => {
+        const kopie = { ...this._config };
+        delete kopie.type;
+        feld.value = JSON.stringify(kopie, null, 2);
+        feld.select();
+        sagen("Konfiguration steht im Feld und ist markiert, zum Kopieren bereit.");
+      });
+    }
+    const imp = this.shadowRoot.getElementById("btn-import");
+    if (imp) {
+      imp.addEventListener("click", () => {
+        let gelesen;
+        try {
+          gelesen = JSON.parse(feld.value);
+        } catch (e) {
+          sagen("Das ist kein gültiges JSON. Bitte den exportierten Text einfügen.");
+          return;
+        }
+        if (!gelesen || typeof gelesen !== "object" || Array.isArray(gelesen)) {
+          sagen("Der Text enthält keine Konfiguration.");
+          return;
+        }
+        const erlaubt = Object.keys(DEFAULT_CONFIG);
+        const uebernommen = {};
+        let verworfen = 0;
+        Object.keys(gelesen).forEach((k) => {
+          if (k === "entities" || erlaubt.includes(k) || k.startsWith("label_")) {
+            uebernommen[k] = gelesen[k];
+          } else {
+            verworfen += 1;
+          }
+        });
+        this._config = { type: this._config.type, ...uebernommen };
+        this._emit();
+        this.setConfig(this._config);
+        sagen(
+          `Übernommen: ${Object.keys(uebernommen).length} Einträge` +
+            (verworfen ? `, ${verworfen} unbekannte übersprungen.` : ".")
+        );
+      });
+    }
+
     this.shadowRoot.getElementById("btn-adopt").addEventListener("click", () => {
       const f = detectIntegration(this._hass);
       if (f.found) applyMap(f.entities, true);
@@ -4515,6 +4662,7 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
     put("opt-hoehe", String(this._config.card_height || 0));
     put("opt-rohr", String(this._config.pipe_inner_mm || 0));
     put("opt-mqtt", this._config.mqtt_prefix || "panasonic_heat_pump");
+    put("opt-profil", this._config.profil || "heishamon");
     put("opt-kxmin", String(this._config.curve_x_min));
     put("opt-kxmax", String(this._config.curve_x_max));
     put("opt-kymin", String(this._config.curve_y_min));
@@ -4598,6 +4746,12 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
       .ed-info {
         margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--divider-color, #E0E0E0);
         font-size: 12px; color: var(--secondary-text-color, #8A94A6);
+      }
+      #ed-austausch {
+        width: 100%; box-sizing: border-box; margin-top: 8px; padding: 8px 10px;
+        border-radius: 10px; border: 1px solid var(--line);
+        background: #0D1219; color: var(--ink);
+        font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
       }
       @media (max-width: 600px) { .ed-row { grid-template-columns: 1fr; align-items: stretch; } }
     `;

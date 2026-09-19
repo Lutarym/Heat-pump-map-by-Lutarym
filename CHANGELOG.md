@@ -1,3 +1,17 @@
+# v2.25.1
+- Bei der automatischen Zuordnung gewinnt die stellbare Entität. Liefert
+  die Integration zum selben Wert einen Sensor und eine number-Entität,
+  wird die number eingetragen
+
+# v2.25.0
+- Verbrauchsverlauf nach Ladeziel eingefärbt: rot für Heizung, blau für
+  Warmwasser, abgeleitet aus dem Verlauf des Umschaltventils. Ohne
+  Ventilentität bleibt die Linie neutral
+- Herstellerprofil im Einstellungsdialog. Umgesetzt ist HeishaMon, die
+  übrigen Profile sind vorgemerkt und gesperrt
+- Konfiguration lässt sich im Einstellungsdialog ausgeben und einlesen.
+  Beim Einlesen werden nur bekannte Schlüssel übernommen
+
 # v2.24.2
 - Aktuelle Außentemperatur als grüne senkrechte gestrichelte Linie, der
   Betriebspunkt ebenfalls grün
