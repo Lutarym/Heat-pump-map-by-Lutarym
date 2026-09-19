@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.25.1";
+const CARD_VERSION = "2.26.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -420,7 +420,7 @@ const FIELD_DOMAIN = {
   sg_k2: ["switch", "input_boolean", "binary_sensor", "sensor"],
 };
 
-function detectIntegration(hass) {
+function detectIntegration(hass, profil) {
   const result = { found: false, source: "keine", entities: {}, count: 0, devices: 0 };
   if (!hass) return result;
 
@@ -437,7 +437,10 @@ function detectIntegration(hass) {
     result.entities[field] = entityId;
   };
 
-  const registry = hass.entities;
+  // Das Profil entscheidet, welcher Weg zuerst versucht wird. Findet er
+  // nichts, wird der andere trotzdem probiert.
+  const nurNamen = profil === "heishamon";
+  const registry = nurNamen ? null : hass.entities;
   if (registry && typeof registry === "object") {
     const deviceIds = new Set();
     let hits = 0;
@@ -487,11 +490,20 @@ function detectIntegration(hass) {
  * geklaert sind.
  */
 const PROFILE = [
-  { id: "heishamon", name: "Panasonic Aquarea über HeishaMon", fertig: true },
-  { id: "vaillant", name: "Vaillant (in Vorbereitung)", fertig: false },
-  { id: "bosch", name: "Bosch (in Vorbereitung)", fertig: false },
-  { id: "viessmann", name: "Viessmann (in Vorbereitung)", fertig: false },
-  { id: "stiebel", name: "Stiebel Eltron (in Vorbereitung)", fertig: false },
+  {
+    id: "heishamon_lutarym",
+    name: "Panasonic Aquarea, HeishaMon by Lutarym",
+    fertig: true,
+  },
+  {
+    id: "heishamon",
+    name: "Panasonic Aquarea, HeishaMon über MQTT-Namensschema",
+    fertig: true,
+  },
+  { id: "vaillant", name: "Vaillant, in Vorbereitung", fertig: false },
+  { id: "bosch", name: "Bosch, in Vorbereitung", fertig: false },
+  { id: "viessmann", name: "Viessmann, in Vorbereitung", fertig: false },
+  { id: "stiebel", name: "Stiebel Eltron, in Vorbereitung", fertig: false },
 ];
 
 function defaultEntityMap() {
@@ -593,7 +605,7 @@ const DEFAULT_CONFIG = {
   card_width: 0,
   pipe_inner_mm: 0,
   mqtt_prefix: "panasonic_heat_pump",
-  profil: "heishamon",
+  profil: "heishamon_lutarym",
   show_history: true,
   curve_x_min: -20,
   curve_x_max: 20,
@@ -655,7 +667,7 @@ class LutarymHeatpumpCard extends HTMLElement {
   }
 
   static getStubConfig(hass) {
-    const found = detectIntegration(hass);
+    const found = detectIntegration(hass, DEFAULT_CONFIG.profil);
     return { ...DEFAULT_CONFIG, entities: found.found ? found.entities : {} };
   }
 
@@ -4360,7 +4372,7 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
       .map((e) => `<option value="${e}">${escapeHtml(friendly(this._hass, e))}</option>`)
       .join("");
 
-    const found = detectIntegration(this._hass);
+    const found = detectIntegration(this._hass, this._config.profil);
 
     this.shadowRoot.innerHTML = `
       <style>${this._css()}</style>
@@ -4381,7 +4393,7 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
             <button type="button" id="btn-default">Standardnamen eintragen</button>
             <button type="button" id="btn-clear" class="is-quiet">Alle leeren</button>
           </div>
-          <label class="ed-row">
+          <label class="ed-row ed-breit">
             <span>Herstellerprofil<em>legt fest, nach welchem Namensschema gesucht wird</em></span>
             <select id="opt-profil">
               ${PROFILE.map(
@@ -4391,9 +4403,12 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
             </select>
           </label>
           <div class="ed-buttons">
-            <button type="button" id="btn-export">Konfiguration exportieren</button>
-            <button type="button" id="btn-import">Konfiguration einlesen</button>
+            <button type="button" id="btn-export">In das Feld schreiben</button>
+            <button type="button" id="btn-import">Aus dem Feld einlesen</button>
+            <button type="button" id="btn-datei-aus">Als Datei speichern</button>
+            <button type="button" id="btn-datei-ein">Aus Datei laden</button>
           </div>
+          <input type="file" id="ed-datei" accept=".json,application/json" hidden>
           <textarea id="ed-austausch" rows="4" spellcheck="false"
                     placeholder="Hier erscheint die exportierte Konfiguration. Zum Einlesen eigenen Text einfügen und auf Einlesen drücken."></textarea>
           <p class="ed-info" id="ed-austausch-hinweis"></p>
@@ -4586,6 +4601,57 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
         sagen("Konfiguration steht im Feld und ist markiert, zum Kopieren bereit.");
       });
     }
+    // Dieselbe Konfiguration als Datei, fuer die Weitergabe.
+    const dateiAus = this.shadowRoot.getElementById("btn-datei-aus");
+    if (dateiAus) {
+      dateiAus.addEventListener("click", () => {
+        const kopie = { ...this._config };
+        delete kopie.type;
+        const text = JSON.stringify(kopie, null, 2);
+        try {
+          // Bevorzugt ein Objekt-Verweis, sonst ein eingebetteter Text.
+          let url;
+          let aufraeumen = null;
+          if (typeof URL !== "undefined" && URL.createObjectURL) {
+            url = URL.createObjectURL(
+              new Blob([text], { type: "application/json" })
+            );
+            aufraeumen = () => URL.revokeObjectURL(url);
+          } else {
+            url =
+              "data:application/json;charset=utf-8," + encodeURIComponent(text);
+          }
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `lutarym-heatpump-card-${CARD_VERSION}.json`;
+          link.click();
+          if (aufraeumen) setTimeout(aufraeumen, 1000);
+          sagen("Datei wurde erzeugt und steht im Download-Ordner.");
+        } catch (e) {
+          sagen("Die Datei konnte nicht erzeugt werden.");
+        }
+      });
+    }
+    const dateiFeld = this.shadowRoot.getElementById("ed-datei");
+    const dateiEin = this.shadowRoot.getElementById("btn-datei-ein");
+    if (dateiEin && dateiFeld) {
+      dateiEin.addEventListener("click", () => dateiFeld.click());
+      dateiFeld.addEventListener("change", () => {
+        const datei = dateiFeld.files && dateiFeld.files[0];
+        if (!datei) return;
+        const leser = new FileReader();
+        leser.onload = () => {
+          const ziel = this.shadowRoot.getElementById("ed-austausch");
+          if (ziel) ziel.value = String(leser.result || "");
+          const knopf = this.shadowRoot.getElementById("btn-import");
+          if (knopf) knopf.click();
+        };
+        leser.onerror = () => sagen("Die Datei konnte nicht gelesen werden.");
+        leser.readAsText(datei);
+        dateiFeld.value = "";
+      });
+    }
+
     const imp = this.shadowRoot.getElementById("btn-import");
     if (imp) {
       imp.addEventListener("click", () => {
@@ -4601,27 +4667,76 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
           return;
         }
         const erlaubt = Object.keys(DEFAULT_CONFIG);
+        const felder = ENTITY_FIELDS.map((f) => f.key);
         const uebernommen = {};
         let verworfen = 0;
         Object.keys(gelesen).forEach((k) => {
-          if (k === "entities" || erlaubt.includes(k) || k.startsWith("label_")) {
+          if (k === "entities") return;
+          if (erlaubt.includes(k) || k.startsWith("label_")) {
             uebernommen[k] = gelesen[k];
           } else {
             verworfen += 1;
           }
         });
+
+        // Entitaeten einzeln pruefen: bekanntes Feld, passender Bereich
+        // und in Home Assistant vorhanden.
+        const zuordnung = {};
+        const unbekannt = [];
+        const fehlen = [];
+        const falscherBereich = [];
+        const quelle = (gelesen.entities && typeof gelesen.entities === "object")
+          ? gelesen.entities
+          : {};
+        Object.keys(quelle).forEach((feld) => {
+          const id = quelle[feld];
+          if (!felder.includes(feld)) {
+            unbekannt.push(feld);
+            return;
+          }
+          if (typeof id !== "string" || !id.includes(".")) return;
+          const bereich = FIELD_DOMAIN[feld];
+          if (bereich && !bereich.includes(id.split(".")[0])) {
+            falscherBereich.push(feld);
+            return;
+          }
+          zuordnung[feld] = id;
+          const st = this._hass && this._hass.states;
+          if (st && !st[id]) fehlen.push(id);
+        });
+        uebernommen.entities = zuordnung;
+
         this._config = { type: this._config.type, ...uebernommen };
         this._emit();
         this.setConfig(this._config);
-        sagen(
-          `Übernommen: ${Object.keys(uebernommen).length} Einträge` +
-            (verworfen ? `, ${verworfen} unbekannte übersprungen.` : ".")
+
+        // Gegenprobe: steht nach dem Anwenden wirklich alles drin?
+        const jetzt = this._config.entities || {};
+        const nichtAngekommen = Object.keys(zuordnung).filter(
+          (k) => jetzt[k] !== zuordnung[k]
         );
+        const teile = [
+          `${Object.keys(uebernommen).length - 1} Einstellungen`,
+          `${Object.keys(zuordnung).length} Entitäten übernommen`,
+        ];
+        if (verworfen) teile.push(`${verworfen} unbekannte Einstellungen übersprungen`);
+        if (unbekannt.length) teile.push(`${unbekannt.length} unbekannte Felder übersprungen`);
+        if (falscherBereich.length)
+          teile.push(`${falscherBereich.length} mit unpassendem Bereich übersprungen`);
+        if (fehlen.length)
+          teile.push(
+            `${fehlen.length} davon gibt es in Home Assistant nicht: ` +
+              fehlen.slice(0, 3).join(", ") +
+              (fehlen.length > 3 ? " und weitere" : "")
+          );
+        if (nichtAngekommen.length)
+          teile.push(`ACHTUNG, nicht angekommen: ${nichtAngekommen.join(", ")}`);
+        sagen(teile.join(". ") + ".");
       });
     }
 
     this.shadowRoot.getElementById("btn-adopt").addEventListener("click", () => {
-      const f = detectIntegration(this._hass);
+      const f = detectIntegration(this._hass, this._config.profil);
       if (f.found) applyMap(f.entities, true);
     });
     this.shadowRoot
@@ -4753,6 +4868,9 @@ class LutarymHeatpumpCardEditor extends HTMLElement {
         background: #0D1219; color: var(--ink);
         font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
       }
+      /* Lange Auswahlnamen brauchen die ganze Breite. */
+      .ed-row.ed-breit { grid-template-columns: 1fr; align-items: stretch; gap: 4px; }
+      .ed-row select { width: 100%; min-width: 0; }
       @media (max-width: 600px) { .ed-row { grid-template-columns: 1fr; align-items: stretch; } }
     `;
   }

@@ -1,3 +1,18 @@
+# v2.26.1
+- Beim Einlesen einer Konfiguration werden die Entitäten einzeln geprüft:
+  unbekannte Felder, unpassender Entitätsbereich und in Home Assistant
+  fehlende Entitäten werden gemeldet
+- Nach dem Anwenden prüft die Karte gegen, ob alle Werte tatsächlich
+  übernommen wurden, und meldet Abweichungen
+
+# v2.26.0
+- Herstellerprofil unterscheidet jetzt HeishaMon by Lutarym und HeishaMon
+  über das MQTT-Namensschema. Das Profil bestimmt, welcher Erkennungsweg
+  zuerst versucht wird
+- Auswahlfeld über die volle Breite, die Namen sind vollständig lesbar
+- Konfiguration lässt sich zusätzlich als Datei speichern und aus einer
+  Datei laden
+
 # v2.25.1
 - Bei der automatischen Zuordnung gewinnt die stellbare Entität. Liefert
   die Integration zum selben Wert einen Sensor und eine number-Entität,
