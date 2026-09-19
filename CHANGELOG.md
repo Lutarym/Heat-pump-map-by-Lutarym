@@ -1,3 +1,10 @@
+# v2.27.1
+- Fenster der Heizkreise braucht rund 40 Pixel weniger: kürzere
+  Beschriftungen, dadurch zwei Schaltflächen nebeneinander
+- Die Zonenschaltfläche heißt jetzt Zone zu- und abschalten, der
+  Kreisschalter Kreis ein- und ausschalten. Vorher hießen beide fast
+  gleich, obwohl sie Verschiedenes tun
+
 # v2.27.0
 - Warmwasserfenster braucht rund 70 Pixel weniger Höhe: kürzere
   Beschriftungen auf den Schaltflächen, dadurch zwei Spalten statt drei

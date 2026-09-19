@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.27.0";
+const CARD_VERSION = "2.27.1";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1405,9 +1405,9 @@ class LutarymHeatpumpCard extends HTMLElement {
         werte: ["hk1_water"],
         anzeige: "hk1_water_target",
         aktionen: [
-          { feld: "zones_select", typ: "zone", nummer: 1 },
-          { feld: "hk1_switch", typ: "schalter", an: "Heizkreis ist an, ausschalten", aus: "Heizkreis einschalten" },
-          { typ: "kurveknopf", zone: 1, titel: "Heizkurve anzeigen" },
+          { feld: "zones_select", typ: "zone", nummer: 1, schmal: true },
+          { feld: "hk1_switch", typ: "schalter", schmal: true, an: "Kreis ausschalten", aus: "Kreis einschalten" },
+          { typ: "kurveknopf", zone: 1, schmal: true, titel: "Heizkurve" },
         ],
       },
       {
@@ -1417,9 +1417,9 @@ class LutarymHeatpumpCard extends HTMLElement {
         werte: ["hk2_water"],
         anzeige: "hk2_water_target",
         aktionen: [
-          { feld: "zones_select", typ: "zone", nummer: 2 },
-          { feld: "hk2_switch", typ: "schalter", an: "Heizkreis ist an, ausschalten", aus: "Heizkreis einschalten" },
-          { typ: "kurveknopf", zone: 2, titel: "Heizkurve anzeigen" },
+          { feld: "zones_select", typ: "zone", nummer: 2, schmal: true },
+          { feld: "hk2_switch", typ: "schalter", schmal: true, an: "Kreis ausschalten", aus: "Kreis einschalten" },
+          { typ: "kurveknopf", zone: 2, schmal: true, titel: "Heizkurve" },
         ],
       },
     ];
@@ -1634,7 +1634,7 @@ class LutarymHeatpumpCard extends HTMLElement {
              </label>`
 
           : a.typ === "kurveknopf"
-          ? `<button type="button" class="lhc-dialog-action" id="dlg-a${i}">${escapeHtml(a.titel)}</button>`
+          ? `<button type="button" class="lhc-dialog-action${a.schmal ? " schmal" : ""}" id="dlg-a${i}">${escapeHtml(a.titel)}</button>`
           : a.typ === "kurvenzone"
           ? `<div class="lhc-zonenwahl" id="dlg-a${i}">
                <button type="button" data-zone="1">Heizkreis 1</button>
@@ -1854,8 +1854,8 @@ class LutarymHeatpumpCard extends HTMLElement {
           aktiv === null
             ? "Zonen unbekannt"
             : aktiv
-            ? "Heizkreis abschalten"
-            : "Heizkreis zuschalten";
+            ? "Zone abschalten"
+            : "Zone zuschalten";
         // Der letzte verbleibende Kreis laesst sich nicht abschalten.
         el.disabled = aktiv === true && andere !== true;
         if (el.disabled) el.textContent = "Einziger aktiver Heizkreis";
