@@ -7,7 +7,7 @@
  * Autor: Lutarym
  */
 
-const CARD_VERSION = "2.26.2";
+const CARD_VERSION = "2.27.0";
 
 /* ------------------------------------------------------------------ *
  *  Zeichenraster
@@ -1392,9 +1392,9 @@ class LutarymHeatpumpCard extends HTMLElement {
         beschriftung: "label_dhw",
         werte: ["dhw_temp", "dhw_heater"],
         aktionen: [
-          { feld: "dhw_force", status: "dhw_force_state", typ: "schalter", an: "Aufheizen läuft, beenden", aus: "Einmalig aufheizen" },
-          { feld: "force_sterilization", status: "sterilization_state", typ: "schalter", an: "Legionellenschutz läuft, beenden", aus: "Legionellenschutz starten" },
-          { feld: "dhw_heater_switch", status: "dhw_heater", typ: "schalter", an: "Heizstab ist an, ausschalten", aus: "Heizstab einschalten" },
+          { feld: "dhw_force", status: "dhw_force_state", typ: "schalter", schmal: true, an: "Aufheizen beenden", aus: "Einmalig aufheizen" },
+          { feld: "force_sterilization", status: "sterilization_state", typ: "schalter", schmal: true, an: "Legionellen beenden", aus: "Legionellen starten" },
+          { feld: "dhw_heater_switch", status: "dhw_heater", typ: "schalter", schmal: true, an: "Heizstab aus", aus: "Heizstab an" },
           { feld: "dhw_heat_delta", typ: "zahl", befehl: "SetDHWHeatDelta", titel: "Lädt ab", bezug: "dhw_setpoint", vorzeichen: 1, min: -12, max: -2, schritt: 1 },
         ],
       },
@@ -1643,17 +1643,15 @@ class LutarymHeatpumpCard extends HTMLElement {
           : a.typ === "trenner"
           ? `<div class="lhc-dialog-trenner">${escapeHtml(a.titel)}</div>`
           : a.typ === "zahl"
-          ? `<div class="lhc-dialog-num">
+          ? `<div class="lhc-num-kompakt">
                <span class="lhc-field-label">${escapeHtml(a.titel)}</span>
-               <div class="lhc-num-row">
-                 <button type="button" class="lhc-step" id="dlg-a${i}-minus"
-                         aria-label="Kleiner">&minus;</button>
-                 <output id="dlg-a${i}">--</output>
-                 <button type="button" class="lhc-step" id="dlg-a${i}-plus"
-                         aria-label="Größer">+</button>
-               </div>
+               <button type="button" class="lhc-step klein" id="dlg-a${i}-minus"
+                       aria-label="Kleiner">&minus;</button>
+               <output id="dlg-a${i}">--</output>
+               <button type="button" class="lhc-step klein" id="dlg-a${i}-plus"
+                       aria-label="Größer">+</button>
              </div>`
-          : `<button type="button" class="lhc-dialog-action" id="dlg-a${i}">--</button>`
+          : `<button type="button" class="lhc-dialog-action${a.schmal ? " schmal" : ""}" id="dlg-a${i}">--</button>`
       )
       .join("");
 
@@ -1812,7 +1810,7 @@ class LutarymHeatpumpCard extends HTMLElement {
           if (k) k.disabled = !kann;
         });
         const beschriftung = el.parentElement
-          ? el.parentElement.parentElement.querySelector(".lhc-field-label")
+          ? el.parentElement.querySelector(".lhc-field-label")
           : null;
         if (beschriftung) {
           const hinweis = " – nur lesbar";
@@ -4160,9 +4158,9 @@ ${this._defs()}
       }
       .lhc-dialog-close:hover { color: var(--ink); }
       .lhc-dialog-value {
-        display: block; margin: 6px 0 12px; text-align: center;
+        display: block; margin: 4px 0 8px; text-align: center;
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
-        font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums;
+        font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums;
       }
       .lhc-dialog-row { display: flex; align-items: center; gap: 14px; }
       .lhc-step {
@@ -4177,10 +4175,11 @@ ${this._defs()}
       #dlg-actions {
         display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px;
       }
-      .lhc-dialog-trenner, .lhc-zonenwahl, .lhc-dialog-num { grid-column: 1 / -1; }
+      .lhc-dialog-trenner, .lhc-zonenwahl, .lhc-dialog-num, .lhc-num-kompakt { grid-column: 1 / -1; }
       .lhc-dialog-action {
         width: 100%; margin-top: 0; padding: 8px 14px; border-radius: 12px;
         grid-column: 1 / -1;
+        /* Kurze Beschriftungen duerfen sich eine Zeile teilen. */
         font: inherit; font-size: 15px; font-weight: 500; cursor: pointer;
         background: #1B2431; border: 1px solid var(--line); color: var(--ink);
       }
@@ -4192,6 +4191,7 @@ ${this._defs()}
       .lhc-dialog-action.is-aus {
         background: #2E1112; border-color: #D6534A; color: #F3C6C3;
       }
+      .lhc-dialog-action.schmal { grid-column: auto; }
       .lhc-dialog-action:disabled {
         opacity: 0.45; cursor: not-allowed;
         background: #1B2431; border-color: var(--line); color: var(--muted);

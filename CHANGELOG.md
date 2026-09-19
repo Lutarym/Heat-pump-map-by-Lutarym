@@ -1,3 +1,8 @@
+# v2.27.0
+- Warmwasserfenster braucht rund 70 Pixel weniger Höhe: kürzere
+  Beschriftungen auf den Schaltflächen, dadurch zwei Spalten statt drei
+  Zeilen, einzeiliges Zahlenfeld und eine kleinere Wertanzeige
+
 # v2.26.2
 - Aktualisierung deutlich schneller: die Elementzugriffe laufen über den
   vorhandenen Zwischenspeicher, 108 statt 12 Zugriffe je Lauf, rund
